@@ -37,6 +37,7 @@ int main() {
 	object_shader.push_normal("normal_mat");
 	object_shader.push_material("material");
 	object_shader.push_light("light_source");
+	object_shader.push_uniform("time");
 
 	Shader_program lightbulb_shader = game.get_shader("lightbulb");
 	lightbulb_shader.set_depth_testing(true);
@@ -96,18 +97,20 @@ int main() {
 	auto draw_body = [&]{
 		Point3D lightbulb_pos = lightbulb.get_pos();
 		glm::mat4 view_mat = game.m_player.m_head.get_look_at();
+		glm::mat4 projection_mat = game.m_player.m_head.get_projection_matrix(game.m_win.get_width(), game.m_win.get_height());
 
 		// First populate uniforms
 		object_shader["view"] = view_mat;
-		object_shader["projection"] = game.m_player.m_head.get_projection_matrix(game.m_win.get_width(), game.m_win.get_height());
+		object_shader["projection"] = projection_mat;
 		object_shader[light_name + ".pos"] = std::vector<float>{ lightbulb_pos.x, lightbulb_pos.y, lightbulb_pos.z };
 		object_shader[light_name + ".color"] = light_source.color;
 		object_shader[light_name + ".ambient_intens"]  = light_source.ambient_intens;
 		object_shader[light_name + ".diffuse_intens"]  = light_source.diffuse_intens;
 		object_shader[light_name + ".specular_intens"] = light_source.specular_intens;
+		object_shader["time"] = (float)glfwGetTime() * 0.7f;
 
 		lightbulb_shader["view"] = view_mat;
-		lightbulb_shader["projection"] = game.m_player.m_head.get_projection_matrix(game.m_win.get_width(), game.m_win.get_height());
+		lightbulb_shader["projection"] = projection_mat;
 		lightbulb_shader[light_name + ".color"] = light_source.color;
 
 		// Second draw
@@ -128,3 +131,4 @@ int main() {
 
 	game.m_win.draw(draw_body, custom_input);
 }
+
