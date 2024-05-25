@@ -1,0 +1,28 @@
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(glfw3 REQUIRED IMPORTED_TARGET glfw3)
+
+add_library(glad        ./src/glad.c)
+add_library(game        ./src/game.cpp)
+add_library(assert      ./src/assert.cpp)
+add_library(camera      ./src/camera.cpp)
+add_library(window      ./src/window.cpp)
+add_library(shaders     ./src/shaders.cpp)
+add_library(figures     ./src/figures.cpp)
+add_library(buffer_obj  ./src/buffer_obj.cpp)
+
+target_include_directories(glad        PUBLIC "include")
+target_include_directories(game        PUBLIC "include")
+target_include_directories(camera      PUBLIC "include")
+target_include_directories(assert      PUBLIC "include")
+target_include_directories(window      PUBLIC "include")
+target_include_directories(shaders     PUBLIC "include")
+target_include_directories(figures     PUBLIC "include")
+target_include_directories(buffer_obj  PUBLIC "include")
+
+target_link_libraries(camera         PUBLIC PkgConfig::glfw3 glad)
+target_link_libraries(shaders        PUBLIC PkgConfig::glfw3 glad)
+target_link_libraries(buffer_obj     PUBLIC PkgConfig::glfw3 glad)
+target_link_libraries(figures        PUBLIC PkgConfig::glfw3 glad buffer_obj)
+target_link_libraries(window         PUBLIC PkgConfig::glfw3 glad camera assert)
+target_link_libraries(game           PUBLIC PkgConfig::glfw3 glad camera window)
+
