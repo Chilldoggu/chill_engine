@@ -171,23 +171,44 @@ void Shader_program::push_material(std::string uniform_var) {
 
 void Shader_program::push_light(std::string uniform_var) {
 	m_light_name = uniform_var;
-	push_uniform(uniform_var + ".pos");
+	push_uniform(uniform_var + ".pos_dir");
 	push_uniform(uniform_var + ".color");
 	push_uniform(uniform_var + ".ambient_intens");
 	push_uniform(uniform_var + ".diffuse_intens");
 	push_uniform(uniform_var + ".specular_intens");
 }
 
+void Shader_program::push_point_light(std::string uniform_var) {
+	push_light(uniform_var);
+	push_uniform(uniform_var + ".linear");
+	push_uniform(uniform_var + ".constant");
+	push_uniform(uniform_var + ".quadratic");
+}
+
 void Shader_program::set_name(std::string a_name) {
 	m_name = a_name;
+}
+
+void Shader_program::set_light(const Light& a_light) {
+	(*this)[m_light_name + ".color"] = a_light.get_color();
+	(*this)[m_light_name + ".pos_dir"] = a_light.get_pos_dir();
+	(*this)[m_light_name + ".ambient_intens"] = a_light.get_ambient();
+	(*this)[m_light_name + ".diffuse_intens"] = a_light.get_diffuse();
+	(*this)[m_light_name + ".specular_intens"] = a_light.get_specular();
+}
+
+void Shader_program::set_point_light(const PointLight& a_light) {
+	set_light(a_light);
+	(*this)[m_light_name + ".linear"] = a_light.get_linear();
+	(*this)[m_light_name + ".constant"] = a_light.get_constant();
+	(*this)[m_light_name + ".quadratic"] = a_light.get_quadratic();
 }
 
 void Shader_program::set_depth_testing(bool a_option) {
 	m_depth_testing = a_option;
 }
 
-void Shader_program::check_linking()
-{
+void Shader_program::check_linking() {
 	glGetProgramiv(m_shader_program, GL_LINK_STATUS, &m_success);
 	if (!m_success) {
 		glGetProgramInfoLog(m_shader_program, 1024, nullptr, m_infoLog);

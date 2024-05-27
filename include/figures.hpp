@@ -77,14 +77,6 @@ struct MaterialMap {
 	auto set_shininess(float a_shininess) -> void;
 };
 
-struct Light {
-    glm::vec3 pos;
-    glm::vec3 color;
-    glm::vec3 ambient_intens;
-    glm::vec3 diffuse_intens;
-    glm::vec3 specular_intens;
-};
-
 struct VBO_FIGURES {
     int vert_sum = 0;
     unsigned int VERTS    = EMPTY_VBO;
