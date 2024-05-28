@@ -27,8 +27,8 @@ int main() {
 	game.m_player.m_head.set_movement_speed(8.0f);
 
 	// Configure shaders
-	game.new_shader("object", {{ ShaderType::VERTEX, "vertex_shader.glsl" }, { ShaderType::FRAGMENT, "fragment_shader_object.glsl" }});
-	game.new_shader("lightbulb", {{ ShaderType::VERTEX, "vertex_shader.glsl" }, { ShaderType::FRAGMENT, "fragment_shader_lightbulb.glsl" }});
+	game.new_shader("object", {{ ShaderType::VERTEX, "main.vsh" }, { ShaderType::FRAGMENT, "object.fsh" }});
+	game.new_shader("lightbulb", {{ ShaderType::VERTEX, "main.vsh" }, { ShaderType::FRAGMENT, "lighbulb.fsh" }});
 	Shader_program object_shader = game.get_shader("object");
 	object_shader.set_depth_testing(true);
 	object_shader.push_model("model");
