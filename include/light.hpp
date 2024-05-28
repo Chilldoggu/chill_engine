@@ -68,6 +68,17 @@ private:
 	auto gen_att_linear(float a_max_distance) -> float;
 };
 
-class SpotLight : public Light {
+class SpotLight : public PointLight {
+public:
+	SpotLight(float a_cutoff, glm::vec3 a_spot_dir, float a_max_distance, glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 a_color = glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3 m_ambient = glm::vec3(0.3f), glm::vec3 m_diffuse = glm::vec3(0.8f), glm::vec3 m_specular = glm::vec3(1.0f));
 
+	auto set_cutoff(float a_cutoff_deg) -> void;
+	auto set_spot_dir(glm::vec3 a_spot_dir) -> void;
+
+	auto get_cutoff() const -> float;
+	auto get_spot_dir() const -> glm::vec3;
+
+private:
+	float m_cutoff; // cos(theta)
+	glm::vec3 m_spot_dir;
 };

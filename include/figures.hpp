@@ -133,6 +133,7 @@ public:
 
     auto set_pos(Point3D a_center) -> void;
     auto set_pos(std::vector<float> a_vec) -> void;
+    auto set_pos(glm::vec3 a_vec) -> void;
     auto set_color(const std::vector<float>& a_color, bool a_multi = false, std::vector<std::vector<int>> a_color_oreder = {}) -> void;
     auto set_normals(const std::vector<float>& a_normals) -> void;
     auto set_texture_buf(std::vector<float> a_texture_cords = {}, float a_ratio = 1.f) -> void;

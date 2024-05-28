@@ -18,6 +18,7 @@ public:
 
 	Player(glm::vec3 a_head_pos = glm::vec3(0.0f, 0.0f, 0.0f));
 	auto get_pos() const -> glm::vec3;
+	auto get_front() const -> glm::vec3;
 
 private:
 	glm::vec3 m_pos;

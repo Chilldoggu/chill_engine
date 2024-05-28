@@ -7,6 +7,10 @@ glm::vec3 Player::get_pos() const {
 	return m_head.get_position();
 }
 
+glm::vec3 Player::get_front() const {
+	return m_head.get_target();
+}
+
 /* ================ */
 
 Game::Game(int win_width, int win_height, std::string win_title, MODES win_mode, glm::vec3 player_head_pos) 

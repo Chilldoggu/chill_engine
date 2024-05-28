@@ -114,9 +114,11 @@ public:
 	auto push_material(std::string uniform_var) -> void;
 	auto push_light(std::string uniform_var) -> void;
 	auto push_point_light(std::string uniform_var) -> void;
+	auto push_spotlight(std::string uniform_var) -> void;
 	
 	auto set_name(std::string a_name) -> void;
 	auto set_light(const Light& a_light) -> void;
+	auto set_spotlight(const SpotLight& a_light) -> void;
 	auto set_point_light(const PointLight& a_light) -> void;
 	auto set_depth_testing(bool option) -> void;
 	auto check_linking() -> void;

@@ -39,7 +39,6 @@ public:
     auto get_position() const -> glm::vec3;
     auto get_target() const -> glm::vec3;
     auto get_look_at() const -> glm::mat4;
-    auto get_own_look_at(glm::vec3 position, glm::vec3 target, glm::vec3 up) const -> glm::mat4;
 
 private:
     // camera Attributes

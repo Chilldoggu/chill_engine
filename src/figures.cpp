@@ -433,6 +433,14 @@ void Shape::set_pos(std::vector<float> a_vec) {
 	m_transform_pos = glm::translate(m_transform_pos, glm::vec3(a_vec[0], a_vec[1], a_vec[2]));
 }
 
+void Shape::set_pos(glm::vec3 a_vec) {
+	m_center.x = a_vec[0];
+	m_center.y = a_vec[1];
+	m_center.z = a_vec[2];
+	m_transform_pos = glm::mat4{ 1.0f };
+	m_transform_pos = glm::translate(m_transform_pos, a_vec);
+}
+
 void Shape::move(Point3D a_vec) {
 	m_center += a_vec;
 	m_transform_pos = glm::translate(m_transform_pos, glm::vec3(a_vec.x, a_vec.y, a_vec.z));
