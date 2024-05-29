@@ -30,7 +30,7 @@ public:
 	Window m_win;
 	Player m_player;
 
-	Game(int win_width = 1280, int win_height = 720, std::string win_title = "OpenGL", MODES win_mode = MODES::FPS, glm::vec3 player_head_pos = glm::vec3(0.0f, 0.0f, 0.0f));
+	Game(int win_width = 1280, int win_height = 720, std::string win_title = "OpenGL", CursorMode win_mode = CursorMode::FPS, bool a_imgui = false, glm::vec3 player_head_pos = glm::vec3(0.0f, 0.0f, 0.0f));
 	~Game();
 	auto new_shader(std::string a_name, Shader_program& a_shader) -> void;
 	auto new_shader(std::string a_name, std::initializer_list<Shader_src> a_shaders_src) -> void;

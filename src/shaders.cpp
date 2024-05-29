@@ -187,7 +187,8 @@ void Shader_program::push_point_light(std::string uniform_var) {
 
 void Shader_program::push_spotlight(std::string uniform_var) {
 	push_point_light(uniform_var);
-	push_uniform(uniform_var + ".cutoff");
+	push_uniform(uniform_var + ".inner_cutoff");
+	push_uniform(uniform_var + ".outer_cutoff");
 	push_uniform(uniform_var + ".spot_dir");
 }
 
@@ -205,7 +206,8 @@ void Shader_program::set_light(const Light& a_light) {
 
 void Shader_program::set_spotlight(const SpotLight& a_light) {
 	set_point_light(a_light);
-	(*this)[m_light_name + ".cutoff"] = a_light.get_cutoff();
+	(*this)[m_light_name + ".inner_cutoff"] = a_light.get_inner_cutoff();
+	(*this)[m_light_name + ".outer_cutoff"] = a_light.get_outer_cutoff();
 	(*this)[m_light_name + ".spot_dir"] = a_light.get_spot_dir();
 }
 

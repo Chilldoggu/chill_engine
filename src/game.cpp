@@ -13,8 +13,8 @@ glm::vec3 Player::get_front() const {
 
 /* ================ */
 
-Game::Game(int win_width, int win_height, std::string win_title, MODES win_mode, glm::vec3 player_head_pos) 
-	:m_win{ win_width, win_height, win_title, win_mode }, m_player{ player_head_pos }
+Game::Game(int win_width, int win_height, std::string win_title, CursorMode win_mode, bool a_imgui, glm::vec3 player_head_pos) 
+	:m_win{ win_width, win_height, win_title, win_mode, a_imgui }, m_player{ player_head_pos }
 {  }
 
 Game::~Game() {
