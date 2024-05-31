@@ -9,7 +9,7 @@
 
 enum class CursorMode {
     NORMAL,
-    FPS,
+    FIRST_PERSON,
 };
 
 class Window {
@@ -43,8 +43,6 @@ public:
     auto get_mouse_focus_status() const -> bool;
 
 private:
-	auto init_imgui() -> void;
-
     float m_delta_time;
     float m_last_frame;
     float m_current_frame;

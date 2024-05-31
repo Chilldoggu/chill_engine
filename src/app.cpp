@@ -1,5 +1,8 @@
 #include <format>
 #include <iostream>
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
 
 #include "app.hpp"
 
@@ -27,6 +30,10 @@ App::App(int win_width, int win_height, std::string win_title, CursorMode win_mo
 	glfwSetCursorPosCallback(m_win->get_obj(), cursor_pos_callback);
 	glfwSetScrollCallback(m_win->get_obj(), scroll_callback);
 	glfwSetErrorCallback(glfw_error_callback);
+
+	// Can't do it in window constructor because this method of callback setting modifies
+	// GLFWwindow* window pointer that's being used for imgui initialisation.
+	ImGui_ImplGlfw_InitForOpenGL(m_win->get_obj(), true);
 }
 
 App::~App() {

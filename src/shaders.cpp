@@ -48,12 +48,15 @@ void Shader_src::load_code(std::string filename) {
 		switch (shader_type) {
 			case ShaderType::VERTEX: {
 				ERROR(std::format("Vertex shader source file {} couldn't be loaded.", filename).data());
+				break;
 			}
 			case ShaderType::FRAGMENT: {
 				ERROR(std::format("Fragment shader source file {} couldn't be loaded.", filename).data());
+				break;
 			}
 			default: {
 				ERROR(std::format("Unhandled shader type with source file {} couldn't be loaded.", filename).data());
+				break;
 			}
 		}
 		throw Error_code::file_init;

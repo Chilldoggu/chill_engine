@@ -29,12 +29,12 @@ Window::Window(int a_width, int a_height, std::string a_title, CursorMode a_mode
 	glfwMakeContextCurrent(m_window);
 
 	switch (a_mode) {
-		case CursorMode::FPS: {
-			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		case CursorMode::NORMAL : {
+			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			break;
 		}
-		case CursorMode::NORMAL: {
-			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		case CursorMode::FIRST_PERSON : {
+			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			break;
 		}
 	}
@@ -46,7 +46,23 @@ Window::Window(int a_width, int a_height, std::string a_title, CursorMode a_mode
 
 	glViewport(0, 0, m_width, m_height);
 
-	init_imgui();
+	// Init Imgui
+	IMGUI_CHECKVERSION();
+
+	ImGui::CreateContext();
+
+	m_io = &ImGui::GetIO();
+	m_io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    m_io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+	
+	ImGui::StyleColorsDark();
+	// ImGui::StyleColorsLight();
+	// ImGui::StyleColorsClassic();
+	
+	ImGui_ImplOpenGL3_Init("#version 330 core");
+	// OpenGL backend will be initialised only after setting up appropriate callbacks in App class.
+	// That's because I'm using UserPointer that modifies GLFWwindow*.
+	// ImGui_ImplGlfw_InitForOpenGL(m_window, true);
 }
 
 Window::Window() :Window(800, 600, "Window") { }
@@ -100,22 +116,21 @@ void Window::draw(std::function<void(void)> draw_body, std::function<void(void)>
 		process_input();
 		custom_input();
 
+		glClearColor(0.0, 0.0, 0.0, 1.0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// Rendering
+		draw_body();
+
 		// ImGui
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		glClearColor(0.0, 0.0, 0.0, 1.0);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 		imgui_body();
-
-		// Rendering
-		draw_body();
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
 
 		glfwSwapBuffers(this->m_window);
 	}
@@ -144,11 +159,11 @@ void Window::toggle_mouse_focus() {
 auto Window::toggle_cursor_mode() -> void {
 	switch (m_cur_mode) {
 		case CursorMode::NORMAL : {
-			m_cur_mode = CursorMode::FPS;
+			m_cur_mode = CursorMode::FIRST_PERSON;
 			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			break;
 		}
-		case CursorMode::FPS : {
+		case CursorMode::FIRST_PERSON : {
 			m_cur_mode = CursorMode::NORMAL;
 			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			break;
@@ -161,23 +176,6 @@ float Window::calculate_delta() {
 	m_delta_time = m_current_frame - m_last_frame;
 	m_last_frame = m_current_frame;
 	return m_delta_time;
-}
-
-void Window::init_imgui() {
-	IMGUI_CHECKVERSION();
-
-	ImGui::CreateContext();
-
-	m_io = &ImGui::GetIO();
-	m_io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    m_io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-	
-	ImGui::StyleColorsDark();
-	// ImGui::StyleColorsLight();
-	// ImGui::StyleColorsClassic();
-	
-	ImGui_ImplGlfw_InitForOpenGL(m_window, true);
-	ImGui_ImplOpenGL3_Init("#version 330 core");
 }
 
 float Window::get_width() const {
