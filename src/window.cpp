@@ -1,53 +1,15 @@
-#include <format>
-#include <iostream>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
 #include "window.hpp"
-#include "camera.hpp"
-#include "game.hpp"
 #include "assert.hpp"
 
 #include <GLFW/glfw3.h>
 
-extern Game game;
-// extern Camera Camera;
-// extern Window Win;
-
-void glfw_framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-	glViewport(0, 0,  width, height);
-	game.m_win.m_width = width;
-	game.m_win.m_height = height;
-}
-
-void glfw_mouse_callback(GLFWwindow* window, double x_pos, double y_pos) {
-	Window* win  = &game.m_win;
-
-	if (!win->get_mouse_focus_status()) {
-		win->set_mouse_x(x_pos);
-		win->set_mouse_y(y_pos);
-		win->toggle_mouse_focus();
-	}
-	float x_offset = x_pos - win->get_mouse_x();
-	float y_offset = win->get_mouse_y() - y_pos;
-	win->set_mouse_x(x_pos);
-	win->set_mouse_y(y_pos);
-
-	game.m_player.m_head.process_mouse_movement(x_offset, y_offset);
-}
-
-static void glfw_scroll_callback(GLFWwindow* window, double x_offset, double y_offset) {
-	game.m_player.m_head.process_mouse_scroll(y_offset);
-}
-
-static void glfw_error_callback(int error, const char* description) {
-	std::cerr << std::format("GLFW Error {}: {}", error, description) << std::endl;
-}
-
-Window::Window(int a_width, int a_height, std::string a_title, CursorMode a_mode, bool a_imgui) 
+Window::Window(int a_width, int a_height, std::string a_title, CursorMode a_mode) 
 	:m_width{ a_width }, m_height{ a_height }, m_title{ a_title }, m_mouse_pos_x{ a_width / 2.f }, m_mouse_pos_y{ a_height / 2.f }, m_mouse_focus{ false },
-	 m_delta_time{ 0.0f }, m_last_frame{ 0.0f }, m_current_frame{ 0.0f }, m_imgui{ a_imgui }, m_cur_mode{ a_mode }
+	 m_delta_time{ 0.0f }, m_last_frame{ 0.0f }, m_current_frame{ 0.0f }, m_cur_mode{ a_mode }
 {
 	if (!glfwInit()) {
 		ERROR("Couldn't initialise glfw.");
@@ -84,23 +46,15 @@ Window::Window(int a_width, int a_height, std::string a_title, CursorMode a_mode
 
 	glViewport(0, 0, m_width, m_height);
 
-	glfwSetFramebufferSizeCallback(m_window, glfw_framebuffer_size_callback);
-	glfwSetCursorPosCallback(m_window, glfw_mouse_callback);
-	glfwSetScrollCallback(m_window, glfw_scroll_callback);
-	glfwSetErrorCallback(glfw_error_callback);
-
-	if (m_imgui)
-		init_imgui();
+	init_imgui();
 }
 
 Window::Window() :Window(800, 600, "Window") { }
 
 Window::~Window() {
-	if (m_imgui) {
-		ImGui_ImplOpenGL3_Shutdown();
-		ImGui_ImplGlfw_Shutdown();
-		ImGui::DestroyContext();
-	}
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 
 	glfwDestroyWindow(m_window);
 	glfwTerminate();
@@ -109,12 +63,6 @@ Window::~Window() {
 void Window::process_input() {
 	if (glfwGetKey(m_window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(m_window, GLFW_TRUE);
-	if (glfwGetKey(m_window, GLFW_KEY_TAB) == GLFW_PRESS)
-		m_tab_pressed = true;
-	if (m_tab_pressed && glfwGetKey(m_window, GLFW_KEY_TAB) == GLFW_RELEASE) {
-		m_tab_pressed = false;
-		toggle_cursor_mode();
-	}
 }
 
 bool Window::closed() {
@@ -157,7 +105,7 @@ void Window::draw(std::function<void(void)> draw_body, std::function<void(void)>
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		glClearColor(0.2, 0.2, 0.2, 1.0);
+		glClearColor(0.0, 0.0, 0.0, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		imgui_body();
@@ -216,8 +164,6 @@ float Window::calculate_delta() {
 }
 
 void Window::init_imgui() {
-	m_imgui = true;
-
 	IMGUI_CHECKVERSION();
 
 	ImGui::CreateContext();

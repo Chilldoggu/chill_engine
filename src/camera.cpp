@@ -1,5 +1,4 @@
 #include "camera.hpp"
-#include <iostream>
 
 Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch, float near_plane, float far_plane)
 	:m_front(glm::vec3(0.0f, 0.0f, -1.0f)), m_movement_speed(SPEED), m_mouse_sensitivity(SENSITIVITY), m_fov(FOV), m_near_plane(near_plane), m_far_plane(far_plane)

@@ -14,7 +14,7 @@ enum class CursorMode {
 
 class Window {
 public:
-    Window(int a_width, int a_height, std::string a_title, CursorMode a_mode = CursorMode::NORMAL, bool a_imgui = false);
+    Window(int a_width, int a_height, std::string a_title, CursorMode a_mode = CursorMode::NORMAL);
     explicit Window();
     ~Window();
 
@@ -22,8 +22,6 @@ public:
     auto closed() -> bool;
     auto set_width(float width) -> void;
     auto set_height(float height) -> void;
-	auto init_imgui() -> void;
-	auto draw_imgui(std::function<void(void)> imgui_body) -> void;
     auto set_mouse_x(float x_pos) -> void;
     auto set_mouse_y(float y_pos) -> void;
     auto title_change() -> void;
@@ -44,17 +42,15 @@ public:
     auto get_mouse_y() const -> float;
     auto get_mouse_focus_status() const -> bool;
 
-    friend auto glfw_mouse_callback(GLFWwindow* window, double xpos, double ypos) -> void;
-    friend auto glfw_framebuffer_size_callback(GLFWwindow* window, int width, int height) -> void;
-
 private:
+	auto init_imgui() -> void;
+
     float m_delta_time;
     float m_last_frame;
     float m_current_frame;
 
     int m_width;
     int m_height;
-	bool m_imgui;
     bool m_mouse_focus;
     float m_mouse_pos_x;
     float m_mouse_pos_y;
@@ -62,6 +58,4 @@ private:
 	ImGuiIO* m_io;
     std::string m_title;
     GLFWwindow* m_window = nullptr;
-
-	bool m_tab_pressed = false;
 };
