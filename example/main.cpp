@@ -56,20 +56,20 @@ int main() {
 
 	Shader_program& object_shader = app.get_shader("object");
 	object_shader.set_depth_testing(true);
-	object_shader.push_model("model");
-	object_shader.push_view("view");
-	object_shader.push_projection("projection");
-	object_shader.push_normal("normal_mat");
-	object_shader.push_material("material");
-	object_shader.push_light("light_source");
+	object_shader.push_uniform("model", UniformType::MODEL_MAT);
+	object_shader.push_uniform("view", UniformType::VIEW_MAT);
+	object_shader.push_uniform("projection", UniformType::PROJECTION_MAT);
+	object_shader.push_uniform("normal_mat", UniformType::NORMAL_MAT);
+	object_shader.push_uniform("material", UniformType::MATERIAL);
+	object_shader.push_uniform("light_source", UniformType::LIGHT);
 	object_shader.push_uniform("time");
 	object_shader.push_uniform("view_light_pos");
 
 	Shader_program& lightbulb_shader = app.get_shader("lightbulb");
 	lightbulb_shader.set_depth_testing(true);
-	lightbulb_shader.push_model("model");
-	lightbulb_shader.push_view("view");
-	lightbulb_shader.push_projection("projection");
+	lightbulb_shader.push_uniform("model", UniformType::MODEL_MAT);
+	lightbulb_shader.push_uniform("view", UniformType::VIEW_MAT);
+	lightbulb_shader.push_uniform("projection", UniformType::PROJECTION_MAT);
 	lightbulb_shader.push_uniform("light_source.color");
 
 	// Configure lightbulb
@@ -146,18 +146,21 @@ int main() {
 		float delta = win.calculate_delta();
 
 		if (glfwGetKey(win.get_obj(), GLFW_KEY_W))
-			cam.process_keyboard(Camera_Movement::FORWARD, delta);
+			cam.process_keyboard(CameraMovement::FORWARD, delta);
 		if (glfwGetKey(win.get_obj(), GLFW_KEY_S))
-			cam.process_keyboard(Camera_Movement::BACKWARD, delta);
+			cam.process_keyboard(CameraMovement::BACKWARD, delta);
 		if (glfwGetKey(win.get_obj(), GLFW_KEY_D))
-			cam.process_keyboard(Camera_Movement::RIGHT, delta);
+			cam.process_keyboard(CameraMovement::RIGHT, delta);
 		if (glfwGetKey(win.get_obj(), GLFW_KEY_A))
-			cam.process_keyboard(Camera_Movement::LEFT, delta);
+			cam.process_keyboard(CameraMovement::LEFT, delta);
 		if (glfwGetKey(win.get_obj(), GLFW_KEY_TAB) == GLFW_PRESS)
 			m_tab_pressed = true;
 		if (m_tab_pressed && glfwGetKey(win.get_obj(), GLFW_KEY_TAB) == GLFW_RELEASE) {
 			m_tab_pressed = false;
-			win.toggle_cursor_mode();
+			if (CursorMode mode = win.get_cursor_mode(); mode == CursorMode::NORMAL || mode == CursorMode::IDLE)
+				win.change_cursor_mode(CursorMode::FIRST_PERSON);
+			else
+				win.change_cursor_mode(CursorMode::IDLE);
 		}
 	};
 
@@ -170,7 +173,7 @@ int main() {
 		object_shader["projection"] = projection_mat;
 		object_shader["time"] = (float)glfwGetTime() * 0.7f;
 		object_shader["view_light_pos"] = glm::vec3(view_mat * light_source.get_pos_dir());
-		object_shader.set_light(light_source);
+		object_shader.set_uniform(light_source);
 
 		lightbulb_shader["view"] = view_mat;
 		lightbulb_shader["projection"] = projection_mat;
