@@ -12,7 +12,7 @@ const float FOV         = 90.0f;
 const float SPEED       = 4.0f;
 const float SENSITIVITY = 0.1f;
 
-enum class Camera_Movement {
+enum class CameraMovement {
     FORWARD,
     BACKWARD,
     RIGHT,
@@ -22,23 +22,22 @@ enum class Camera_Movement {
 class Camera {
 public:
     // constructor vector values
-    Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), 
+    Camera(const glm::vec3& position = glm::vec3(0.0f, 0.0f, 0.0f), const glm::vec3& up = glm::vec3(0.0f, 1.0f, 0.0f), 
            float yaw = YAW, float pitch = PITCH, float near_plane = NEAR_PLANE, float far_plane = FAR_PLANE);
     // construtor for scalar values
     Camera(float pos_x, float pos_y, float pos_z, float up_x, float up_y, float up_z,
            float yaw, float pitch, float near_plane = NEAR_PLANE, float far_plane = FAR_PLANE);
 
-
     auto set_movement_speed(float a_speed) -> void;
-    auto process_keyboard(Camera_Movement direction, float delta_time) -> void;
+    auto process_keyboard(CameraMovement direction, float delta_time) -> void;
     auto process_mouse_movement(float x_offset, float y_offset, GLboolean constrain_pitch = true) -> void;
     auto process_mouse_scroll(float y_offset) -> void;
 
     auto get_fov() const -> float;
-    auto get_projection_matrix(float width, float height) const -> glm::mat4;
-    auto get_position() const -> glm::vec3;
     auto get_target() const -> glm::vec3;
     auto get_look_at() const -> glm::mat4;
+    auto get_position() const -> glm::vec3;
+    auto get_projection_matrix(float width, float height) const -> glm::mat4;
 
 private:
     // camera Attributes

@@ -7,7 +7,7 @@
 
 #include <GLFW/glfw3.h>
 
-Window::Window(int a_width, int a_height, std::string a_title, CursorMode a_mode) 
+Window::Window(int a_width, int a_height, const std::string& a_title, CursorMode a_mode) 
 	:m_width{ a_width }, m_height{ a_height }, m_title{ a_title }, m_mouse_pos_x{ a_width / 2.f }, m_mouse_pos_y{ a_height / 2.f }, m_mouse_focus{ false },
 	 m_delta_time{ 0.0f }, m_last_frame{ 0.0f }, m_current_frame{ 0.0f }, m_cur_mode{ a_mode }
 {
@@ -30,6 +30,10 @@ Window::Window(int a_width, int a_height, std::string a_title, CursorMode a_mode
 
 	switch (a_mode) {
 		case CursorMode::NORMAL : {
+			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			break;
+		}
+		case CursorMode::IDLE : {
 			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			break;
 		}
@@ -156,15 +160,20 @@ void Window::toggle_mouse_focus() {
 	m_mouse_focus = !m_mouse_focus;
 }
 
-auto Window::toggle_cursor_mode() -> void {
-	switch (m_cur_mode) {
+auto Window::change_cursor_mode(CursorMode a_mode) -> void {
+	switch (a_mode) {
 		case CursorMode::NORMAL : {
+			m_cur_mode = CursorMode::NORMAL;
+			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			break;
+		}
+		case CursorMode::FIRST_PERSON : {
 			m_cur_mode = CursorMode::FIRST_PERSON;
 			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			break;
 		}
-		case CursorMode::FIRST_PERSON : {
-			m_cur_mode = CursorMode::NORMAL;
+		case CursorMode::IDLE : {
+			m_cur_mode = CursorMode::IDLE;
 			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			break;
 		}
@@ -193,8 +202,13 @@ bool Window::get_mouse_focus_status() const {
 float Window::get_mouse_x() const {
 	return m_mouse_pos_x;
 }
+
 float Window::get_mouse_y() const {
 	return m_mouse_pos_y;
+}
+
+CursorMode Window::get_cursor_mode() const {
+	return m_cur_mode;
 }
 
 float Window::get_delta() const {

@@ -1,25 +1,15 @@
 #include "camera.hpp"
 
-Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch, float near_plane, float far_plane)
-	:m_front(glm::vec3(0.0f, 0.0f, -1.0f)), m_movement_speed(SPEED), m_mouse_sensitivity(SENSITIVITY), m_fov(FOV), m_near_plane(near_plane), m_far_plane(far_plane)
+Camera::Camera(const glm::vec3& a_position, const glm::vec3& up, float a_yaw, float a_pitch, float a_near_plane, float a_far_plane)
+	:m_front{ glm::vec3(0.0f, 0.0f, -1.0f) }, m_movement_speed{ SPEED }, m_mouse_sensitivity{ SENSITIVITY }, m_fov{ FOV }, m_near_plane{ a_near_plane }, m_far_plane{ a_far_plane },
+	 m_position{ a_position }, m_world_up{ up }, m_yaw{ a_yaw }, m_pitch{ a_pitch }
 {
-	m_position = position;
-	m_world_up = up;
-	m_yaw = yaw;
-	m_pitch = pitch;
 	update_camera_vectors();
 }
 
 // constructor with scalar values
-Camera::Camera(float pos_x, float pos_y, float pos_z, float up_x, float up_y, float up_z, float yaw, float pitch, float near_plane, float far_plane) 
-	:m_front(glm::vec3(0.0f, 0.0f, -1.0f)), m_movement_speed(SPEED), m_mouse_sensitivity(SENSITIVITY), m_fov(FOV), m_near_plane(near_plane), m_far_plane(far_plane)
-{
-	m_position = glm::vec3(pos_x, pos_y, pos_z);
-	m_world_up = glm::vec3(up_x, up_y, up_z);
-	m_yaw = yaw;
-	m_pitch = pitch;
-	update_camera_vectors();
-}
+Camera::Camera(float a_pos_x, float a_pos_y, float a_pos_z, float a_up_x, float a_up_y, float a_up_z, float a_yaw, float a_pitch, float a_near_plane, float a_far_plane)
+	:Camera(glm::vec3(a_pos_x, a_pos_y, a_pos_z), glm::vec3(a_up_x, a_up_y, a_up_z), a_yaw, a_pitch, a_near_plane, a_far_plane) { }
 
 glm::mat4 Camera::get_projection_matrix(float width, float height) const {
 	return glm::perspective(glm::radians(m_fov), width/height, m_near_plane, m_far_plane);
@@ -45,16 +35,16 @@ auto Camera::set_movement_speed(float a_speed) -> void {
 }
 
 // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
-void Camera::process_keyboard(Camera_Movement direction, float delta_time) {
+void Camera::process_keyboard(CameraMovement direction, float delta_time) {
 	float velocity = m_movement_speed * delta_time;
 	// float height = m_position.y;
-	if (direction == Camera_Movement::FORWARD)
+	if (direction == CameraMovement::FORWARD)
 		m_position += m_front * velocity;
-	if (direction == Camera_Movement::BACKWARD)
+	if (direction == CameraMovement::BACKWARD)
 		m_position -= m_front * velocity;
-	if (direction == Camera_Movement::LEFT)
+	if (direction == CameraMovement::LEFT)
 		m_position -= m_right * velocity;
-	if (direction == Camera_Movement::RIGHT)
+	if (direction == CameraMovement::RIGHT)
 		m_position += m_right * velocity;
 	// m_position = glm::vec3(m_position.x, height, m_position.z);
 }

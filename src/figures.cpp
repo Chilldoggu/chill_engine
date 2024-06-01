@@ -376,7 +376,7 @@ void Shape::toggle_material_map() {
 void Shape::draw(Shader_program& a_shader) {
 	a_shader.use();
 
-	if (std::string model_name = a_shader.get_model_name(); model_name != "")
+	if (std::string model_name = a_shader.get_uniform_name(UniformType::MODEL_MAT); model_name != "")
 		a_shader[model_name] = get_model();
 
 	if (a_shader.get_depth_testing()) {
@@ -386,7 +386,7 @@ void Shape::draw(Shader_program& a_shader) {
 	}
 
 	if (m_material_map_used) {
-		a_shader[a_shader.get_material_name() + ".shininess"] = m_material_map.shininess;
+		a_shader[a_shader.get_uniform_name(UniformType::MATERIAL) + ".shininess"] = m_material_map.shininess;
 		m_material_map.diffuse_map->activate();
 		m_material_map.specular_map->activate();
 		m_material_map.emission_map->activate();
