@@ -19,6 +19,14 @@ glm::vec3 Camera::get_position() const {
 	return m_position;
 }
 
+float Camera::get_far_plane() const {
+	return m_far_plane;
+}
+
+float Camera::get_near_plane() const {
+	return m_near_plane;
+}
+
 glm::vec3 Camera::get_target() const {
 	return m_front;
 }
@@ -26,6 +34,18 @@ glm::vec3 Camera::get_target() const {
 // returns the view matrix calculated using Euler Angles and the LookAt Matrix
 glm::mat4 Camera::get_look_at() const {
 	return glm::lookAt(m_position, m_position + m_front, m_up);
+}
+
+void Camera::set_fov(float a_fov) {
+	m_fov = a_fov;
+}
+
+void Camera::set_far_plane(float a_far) {
+	m_far_plane = a_far;
+}
+
+void Camera::set_near_plane(float a_near) {
+	m_near_plane = a_near;
 }
 
 auto Camera::set_movement_speed(float a_speed) -> void {

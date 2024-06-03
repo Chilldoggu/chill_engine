@@ -138,7 +138,6 @@ public:
     auto set_normals(const std::vector<float>& a_normals) -> void;
     auto set_texture_buf(std::vector<float> a_texture_cords = {}, float a_ratio = 1.f) -> void;
     auto set_material_map(const MaterialMap& a_material_map) -> void;
-    // auto init_texture_stack(std::initializer_list<std::string> a_texture_names) -> void;
 
     auto move(Point3D a_vec) -> void;
     auto move(std::vector<float> a_vec) -> void;
@@ -149,6 +148,7 @@ public:
     auto reset() -> void;
     auto draw(Shader_program& a_shader) -> void;
 
+	auto get_material_map() -> MaterialMap&;
     auto get_obj_data() const -> Buffer_data;
     auto get_size() const -> glm::vec3;
     auto get_pos() const -> Point3D;

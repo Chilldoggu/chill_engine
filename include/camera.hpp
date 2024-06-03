@@ -28,6 +28,9 @@ public:
     Camera(float pos_x, float pos_y, float pos_z, float up_x, float up_y, float up_z,
            float yaw, float pitch, float near_plane = NEAR_PLANE, float far_plane = FAR_PLANE);
 
+    auto set_fov(float a_fov) -> void;
+    auto set_far_plane(float a_far) -> void;
+    auto set_near_plane(float a_near) -> void;
     auto set_movement_speed(float a_speed) -> void;
     auto process_keyboard(CameraMovement direction, float delta_time) -> void;
     auto process_mouse_movement(float x_offset, float y_offset, GLboolean constrain_pitch = true) -> void;
@@ -37,6 +40,8 @@ public:
     auto get_target() const -> glm::vec3;
     auto get_look_at() const -> glm::mat4;
     auto get_position() const -> glm::vec3;
+	auto get_far_plane() const -> float;
+	auto get_near_plane() const -> float;
     auto get_projection_matrix(float width, float height) const -> glm::mat4;
 
 private:

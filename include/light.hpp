@@ -76,11 +76,15 @@ public:
 	auto set_outer_cutoff(float a_cutoff_deg) -> void;
 	auto set_spot_dir(glm::vec3 a_spot_dir) -> void;
 
+	auto get_inner_cutoff_deg() const -> float;
+	auto get_outer_cutoff_deg() const -> float;
 	auto get_inner_cutoff() const -> float;
 	auto get_outer_cutoff() const -> float;
 	auto get_spot_dir() const -> glm::vec3;
 
 private:
+	float m_inner_cutoff_deg;
+	float m_outer_cutoff_deg;
 	float m_inner_cutoff; // cos(theta)
 	float m_outer_cutoff; // cos(theta)
 	glm::vec3 m_spot_dir;

@@ -39,7 +39,7 @@ static fs::path get_asset_path() {
 	return p;
 }
 
-Texture::Texture() :m_name{ "" }, m_type{ TextureType::NONE }, m_texture_id{ 0 }, m_texture_unit{ 0 }, m_width{ 0 }, m_height{ 0 }, m_deletable{ false } {}
+Texture::Texture() :m_name{ "" }, m_type{ TextureType::NONE }, m_texture_id{ 0 }, m_texture_unit{ 0 }, m_width{ 0 }, m_height{ 0 }, m_deletable{ false } { }
 
 Texture::Texture(std::string a_name, TextureType a_type, int a_texture_unit) {
 	// generate_texture deletes older texture if m_deletable is true
@@ -216,15 +216,24 @@ MaterialMap::MaterialMap(const MaterialMap& a_material_map)
 	 shininess{ a_material_map.shininess } { }
 
 void MaterialMap::set_diffuse_map(std::string a_diffuse_map) {
-	diffuse_map.reset(new  Texture{ a_diffuse_map,  TextureType::TEX_2D, DIFFUSE_MAP_ID });
+	if (a_diffuse_map == "")
+		diffuse_map.reset(new Texture{});
+	else
+		diffuse_map.reset(new  Texture{ a_diffuse_map,  TextureType::TEX_2D, DIFFUSE_MAP_ID });
 }
 
 void MaterialMap::set_specular_map(std::string a_specular_map) {
-	specular_map.reset(new Texture{ a_specular_map, TextureType::TEX_2D, SPECULAR_MAP_ID });
+	if (a_specular_map == "")
+		specular_map.reset(new Texture{});
+	else
+		specular_map.reset(new Texture{ a_specular_map, TextureType::TEX_2D, SPECULAR_MAP_ID });
 }
 
 void MaterialMap::set_emission_map(std::string a_emission_map) {
-	emission_map.reset(new Texture{ a_emission_map, TextureType::TEX_2D, EMISSION_MAP_ID });
+	if (a_emission_map == "")
+		emission_map.reset(new Texture{});
+	else
+		emission_map.reset(new Texture{ a_emission_map, TextureType::TEX_2D, EMISSION_MAP_ID });
 }
 
 void MaterialMap::set_shininess(float a_shininess) {
@@ -474,6 +483,10 @@ void Shape::reset() {
 	m_transform_scale = glm::mat4(1.0f);
 	m_transform_pos = glm::mat4(1.0f);
 	m_transform_rotation = glm::mat4(1.0f);
+}
+
+MaterialMap& Shape::get_material_map() {
+	return m_material_map;
 }
 
 Buffer_data Shape::get_obj_data() const {
