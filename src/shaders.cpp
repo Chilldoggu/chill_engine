@@ -133,8 +133,8 @@ Uniform& Shader_program::operator[](const std::string& uniform_var) {
 	try {
 		return m_uniforms.at(uniform_var);
 	} catch (std::out_of_range) {
-		ERROR(std::format("{}::{} out of range.\n", m_name, uniform_var).c_str());
-		throw Error_code::range_error;
+		push_uniform(uniform_var);
+		return m_uniforms[uniform_var];
 	}
 }
 
@@ -153,10 +153,13 @@ bool Shader_program::push_uniform(const std::string& uniform_var, UniformType a_
 		m_uniforms[uniform_var + ".diffuse_map"]  = DIFFUSE_MAP_ID;
 		m_uniforms[uniform_var + ".specular_map"] = SPECULAR_MAP_ID;
 		m_uniforms[uniform_var + ".emission_map"] = EMISSION_MAP_ID;
-	} else if (a_type == UniformType::LIGHT || a_type == UniformType::POINT_LIGHT || a_type == UniformType::SPOTLIGHT) {
-		lamb_push_member({ "color", "pos_dir", "ambient_intens", "diffuse_intens", "specular_intens" });
+	} else if (a_type == UniformType::DIRECTIONAL_LIGHT || a_type == UniformType::POINT_LIGHT || a_type == UniformType::SPOTLIGHT) {
+		lamb_push_member({ "color", "ambient_intens", "diffuse_intens", "specular_intens" });
+		if (a_type == UniformType::DIRECTIONAL_LIGHT) {
+			lamb_push_member({ "dir" });
+		}
 		if (a_type == UniformType::POINT_LIGHT || a_type == UniformType::SPOTLIGHT) {
-			lamb_push_member({ "linear", "constant", "quadratic" });
+			lamb_push_member({ "pos", "linear", "constant", "quadratic" });
 		}
 		if (a_type == UniformType::SPOTLIGHT) {
 			lamb_push_member({ "spot_dir", "inner_cutoff", "outer_cutoff" });
@@ -171,14 +174,14 @@ void Shader_program::set_name(const std::string& a_name) {
 	m_name = a_name;
 }
 
-void Shader_program::set_uniform(const Light& a_light) {
-	std::string light_name = get_uniform_name(UniformType::LIGHT);
+void Shader_program::set_uniform(const DirectionalLight& a_light) {
+	std::string light_name = get_uniform_name(UniformType::DIRECTIONAL_LIGHT);
 	if (light_name == "") {
 		ERROR("Light uniform haven't been pushed.");
 		throw Error_code::range_error;
 	}
 	m_uniforms[light_name + ".color"] = a_light.get_color();
-	m_uniforms[light_name + ".pos_dir"] = a_light.get_pos_dir();
+	m_uniforms[light_name + ".dir"] = a_light.get_dir();
 	m_uniforms[light_name + ".ambient_intens"] = a_light.get_ambient();
 	m_uniforms[light_name + ".diffuse_intens"] = a_light.get_diffuse();
 	m_uniforms[light_name + ".specular_intens"] = a_light.get_specular();
@@ -192,7 +195,7 @@ void Shader_program::set_uniform(const PointLight& a_light) {
 		throw Error_code::range_error;
 	}
 	m_uniforms[point_light_name + ".color"] = a_light.get_color();
-	m_uniforms[point_light_name + ".pos_dir"] = a_light.get_pos_dir();
+	m_uniforms[point_light_name + ".pos"] = a_light.get_pos();
 	m_uniforms[point_light_name + ".ambient_intens"] = a_light.get_ambient();
 	m_uniforms[point_light_name + ".diffuse_intens"] = a_light.get_diffuse();
 	m_uniforms[point_light_name + ".specular_intens"] = a_light.get_specular();
@@ -208,7 +211,7 @@ void Shader_program::set_uniform(const SpotLight& a_light) {
 		throw Error_code::range_error;
 	}
 	m_uniforms[spotlight_name + ".color"] = a_light.get_color();
-	m_uniforms[spotlight_name + ".pos_dir"] = a_light.get_pos_dir();
+	m_uniforms[spotlight_name + ".pos"] = a_light.get_pos();
 	m_uniforms[spotlight_name + ".ambient_intens"] = a_light.get_ambient();
 	m_uniforms[spotlight_name + ".diffuse_intens"] = a_light.get_diffuse();
 	m_uniforms[spotlight_name + ".specular_intens"] = a_light.get_specular();

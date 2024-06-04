@@ -30,7 +30,7 @@ enum class UniformType {
 	PROJECTION_MAT,
 	NORMAL_MAT,
 	MATERIAL,
-	LIGHT,
+	DIRECTIONAL_LIGHT,
 	POINT_LIGHT,
 	SPOTLIGHT,
 };
@@ -122,7 +122,7 @@ public:
 	auto operator[](const std::string& uniform_var) -> Uniform&;
 	auto push_uniform(const std::string& uniform_var, UniformType a_type = UniformType::STANDARD) -> bool;
 	auto set_name(const std::string& a_name) -> void;
-	auto set_uniform(const Light& a_light) -> void;
+	auto set_uniform(const DirectionalLight& a_light) -> void;
 	auto set_uniform(const PointLight& a_light) -> void;
 	auto set_uniform(const SpotLight& a_light) -> void;
 	auto set_depth_testing(bool option) -> void;
