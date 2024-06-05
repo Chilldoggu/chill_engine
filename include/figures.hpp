@@ -38,20 +38,6 @@ struct Angle {
     Angle(float a_roll = 0.0f, float a_pitch = 0.0f, float a_yaw = 0.0f);
 };
 
-struct Point3D {
-    float x;
-    float y;
-    float z;
-
-    explicit Point3D(float a_x = 0.0f, float a_y = 0.0f, float a_z = 0.0f);
-
-    Point3D& operator+=(const Point3D& p);
-    Point3D& operator-=(const Point3D& p);
-    Point3D& operator*=(const Point3D& p);
-    Point3D& operator/=(const Point3D& p);
-};
-
-
 struct Material {
     glm::vec3 ambient;
     glm::vec3 diffuse;
@@ -128,19 +114,16 @@ private:
 
 class Shape {
 public:
-    Shape(Point3D a_center, float a_size, float a_degree_angle, BufferType a_data_type, std::vector<float> a_verts, std::vector<int> a_elem_indices = {}, bool a_wireframe = false);
-    Shape(Point3D a_center, float a_size, float a_degree_angle, BufferType a_data_type, const VBO_FIGURES& a_VBOs, bool a_wireframe = false);
+    Shape(glm::vec3 a_center, float a_size, float a_degree_angle, BufferType a_data_type, std::vector<float> a_verts, std::vector<int> a_elem_indices = {}, bool a_wireframe = false);
+    Shape(glm::vec3 a_center, float a_size, float a_degree_angle, BufferType a_data_type, const VBO_FIGURES& a_VBOs, bool a_wireframe = false);
 
-    auto set_pos(Point3D a_center) -> void;
-    auto set_pos(std::vector<float> a_vec) -> void;
-    auto set_pos(glm::vec3 a_vec) -> void;
+    auto set_pos(glm::vec3 a_center) -> void;
     auto set_color(const std::vector<float>& a_color, bool a_multi = false, std::vector<std::vector<int>> a_color_oreder = {}) -> void;
     auto set_normals(const std::vector<float>& a_normals) -> void;
     auto set_texture_buf(std::vector<float> a_texture_cords = {}, float a_ratio = 1.f) -> void;
     auto set_material_map(const MaterialMap& a_material_map) -> void;
 
-    auto move(Point3D a_vec) -> void;
-    auto move(std::vector<float> a_vec) -> void;
+    auto move(glm::vec3 a_vec) -> void;
     auto rotate(float degree_angle, Axis axis = Axis::Z) -> void;
     auto resize(float a_size) -> void;
     auto resize(std::vector<float> a_size) -> void;
@@ -151,7 +134,7 @@ public:
 	auto get_material_map() -> MaterialMap&;
     auto get_obj_data() const -> Buffer_data;
     auto get_size() const -> glm::vec3;
-    auto get_pos() const -> Point3D;
+    auto get_pos() const -> glm::vec3;
     auto get_model() const -> glm::mat4;
     auto get_normal_mat() const -> glm::mat3;
     auto inside_viewport() const -> bool;
@@ -161,7 +144,7 @@ public:
 private:
     float m_texture_ratio;
     Angle m_rad_angles;
-    Point3D m_center;
+	glm::vec3 m_center;
     MaterialMap m_material_map;
     glm::vec3 m_size;
     glm::mat4 m_transform_scale;
@@ -173,19 +156,19 @@ private:
 
 class Triangle2D : public Shape {
 public:
-    Triangle2D(Point3D a_center, float a_size, float a_degree_angle, bool a_wireframe = false);
+    Triangle2D(glm::vec3 a_center, float a_size, float a_degree_angle, bool a_wireframe = false);
 private:
 };
 
 class Rectangle2D : public Shape {
 public:
-    Rectangle2D(Point3D a_center, float a_size, float a_degree_angle, bool a_wireframe = false);
+    Rectangle2D(glm::vec3 a_center, float a_size, float a_degree_angle, bool a_wireframe = false);
 private:
 };
 
 class Cube : public Shape {
 public:
-    Cube(Point3D a_center, float a_size, float a_degree_angle, bool a_wireframe = false); // Create new local VBOs
-    Cube(Point3D a_center, float a_size, float a_degree_angle, const VBO_FIGURES& a_VBOs, bool a_wireframe = false); // Reuse global VBOs
+    Cube(glm::vec3 a_center, float a_size, float a_degree_angle, bool a_wireframe = false); // Create new local VBOs
+    Cube(glm::vec3 a_center, float a_size, float a_degree_angle, const VBO_FIGURES& a_VBOs, bool a_wireframe = false); // Reuse global VBOs
 private:
 };

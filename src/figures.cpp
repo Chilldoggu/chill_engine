@@ -1,14 +1,12 @@
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/fwd.hpp"
-#include <format>
-#include <initializer_list>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#include <cmath>
 #include <string>
 #include <iostream>
 #include <filesystem>
+#include <format>
 
 #include "assert.hpp"
 #include "figures.hpp"
@@ -166,36 +164,6 @@ unsigned int Texture::get_texture_id() const {
 	return m_texture_id;
 }
 
-Point3D::Point3D(float a_x, float a_y, float a_z) :x{ a_x }, y{ a_y }, z{ a_z } { }
-
-Point3D& Point3D::operator+=(const Point3D& p) {
-	x += p.x;
-	y += p.y;
-	z += p.z;
-	return *this;
-}
-
-Point3D& Point3D::operator-=(const Point3D& p) {
-	x -= p.x;
-	y -= p.y;
-	z -= p.z;
-	return *this;
-}
-
-Point3D& Point3D::operator*=(const Point3D& p) {
-	x *= p.x;
-	y *= p.y;
-	z *= p.z;
-	return *this;
-}
-
-Point3D& Point3D::operator/=(const Point3D& p) {
-	x /= p.x;
-	y /= p.y;
-	z /= p.z;
-	return *this;
-}
-
 Angle::Angle(float a_roll, float a_pitch, float a_yaw) :roll{ a_roll }, pitch{ a_pitch }, yaw{ a_yaw } { }
 
 Material::Material() :ambient(0.0f), diffuse(0.0f), specular(0.0f), shininess(0.0f) { }
@@ -247,8 +215,8 @@ VBO_FIGURES::~VBO_FIGURES() {
 	glDeleteBuffers(1, &NORMALS);
 }
 
-Shape::Shape(Point3D a_center, float a_size, float a_degree_angle, BufferType a_data_type, std::vector<float> a_verts, std::vector<int> a_elem_indices, bool a_wireframe)
-	:m_center{ std::move(a_center) }, m_size{ a_size, a_size, a_size }, m_rad_angles{ glm::radians(a_degree_angle), 0.0f, 0.0f }
+Shape::Shape(glm::vec3 a_center, float a_size, float a_degree_angle, BufferType a_data_type, std::vector<float> a_verts, std::vector<int> a_elem_indices, bool a_wireframe)
+	:m_center{ a_center }, m_size{ a_size, a_size, a_size }, m_rad_angles{ glm::radians(a_degree_angle), 0.0f, 0.0f }
 {
 	Buffer_data data{ a_data_type };
 	if (!a_verts.empty()) {
@@ -267,8 +235,8 @@ Shape::Shape(Point3D a_center, float a_size, float a_degree_angle, BufferType a_
 	m_shape_obj->data.vert_sum = a_verts.size() / 3;
 }
 
-Shape::Shape(Point3D a_center, float a_size, float a_degree_angle, BufferType a_data_type, const VBO_FIGURES& a_VBOs, bool a_wireframe)
-	:m_center{ std::move(a_center) }, m_size{ a_size, a_size, a_size }, m_rad_angles{ glm::radians(a_degree_angle), 0.0f, 0.0f }
+Shape::Shape(glm::vec3 a_center, float a_size, float a_degree_angle, BufferType a_data_type, const VBO_FIGURES& a_VBOs, bool a_wireframe)
+	:m_center{ a_center }, m_size{ a_size, a_size, a_size }, m_rad_angles{ glm::radians(a_degree_angle), 0.0f, 0.0f }
 {
 	Buffer_data data{ a_data_type };
 
@@ -416,45 +384,16 @@ void Shape::rotate(float degree_angle, Axis axis) {
 	}
 }
 
-void Shape::set_pos(Point3D a_center) {
+void Shape::set_pos(glm::vec3 a_center) {
 	m_center = a_center;
 	m_transform_pos = glm::mat4(1.0f);
-	m_transform_pos = glm::translate(m_transform_pos, glm::vec3(m_center.x, m_center.y, m_center.z));
+	m_transform_pos = glm::translate(m_transform_pos, m_center);
 
 }
 
-void Shape::set_pos(std::vector<float> a_vec) {
-	if (a_vec.size() != 3)
-		return;
-
-	m_center.x = a_vec[0];
-	m_center.y = a_vec[1];
-	m_center.z = a_vec[2];
-	m_transform_pos = glm::mat4{ 1.0f };
-	m_transform_pos = glm::translate(m_transform_pos, glm::vec3(a_vec[0], a_vec[1], a_vec[2]));
-}
-
-void Shape::set_pos(glm::vec3 a_vec) {
-	m_center.x = a_vec[0];
-	m_center.y = a_vec[1];
-	m_center.z = a_vec[2];
-	m_transform_pos = glm::mat4{ 1.0f };
-	m_transform_pos = glm::translate(m_transform_pos, a_vec);
-}
-
-void Shape::move(Point3D a_vec) {
+void Shape::move(glm::vec3 a_vec) {
 	m_center += a_vec;
-	m_transform_pos = glm::translate(m_transform_pos, glm::vec3(a_vec.x, a_vec.y, a_vec.z));
-}
-
-void Shape::move(std::vector<float> a_vec) {
-	if (a_vec.size() != 3)
-		return;
-
-	m_center.x += a_vec[0];
-	m_center.y += a_vec[1];
-	m_center.z += a_vec[2];
-	m_transform_pos = glm::translate(m_transform_pos, glm::vec3(a_vec[0], a_vec[1], a_vec[2]));
+	m_transform_pos = glm::translate(m_transform_pos, a_vec);
 }
 
 void Shape::resize(float a_size) {
@@ -489,7 +428,7 @@ glm::vec3 Shape::get_size() const {
 	return m_size;
 }
 
-Point3D Shape::get_pos() const {
+glm::vec3 Shape::get_pos() const {
 	return m_center;
 }
 
@@ -523,7 +462,7 @@ void Shape::print_texture_verts() const {
 	std::cout << std::endl;
 }
 
-Triangle2D::Triangle2D(Point3D a_center, float a_size, float a_degree_angle, bool a_wireframe)
+Triangle2D::Triangle2D(glm::vec3 a_center, float a_size, float a_degree_angle, bool a_wireframe)
 	:Shape(a_center, a_size, a_degree_angle, BufferType::VERTEX,
 		     { // Verticies
 				  0.0f,  0.5f, 0.0f,
@@ -532,7 +471,7 @@ Triangle2D::Triangle2D(Point3D a_center, float a_size, float a_degree_angle, boo
 		     }, {  }, a_wireframe)
 { }
 
-Rectangle2D::Rectangle2D(Point3D a_center, float a_size, float a_degree_angle, bool a_wireframe)
+Rectangle2D::Rectangle2D(glm::vec3 a_center, float a_size, float a_degree_angle, bool a_wireframe)
 	:Shape(a_center, a_size, a_degree_angle, BufferType::ELEMENT,
 		  { // Verticies
 			   0.5f,  0.5f, 0.0f,
@@ -546,10 +485,10 @@ Rectangle2D::Rectangle2D(Point3D a_center, float a_size, float a_degree_angle, b
 		  }, a_wireframe)
 { }
 
-Cube::Cube(Point3D a_center, float a_size, float a_degree_angle, bool a_wireframe)
+Cube::Cube(glm::vec3 a_center, float a_size, float a_degree_angle, bool a_wireframe)
 	:Shape(a_center, a_size, a_degree_angle, BufferType::VERTEX, CUBE_VERT_CORDS, { }, a_wireframe) {  }
 
-Cube::Cube(Point3D a_center, float a_size, float a_degree_angle, const VBO_FIGURES& a_VBOs, bool a_wireframe)
+Cube::Cube(glm::vec3 a_center, float a_size, float a_degree_angle, const VBO_FIGURES& a_VBOs, bool a_wireframe)
 	:Shape(a_center, a_size, a_degree_angle, BufferType::VERTEX, a_VBOs, a_wireframe) { }
 
 /*********************
