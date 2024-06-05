@@ -402,11 +402,8 @@ void Shape::resize(float a_size) {
 	m_transform_scale = glm::scale(m_transform_scale, m_size);
 }
 
-void Shape::resize(std::vector<float> a_size) {
-	if (a_size.size() != 3)
-		return;
-
-	m_size = glm::vec3(a_size[0], a_size[1], a_size[2]);
+void Shape::resize(glm::vec3 a_size) {
+	m_size = a_size;
 	m_transform_scale = glm::scale(m_transform_scale, m_size);
 }
 

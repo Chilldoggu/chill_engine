@@ -126,7 +126,7 @@ public:
     auto move(glm::vec3 a_vec) -> void;
     auto rotate(float degree_angle, Axis axis = Axis::Z) -> void;
     auto resize(float a_size) -> void;
-    auto resize(std::vector<float> a_size) -> void;
+    auto resize(glm::vec3 a_size) -> void;
     auto toggle_material_map() -> void;
     auto reset() -> void;
     auto draw(ShaderProgram& a_shader) -> void;
