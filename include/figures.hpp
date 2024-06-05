@@ -9,13 +9,13 @@
 #include <string>
 #include <vector>
 
-#include "shaders.hpp"
 #include "buffer_obj.hpp"
 
 template<typename T>
 unsigned int constexpr VBO_generate(std::vector<T> data);
 
 class Texture;
+class ShaderProgram;
 
 enum class Axis {
     X,
@@ -146,7 +146,7 @@ public:
     auto resize(std::vector<float> a_size) -> void;
     auto toggle_material_map() -> void;
     auto reset() -> void;
-    auto draw(Shader_program& a_shader) -> void;
+    auto draw(ShaderProgram& a_shader) -> void;
 
 	auto get_material_map() -> MaterialMap&;
     auto get_obj_data() const -> Buffer_data;
@@ -159,7 +159,6 @@ public:
     auto print_texture_verts() const -> void;
 
 private:
-    bool m_material_map_used;
     float m_texture_ratio;
     Angle m_rad_angles;
     Point3D m_center;

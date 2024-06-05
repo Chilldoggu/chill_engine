@@ -44,14 +44,14 @@ glm::vec3 Light::get_specular() const {
 	return m_specular_intens;
 }
 
-DirectionalLight::DirectionalLight(glm::vec3 a_direction, glm::vec3 a_color, glm::vec3 a_ambient, glm::vec3 a_diffuse, glm::vec3 a_specular)
+DirLight::DirLight(glm::vec3 a_direction, glm::vec3 a_color, glm::vec3 a_ambient, glm::vec3 a_diffuse, glm::vec3 a_specular)
 	:Light(glm::vec4(a_direction, 0.0f), a_color, a_ambient, a_diffuse, a_specular) { }
 
-void DirectionalLight::set_dir(glm::vec3 a_dir) {
+void DirLight::set_dir(glm::vec3 a_dir) {
 	m_pos_dir = glm::vec4(a_dir, 0.0f);
 }
 
-glm::vec3 DirectionalLight::get_dir() const {
+glm::vec3 DirLight::get_dir() const {
 	return glm::vec3(m_pos_dir);
 }
 

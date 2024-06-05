@@ -33,9 +33,9 @@ protected:
 	glm::vec3 m_specular_intens;
 };
 
-class DirectionalLight : public Light {
+class DirLight : public Light {
 public:
-	DirectionalLight(glm::vec3 a_direction, glm::vec3 a_color = glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3 a_ambient = glm::vec3(0.3f), glm::vec3 a_diffuse = glm::vec3(0.8f), glm::vec3 a_specular = glm::vec3(1.0f));
+	DirLight(glm::vec3 a_direction, glm::vec3 a_color = glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3 a_ambient = glm::vec3(0.3f), glm::vec3 a_diffuse = glm::vec3(0.8f), glm::vec3 a_specular = glm::vec3(1.0f));
 
 	auto set_dir(glm::vec3 a_dir) -> void;
 

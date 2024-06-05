@@ -30,7 +30,7 @@ UniformType Uniform::get_type() const {
 	return m_type;
 };
 
-Shader_src::Shader_src(ShaderType a_shader_type, const std::string& a_filename) 
+ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::string& a_filename) 
 	:shader_type{ a_shader_type }, filename{ a_filename }, success{ false }
 {
 	switch(shader_type) {
@@ -54,7 +54,7 @@ Shader_src::Shader_src(ShaderType a_shader_type, const std::string& a_filename)
 	compile_shader(&code);
 }
 
-void Shader_src::load_code(const std::string& filename) {
+void ShaderSrc::load_code(const std::string& filename) {
 	using std::ios;
 	std::ifstream file_vertex_shader{ "../" + filename, ios::in | ios::binary };
 
@@ -85,13 +85,13 @@ void Shader_src::load_code(const std::string& filename) {
 	code[len-1] = '\0';
 }
 
-void Shader_src::compile_shader(char** code) {
+void ShaderSrc::compile_shader(char** code) {
 	glShaderSource(shader_obj, 1, code, nullptr);
 	glCompileShader(shader_obj);
 	check_compilation();
 }
 
-void Shader_src::check_compilation() {
+void ShaderSrc::check_compilation() {
 	glGetShaderiv(shader_obj, GL_COMPILE_STATUS, &success);
 
 	if (!success) {
@@ -101,20 +101,20 @@ void Shader_src::check_compilation() {
 	}
 }
 
-Shader_src::~Shader_src() {
+ShaderSrc::~ShaderSrc() {
 	glDeleteShader(shader_obj);
 	shader_obj = 0;
 	delete[] code;
 }
 
-Shader_program::Shader_program(std::initializer_list<Shader_src> a_shaders)
+ShaderProgram::ShaderProgram(std::initializer_list<ShaderSrc> a_shaders)
 	:m_name{ "" }, m_shader_program{ glCreateProgram() }, m_depth_testing{ true }
 {
-	if (!std::find_if(a_shaders.begin(), a_shaders.end(), [](const Shader_src& sh){ return sh.shader_type == ShaderType::VERTEX; })) {
+	if (!std::find_if(a_shaders.begin(), a_shaders.end(), [](const ShaderSrc& sh){ return sh.shader_type == ShaderType::VERTEX; })) {
 		ERROR("Shader initializer list lacks vertex shader.");
 		throw Error_code::glsl_bad_shader_type;
 	}
-	if (!std::find_if(a_shaders.begin(), a_shaders.end(), [](const Shader_src& sh){ return sh.shader_type == ShaderType::FRAGMENT; })) {
+	if (!std::find_if(a_shaders.begin(), a_shaders.end(), [](const ShaderSrc& sh){ return sh.shader_type == ShaderType::FRAGMENT; })) {
 		ERROR("Shader initializer list lacks fragment shader.");
 		throw Error_code::glsl_bad_shader_type;
 	}
@@ -126,10 +126,10 @@ Shader_program::Shader_program(std::initializer_list<Shader_src> a_shaders)
 	check_linking();
 }
 
-Shader_program::Shader_program(const Shader_program& a_shader_prog)
+ShaderProgram::ShaderProgram(const ShaderProgram& a_shader_prog)
 	:m_name{ a_shader_prog.m_name }, m_shader_program{ a_shader_prog.m_shader_program }, m_depth_testing{ a_shader_prog.m_depth_testing } { }
 
-Uniform& Shader_program::operator[](const std::string& uniform_var) {
+Uniform& ShaderProgram::operator[](const std::string& uniform_var) {
 	try {
 		return m_uniforms.at(uniform_var);
 	} catch (std::out_of_range) {
@@ -138,7 +138,7 @@ Uniform& Shader_program::operator[](const std::string& uniform_var) {
 	}
 }
 
-bool Shader_program::push_uniform(const std::string& uniform_var, UniformType a_type) {
+bool ShaderProgram::push_uniform(const std::string& uniform_var, UniformType a_type) {
 	auto lamb_push_member = [&](std::initializer_list<std::string> member_names){
 		for (const auto& member_name : member_names) {
 			std::string full_name = uniform_var + "." + member_name;
@@ -146,7 +146,7 @@ bool Shader_program::push_uniform(const std::string& uniform_var, UniformType a_
 		}
 	};
 
-	if (a_type == UniformType::STANDARD || a_type == UniformType::MODEL_MAT || a_type == UniformType::VIEW_MAT || a_type == UniformType::PROJECTION_MAT || a_type == UniformType::NORMAL_MAT) {
+	if (a_type == UniformType::STANDARD) {
 		m_uniforms[uniform_var] = Uniform(a_type, uniform_var, glGetUniformLocation(m_shader_program, uniform_var.c_str()), m_shader_program);
 	} else if (a_type == UniformType::MATERIAL) {
 		lamb_push_member({ "shininess", "diffuse_map", "specular_map", "emission_map" });
@@ -170,64 +170,56 @@ bool Shader_program::push_uniform(const std::string& uniform_var, UniformType a_
 	return true;
 }
 
-void Shader_program::set_name(const std::string& a_name) {
+void ShaderProgram::set_name(const std::string& a_name) {
 	m_name = a_name;
 }
 
-void Shader_program::set_uniform(const DirectionalLight& a_light) {
-	std::string light_name = get_uniform_name(UniformType::DIRECTIONAL_LIGHT);
-	if (light_name == "") {
-		ERROR("Light uniform haven't been pushed.");
-		throw Error_code::range_error;
-	}
-	m_uniforms[light_name + ".color"] = a_light.get_color();
-	m_uniforms[light_name + ".dir"] = a_light.get_dir();
-	m_uniforms[light_name + ".ambient_intens"] = a_light.get_ambient();
-	m_uniforms[light_name + ".diffuse_intens"] = a_light.get_diffuse();
-	m_uniforms[light_name + ".specular_intens"] = a_light.get_specular();
+void ShaderProgram::set_uniform(const std::string& a_dirlight_name, const DirLight& a_light) {
+	m_uniforms.at(a_dirlight_name + ".color") = a_light.get_color();
+	m_uniforms.at(a_dirlight_name + ".dir") = a_light.get_dir();
+	m_uniforms.at(a_dirlight_name + ".ambient_intens") = a_light.get_ambient();
+	m_uniforms.at(a_dirlight_name + ".diffuse_intens") = a_light.get_diffuse();
+	m_uniforms.at(a_dirlight_name + ".specular_intens") = a_light.get_specular();
 }
 
 
-void Shader_program::set_uniform(const PointLight& a_light) {
-	std::string point_light_name = get_uniform_name(UniformType::POINT_LIGHT);
-	if (point_light_name == "") {
-		ERROR("Point light uniform haven't been pushed.");
-		throw Error_code::range_error;
-	}
-	m_uniforms[point_light_name + ".color"] = a_light.get_color();
-	m_uniforms[point_light_name + ".pos"] = a_light.get_pos();
-	m_uniforms[point_light_name + ".ambient_intens"] = a_light.get_ambient();
-	m_uniforms[point_light_name + ".diffuse_intens"] = a_light.get_diffuse();
-	m_uniforms[point_light_name + ".specular_intens"] = a_light.get_specular();
-	m_uniforms[point_light_name + ".linear"] = a_light.get_linear();
-	m_uniforms[point_light_name + ".constant"] = a_light.get_constant();
-	m_uniforms[point_light_name + ".quadratic"] = a_light.get_quadratic();
+void ShaderProgram::set_uniform(const std::string& a_pointlight_name, const PointLight& a_light) {
+	m_uniforms.at(a_pointlight_name + ".color") = a_light.get_color();
+	m_uniforms.at(a_pointlight_name + ".pos") = a_light.get_pos();
+	m_uniforms.at(a_pointlight_name + ".ambient_intens") = a_light.get_ambient();
+	m_uniforms.at(a_pointlight_name + ".diffuse_intens") = a_light.get_diffuse();
+	m_uniforms.at(a_pointlight_name + ".specular_intens") = a_light.get_specular();
+	m_uniforms.at(a_pointlight_name + ".linear") = a_light.get_linear();
+	m_uniforms.at(a_pointlight_name + ".constant") = a_light.get_constant();
+	m_uniforms.at(a_pointlight_name + ".quadratic") = a_light.get_quadratic();
 }
 
-void Shader_program::set_uniform(const SpotLight& a_light) {
-	std::string spotlight_name = get_uniform_name(UniformType::SPOTLIGHT);
-	if (spotlight_name == "") {
-		ERROR("Spotlight uniform haven't been pushed.");
-		throw Error_code::range_error;
-	}
-	m_uniforms[spotlight_name + ".color"] = a_light.get_color();
-	m_uniforms[spotlight_name + ".pos"] = a_light.get_pos();
-	m_uniforms[spotlight_name + ".ambient_intens"] = a_light.get_ambient();
-	m_uniforms[spotlight_name + ".diffuse_intens"] = a_light.get_diffuse();
-	m_uniforms[spotlight_name + ".specular_intens"] = a_light.get_specular();
-	m_uniforms[spotlight_name + ".linear"] = a_light.get_linear();
-	m_uniforms[spotlight_name + ".constant"] = a_light.get_constant();
-	m_uniforms[spotlight_name + ".quadratic"] = a_light.get_quadratic();
-	m_uniforms[spotlight_name + ".inner_cutoff"] = a_light.get_inner_cutoff();
-	m_uniforms[spotlight_name + ".outer_cutoff"] = a_light.get_outer_cutoff();
-	m_uniforms[spotlight_name + ".spot_dir"] = a_light.get_spot_dir();
+void ShaderProgram::set_uniform(const std::string& a_spotlight_name, const SpotLight& a_light) {
+	m_uniforms.at(a_spotlight_name + ".color") = a_light.get_color();
+	m_uniforms.at(a_spotlight_name + ".pos") = a_light.get_pos();
+	m_uniforms.at(a_spotlight_name + ".ambient_intens") = a_light.get_ambient();
+	m_uniforms.at(a_spotlight_name + ".diffuse_intens") = a_light.get_diffuse();
+	m_uniforms.at(a_spotlight_name + ".specular_intens") = a_light.get_specular();
+	m_uniforms.at(a_spotlight_name + ".linear") = a_light.get_linear();
+	m_uniforms.at(a_spotlight_name + ".constant") = a_light.get_constant();
+	m_uniforms.at(a_spotlight_name + ".quadratic") = a_light.get_quadratic();
+	m_uniforms.at(a_spotlight_name + ".inner_cutoff") = a_light.get_inner_cutoff();
+	m_uniforms.at(a_spotlight_name + ".outer_cutoff") = a_light.get_outer_cutoff();
+	m_uniforms.at(a_spotlight_name + ".spot_dir") = a_light.get_spot_dir();
 }
 
-void Shader_program::set_depth_testing(bool a_option) {
+void ShaderProgram::set_uniform(const std::string& a_material_name, const MaterialMap& a_material) {
+	m_uniforms[a_material_name + ".shininess"] = a_material.shininess;
+	a_material.diffuse_map->activate();
+	a_material.specular_map->activate();
+	a_material.emission_map->activate();
+}
+
+void ShaderProgram::set_depth_testing(bool a_option) {
 	m_depth_testing = a_option;
 }
 
-void Shader_program::check_linking() {
+void ShaderProgram::check_linking() {
 	glGetProgramiv(m_shader_program, GL_LINK_STATUS, &m_success);
 	if (!m_success) {
 		glGetProgramInfoLog(m_shader_program, 1024, nullptr, m_infoLog);
@@ -236,15 +228,15 @@ void Shader_program::check_linking() {
 	}
 }
 
-void Shader_program::use() {
+void ShaderProgram::use() {
 	glUseProgram(m_shader_program);
 }
 
-Shader_program::~Shader_program() {
+ShaderProgram::~ShaderProgram() {
 	glDeleteProgram(m_shader_program);
 }
 
-std::string Shader_program::get_uniform_name(UniformType a_type) const {
+std::string ShaderProgram::get_uniform_name(UniformType a_type) const {
 	std::string ret{ "" };
 	for (const auto& [key, val] : m_uniforms) {
 		if (val.get_type() == a_type) {
@@ -260,15 +252,15 @@ std::string Shader_program::get_uniform_name(UniformType a_type) const {
 	}
 }
 
-bool Shader_program::get_depth_testing() const {
+bool ShaderProgram::get_depth_testing() const {
 	return m_depth_testing;
 }
 
-unsigned int Shader_program::get_shader_program() const { 
+unsigned int ShaderProgram::get_shader_program() const { 
 	return m_shader_program;
 }
 
-void Shader_program::debug() const {
+void ShaderProgram::debug() const {
 	for (const auto& [key, val] : m_uniforms) {
 		std::cout << std::format("key: {}\n", key);
 	}

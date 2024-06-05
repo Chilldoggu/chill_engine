@@ -38,18 +38,18 @@ App::App(int win_width, int win_height, std::string win_title, CursorMode win_mo
 
 App::~App() {
 	for (auto& key : m_shaders) {
-		Shader_program* shader = key.second;
+		ShaderProgram* shader = key.second;
 		delete shader;
 	}
 }
 
-void App::new_shader(const std::string& a_name, Shader_program& a_shader) {
-	m_shaders[a_name] = new Shader_program(a_shader);
+void App::new_shader(const std::string& a_name, ShaderProgram& a_shader) {
+	m_shaders[a_name] = new ShaderProgram(a_shader);
 	m_shaders[a_name]->set_name(a_name);
 }
 
-void App::new_shader(const std::string& a_name, std::initializer_list<Shader_src> a_shaders_src) {
-	m_shaders[a_name] = new Shader_program(a_shaders_src);
+void App::new_shader(const std::string& a_name, std::initializer_list<ShaderSrc> a_shaders_src) {
+	m_shaders[a_name] = new ShaderProgram(a_shaders_src);
 	m_shaders[a_name]->set_name(a_name);
 }
 
@@ -84,6 +84,6 @@ Camera& App::get_cam() {
 	return *m_cam;
 }
 
-Shader_program& App::get_shader(const std::string& name) {
+ShaderProgram& App::get_shader(const std::string& name) {
 	return *(m_shaders[name]);
 }

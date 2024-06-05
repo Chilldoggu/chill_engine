@@ -113,14 +113,14 @@ void Window::title_change() {
 	glfwSetWindowTitle(m_window, m_title.c_str());
 }
 
-void Window::draw(std::function<void(void)> draw_body, std::function<void(void)> custom_input, std::function<void(void)> imgui_body) {
+void Window::draw(glm::vec3 a_background_color, std::function<void(void)> draw_body, std::function<void(void)> custom_input, std::function<void(void)> imgui_body) {
 	while (!closed()) {
 		glfwPollEvents();
 
 		process_input();
 		custom_input();
 
-		glClearColor(0.0, 0.0, 0.0, 1.0);
+		glClearColor(a_background_color[0], a_background_color[1], a_background_color[2], 1.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Rendering

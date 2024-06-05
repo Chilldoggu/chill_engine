@@ -12,6 +12,7 @@
 
 #include "assert.hpp"
 #include "light.hpp"
+#include "figures.hpp"
 
 #define INFO_LOG_SIZ 1024
 #define DIFFUSE_MAP_ID  0
@@ -25,10 +26,6 @@ enum class ShaderType {
 
 enum class UniformType {
 	STANDARD,
-	MODEL_MAT,
-	VIEW_MAT,
-	PROJECTION_MAT,
-	NORMAL_MAT,
 	MATERIAL,
 	DIRECTIONAL_LIGHT,
 	POINT_LIGHT,
@@ -96,7 +93,7 @@ Uniform& Uniform::operator=(T val) {
 	return *this;
 }
 
-struct Shader_src {
+struct ShaderSrc {
 	int success;
 	char infoLog[INFO_LOG_SIZ];
 	char* code = nullptr;
@@ -105,26 +102,27 @@ struct Shader_src {
 	std::string shader_name;
 	unsigned int shader_obj;
 
-	Shader_src(ShaderType a_shader_type, const std::string& a_filename);
+	ShaderSrc(ShaderType a_shader_type, const std::string& a_filename);
 
 	auto load_code(const std::string& filename) -> void;
 	auto compile_shader(char** code) -> void;
 	auto check_compilation() -> void;
-	~Shader_src();
+	~ShaderSrc();
 };
 
-class Shader_program {
+class ShaderProgram {
 public:
-	Shader_program(std::initializer_list<Shader_src> a_shaders);
-	Shader_program(const Shader_program& a_shader_prog);
-	~Shader_program();
+	ShaderProgram(std::initializer_list<ShaderSrc> a_shaders);
+	ShaderProgram(const ShaderProgram& a_shader_prog);
+	~ShaderProgram();
 
 	auto operator[](const std::string& uniform_var) -> Uniform&;
 	auto push_uniform(const std::string& uniform_var, UniformType a_type = UniformType::STANDARD) -> bool;
 	auto set_name(const std::string& a_name) -> void;
-	auto set_uniform(const DirectionalLight& a_light) -> void;
-	auto set_uniform(const PointLight& a_light) -> void;
-	auto set_uniform(const SpotLight& a_light) -> void;
+	auto set_uniform(const std::string& a_dirlight_name, const DirLight& a_light) -> void;
+	auto set_uniform(const std::string& a_pointlight_name, const PointLight& a_light) -> void;
+	auto set_uniform(const std::string& a_spotlight_name, const SpotLight& a_light) -> void;
+	auto set_uniform(const std::string& a_material_name, const MaterialMap& a_material) -> void;
 	auto set_depth_testing(bool option) -> void;
 	auto check_linking() -> void;
 	auto use() -> void;

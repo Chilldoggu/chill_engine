@@ -248,8 +248,7 @@ VBO_FIGURES::~VBO_FIGURES() {
 }
 
 Shape::Shape(Point3D a_center, float a_size, float a_degree_angle, BufferType a_data_type, std::vector<float> a_verts, std::vector<int> a_elem_indices, bool a_wireframe)
-	:m_center{ std::move(a_center) }, m_size{ a_size, a_size, a_size }, m_rad_angles{ glm::radians(a_degree_angle), 0.0f, 0.0f },
-	 m_material_map_used{ false }
+	:m_center{ std::move(a_center) }, m_size{ a_size, a_size, a_size }, m_rad_angles{ glm::radians(a_degree_angle), 0.0f, 0.0f }
 {
 	Buffer_data data{ a_data_type };
 	if (!a_verts.empty()) {
@@ -269,8 +268,7 @@ Shape::Shape(Point3D a_center, float a_size, float a_degree_angle, BufferType a_
 }
 
 Shape::Shape(Point3D a_center, float a_size, float a_degree_angle, BufferType a_data_type, const VBO_FIGURES& a_VBOs, bool a_wireframe)
-	:m_center{ std::move(a_center) }, m_size{ a_size, a_size, a_size }, m_rad_angles{ glm::radians(a_degree_angle), 0.0f, 0.0f },
-	 m_material_map_used{ false }
+	:m_center{ std::move(a_center) }, m_size{ a_size, a_size, a_size }, m_rad_angles{ glm::radians(a_degree_angle), 0.0f, 0.0f }
 {
 	Buffer_data data{ a_data_type };
 
@@ -370,23 +368,17 @@ void Shape::set_texture_buf(std::vector<float> a_texture_cords, float a_ratio) {
 }
 
 void Shape::set_material_map(const MaterialMap& a_material_map) {
-	m_material_map_used = true;
-	
 	m_material_map.diffuse_map.reset(new Texture(*a_material_map.diffuse_map));
 	m_material_map.specular_map.reset(new Texture(*a_material_map.specular_map));
 	m_material_map.emission_map.reset(new Texture(*a_material_map.emission_map));
 	m_material_map.shininess = a_material_map.shininess;
 }
 
-void Shape::toggle_material_map() {
-	m_material_map_used = !m_material_map_used;
-}
-
-void Shape::draw(Shader_program& a_shader) {
+void Shape::draw(ShaderProgram& a_shader) {
 	a_shader.use();
 
-	if (std::string model_name = a_shader.get_uniform_name(UniformType::MODEL_MAT); model_name != "")
-		a_shader[model_name] = get_model();
+	// if (std::string model_name = a_shader.get_uniform_name(UniformType::MODEL_MAT); model_name != "")
+	// 	a_shader[model_name] = get_model();
 
 	if (a_shader.get_depth_testing()) {
 		glEnable(GL_DEPTH_TEST);
@@ -394,12 +386,12 @@ void Shape::draw(Shader_program& a_shader) {
 		glDisable(GL_DEPTH_TEST);
 	}
 
-	if (m_material_map_used) {
-		a_shader[a_shader.get_uniform_name(UniformType::MATERIAL) + ".shininess"] = m_material_map.shininess;
-		m_material_map.diffuse_map->activate();
-		m_material_map.specular_map->activate();
-		m_material_map.emission_map->activate();
-	}
+	// if (m_material_map_used) {
+	// 	a_shader[a_shader.get_uniform_name(UniformType::MATERIAL) + ".shininess"] = m_material_map.shininess;
+	// 	m_material_map.diffuse_map->activate();
+	// 	m_material_map.specular_map->activate();
+	// 	m_material_map.emission_map->activate();
+	// }
 
 	m_shape_obj->draw_vertices();
 }

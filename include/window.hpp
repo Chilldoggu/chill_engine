@@ -1,5 +1,6 @@
 #pragma once
 
+#include "glm/ext/vector_float3.hpp"
 #include "imgui/imgui.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -19,7 +20,7 @@ public:
 	Window();
 	~Window();
 
-	auto draw(std::function<void(void)> draw_body, std::function<void(void)> custom_input, std::function<void(void)> imgui_body) -> void;
+	auto draw(glm::vec3 a_backgoround_color, std::function<void(void)> draw_body, std::function<void(void)> custom_input, std::function<void(void)> imgui_body) -> void;
 	auto closed() -> bool;
 	auto set_width(float width) -> void;
 	auto set_height(float height) -> void;
