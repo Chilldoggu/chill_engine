@@ -24,21 +24,12 @@ enum class ShaderType {
 	FRAGMENT
 };
 
-enum class UniformType {
-	STANDARD,
-	MATERIAL,
-	DIRECTIONAL_LIGHT,
-	POINT_LIGHT,
-	SPOTLIGHT,
-};
-
 class Uniform {
 public:
-	Uniform(UniformType a_type, std::string a_name, int a_location, unsigned int a_program);
+	Uniform(std::string a_name, int a_location, unsigned int a_program);
 	Uniform();
 
 	auto get_name() const -> std::string;
-	auto get_type() const -> UniformType;
 
 	template<typename T>
 	auto operator=(T val) -> Uniform&;
@@ -47,7 +38,6 @@ private:
 	int m_uniform_location;
 	unsigned int m_shader_program;
 	std::string m_name;
-	UniformType m_type;
 };
 
 template<typename T>
@@ -116,24 +106,25 @@ public:
 	ShaderProgram(const ShaderProgram& a_shader_prog);
 	~ShaderProgram();
 
-	auto operator[](const std::string& uniform_var) -> Uniform&;
-	auto push_uniform(const std::string& uniform_var, UniformType a_type = UniformType::STANDARD) -> bool;
+	auto operator[](const std::string& a_uniform_var) -> Uniform&;
 	auto set_name(const std::string& a_name) -> void;
 	auto set_uniform(const std::string& a_dirlight_name, const DirLight& a_light) -> void;
 	auto set_uniform(const std::string& a_pointlight_name, const PointLight& a_light) -> void;
 	auto set_uniform(const std::string& a_spotlight_name, const SpotLight& a_light) -> void;
 	auto set_uniform(const std::string& a_material_name, const MaterialMap& a_material) -> void;
 	auto set_depth_testing(bool option) -> void;
-	auto check_linking() -> void;
 	auto use() -> void;
 
-	auto get_uniform_name(UniformType a_type) const -> std::string;
 	auto get_depth_testing() const -> bool;
 	auto get_shader_program() const -> unsigned int;
 
 	auto debug() const -> void;
 
 private:
+	auto push_uniform(const std::string& a_uniform_var) -> void;
+	auto push_uniform_struct(const std::string& uniform_var, std::initializer_list<std::string> a_members) -> void;
+	auto check_linking() -> void;
+
 	int m_success;
 	char m_infoLog[INFO_LOG_SIZ];
 	bool m_depth_testing;
