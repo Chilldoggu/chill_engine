@@ -42,6 +42,7 @@ public:
     auto get_position() const -> glm::vec3;
 	auto get_far_plane() const -> float;
 	auto get_near_plane() const -> float;
+	auto get_movement_speed() const -> float;
     auto get_projection_matrix(float width, float height) const -> glm::mat4;
 
 private:

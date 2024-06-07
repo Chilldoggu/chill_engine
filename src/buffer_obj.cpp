@@ -1,4 +1,5 @@
 #include "assert.hpp"
+#include "figures.hpp"
 #include "buffer_obj.hpp"
 
 Buffer_data::Buffer_data(BufferType a_type)
@@ -47,6 +48,21 @@ VAO::VAO(const Buffer_data& a_data, bool a_wireframe)
 		set_elements();
 	}
 }
+
+VAO::VAO(BufferType a_buf_type, const VBO_FIGURES& a_VBOs, bool a_wireframe)
+	:data{ a_buf_type }, m_wireframe{ a_wireframe }
+{
+	glGenVertexArrays(1, &m_VAO);
+
+	reuse_pos(a_VBOs.VERTS);
+	reuse_normals(a_VBOs.NORMALS);
+	reuse_texture(a_VBOs.TEXTURE);
+	if (a_VBOs.INDICIES != EMPTY_VBO && a_buf_type == BufferType::ELEMENT)
+		reuse_elements(a_VBOs.INDICIES);
+	data.vert_sum = a_VBOs.vert_sum;
+}
+
+VAO::VAO(const VAO& a_vao) :VAO(a_vao.data, a_vao.m_wireframe) { }
 
 void VAO::set_pos(const std::vector<float>& a_pos) {
 	if (!a_pos.empty())
@@ -121,6 +137,9 @@ void VAO::set_elements(const std::vector<int>& a_elem_indicies) {
 }
 
 void VAO::reuse_pos(unsigned int a_VBO_vert) {
+	if (a_VBO_vert == EMPTY_VBO)
+		return;
+
 	data.verts.clear();
 
 	m_VBO_vert = EMPTY_VBO;
@@ -133,6 +152,9 @@ void VAO::reuse_pos(unsigned int a_VBO_vert) {
 }
 
 void VAO::reuse_color(unsigned int a_VBO_color) {
+	if (a_VBO_color == EMPTY_VBO)
+		return;
+
 	data.colors.clear();
 
 	m_VBO_color = EMPTY_VBO;
@@ -145,6 +167,9 @@ void VAO::reuse_color(unsigned int a_VBO_color) {
 }
 
 void VAO::reuse_normals(unsigned int a_VBO_normal) {
+	if (a_VBO_normal == EMPTY_VBO)
+		return;
+
 	data.normals.clear();
 
 	m_VBO_normal = EMPTY_VBO;
@@ -157,6 +182,9 @@ void VAO::reuse_normals(unsigned int a_VBO_normal) {
 }
 
 void VAO::reuse_texture(unsigned int a_VBO_texture) {
+	if (a_VBO_texture == EMPTY_VBO)
+		return;
+
 	data.texture.clear();
 
 	m_VBO_texture = EMPTY_VBO;
@@ -169,6 +197,9 @@ void VAO::reuse_texture(unsigned int a_VBO_texture) {
 }
 
 void VAO::reuse_elements(unsigned int a_EBO) {
+	if (a_EBO == EMPTY_VBO)
+		return;
+
 	data.indicies.clear();
 
 	m_EBO = EMPTY_VBO;

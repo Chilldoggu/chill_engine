@@ -36,6 +36,10 @@ glm::mat4 Camera::get_look_at() const {
 	return glm::lookAt(m_position, m_position + m_front, m_up);
 }
 
+float Camera::get_movement_speed() const {
+	return m_movement_speed;
+}
+
 void Camera::set_fov(float a_fov) {
 	m_fov = a_fov;
 }

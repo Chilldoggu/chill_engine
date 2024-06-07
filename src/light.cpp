@@ -63,6 +63,11 @@ void PointLight::set_pos(glm::vec3 a_pos) {
 	m_pos_dir = glm::vec4(a_pos, 1.0f);
 }
 
+void PointLight::set_max_dist(float a_max_distance) {
+	m_linear = gen_att_linear(a_max_distance);
+	m_quadratic = gen_att_quadratic(a_max_distance);
+}
+
 void PointLight::set_const_att(float a_const) {
 	m_constant = a_const;
 }

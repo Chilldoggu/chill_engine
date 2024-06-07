@@ -47,6 +47,7 @@ public:
 	PointLight(float a_max_distance, glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 a_color = glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3 m_ambient = glm::vec3(0.3f), glm::vec3 m_diffuse = glm::vec3(0.8f), glm::vec3 m_specular = glm::vec3(1.0f));
 
 	auto set_pos(glm::vec3 a_pos) -> void;
+	auto set_max_dist(float a_max_distance) -> void;
 	auto set_const_att(float a_const) -> void;
 	auto set_linear_att(float a_linear) -> void;
 	auto set_quadratic_att(float a_quadratic) -> void;

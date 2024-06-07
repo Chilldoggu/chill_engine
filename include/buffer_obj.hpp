@@ -11,6 +11,8 @@
 #define ATTRIB_TEX_LOCATION    2
 #define ATTRIB_NORMAL_LOCATION 3
 
+struct VBO_FIGURES;
+
 enum class BufferType {
 	VERTEX,
 	ELEMENT,
@@ -37,6 +39,8 @@ public:
 	Buffer_data data;
 
 	VAO(const Buffer_data& a_data, bool a_wireframe = false);
+	VAO(BufferType a_buf_type, const VBO_FIGURES& a_VBOs, bool a_wireframe = false);
+	VAO(const VAO& a_vao);
 	~VAO();
 
 	auto set_pos(const std::vector<float>& a_pos = {}) -> void;

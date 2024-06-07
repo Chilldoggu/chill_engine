@@ -48,14 +48,15 @@ struct Material {
     Material(glm::vec3 a_ambient, glm::vec3 a_diffuse, glm::vec3 a_specular, float a_shininess);
 };
 
+// Copy assignment means sharing pointer to a texture that CAN be DELETED but
+// proves to be effficient when modyfying the original MaterialMap object.
 struct MaterialMap {
-    std::unique_ptr<Texture> diffuse_map;
-    std::unique_ptr<Texture> specular_map;
-    std::unique_ptr<Texture> emission_map;
+    std::shared_ptr<Texture> diffuse_map;
+    std::shared_ptr<Texture> specular_map;
+    std::shared_ptr<Texture> emission_map;
     float shininess;
 
     MaterialMap(std::string a_diffuse_map = "", std::string a_specular_map = "", std::string a_emission_map = "", float a_shininess = 32);
-    MaterialMap(const MaterialMap& a_material_map);
 
 	auto set_diffuse_map(std::string a_diffuse_map) -> void;
 	auto set_specular_map(std::string a_specular_map) -> void;
@@ -142,16 +143,17 @@ public:
     auto print_texture_verts() const -> void;
 
 private:
-    float m_texture_ratio;
-    Angle m_rad_angles;
+	float m_texture_ratio;
+	Angle m_rad_angles;
 	glm::vec3 m_center;
-    MaterialMap m_material_map;
-    glm::vec3 m_size;
-    glm::mat4 m_transform_scale;
-    glm::mat4 m_transform_rotation;
-    glm::mat4 m_transform_pos;
-    glm::mat2 m_texture_scalar;
-    std::unique_ptr<VAO> m_shape_obj;
+	MaterialMap m_material_map;
+	glm::vec3 m_size;
+	glm::mat4 m_transform_scale;
+	glm::mat4 m_transform_rotation;
+	glm::mat4 m_transform_pos;
+	glm::mat2 m_texture_scalar;
+	std::shared_ptr<VAO> m_shape_obj;
+	VBO_FIGURES m_reused_VBOs;
 };
 
 class Triangle2D : public Shape {

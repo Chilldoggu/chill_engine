@@ -1,5 +1,7 @@
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/fwd.hpp"
+#include <iterator>
+#include <memory>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -177,12 +179,6 @@ MaterialMap::MaterialMap(std::string a_diffuse_map, std::string a_specular_map, 
 	 emission_map{ (a_emission_map != "") ? new Texture{ a_emission_map, TextureType::TEX_2D, EMISSION_MAP_ID } : new Texture{} },
 	 shininess{ a_shininess } { }
 
-MaterialMap::MaterialMap(const MaterialMap& a_material_map)
-	:diffuse_map { new Texture{ *a_material_map.diffuse_map } },
-	 specular_map{ new Texture{ *a_material_map.specular_map } },
-	 emission_map{ new Texture{ *a_material_map.emission_map } },
-	 shininess{ a_material_map.shininess } { }
-
 void MaterialMap::set_diffuse_map(std::string a_diffuse_map) {
 	if (a_diffuse_map == "")
 		diffuse_map.reset(new Texture{});
@@ -209,10 +205,10 @@ void MaterialMap::set_shininess(float a_shininess) {
 }
 
 VBO_FIGURES::~VBO_FIGURES() {
-	glDeleteBuffers(1, &VERTS);
-	glDeleteBuffers(1, &TEXTURE);
-	glDeleteBuffers(1, &INDICIES);
-	glDeleteBuffers(1, &NORMALS);
+	// glDeleteBuffers(1, &VERTS);
+	// glDeleteBuffers(1, &TEXTURE);
+	// glDeleteBuffers(1, &INDICIES);
+	// glDeleteBuffers(1, &NORMALS);
 }
 
 Shape::Shape(glm::vec3 a_center, float a_size, float a_degree_angle, BufferType a_data_type, std::vector<float> a_verts, std::vector<int> a_elem_indices, bool a_wireframe)
@@ -231,28 +227,19 @@ Shape::Shape(glm::vec3 a_center, float a_size, float a_degree_angle, BufferType 
 	m_transform_pos      = glm::translate(glm::mat4(1.0f), glm::vec3(m_center.x, m_center.y, m_center.z));
 	m_texture_scalar     = glm::mat2{ a_size };
 
-	m_shape_obj = std::make_unique<VAO>(data, a_wireframe);
+	m_shape_obj = std::make_shared<VAO>(data, a_wireframe);
 	m_shape_obj->data.vert_sum = a_verts.size() / 3;
 }
 
 Shape::Shape(glm::vec3 a_center, float a_size, float a_degree_angle, BufferType a_data_type, const VBO_FIGURES& a_VBOs, bool a_wireframe)
-	:m_center{ a_center }, m_size{ a_size, a_size, a_size }, m_rad_angles{ glm::radians(a_degree_angle), 0.0f, 0.0f }
+	:m_center{ a_center }, m_size{ a_size, a_size, a_size }, m_rad_angles{ glm::radians(a_degree_angle), 0.0f, 0.0f }, m_reused_VBOs{ a_VBOs }
 {
-	Buffer_data data{ a_data_type };
-
 	m_transform_scale    = glm::scale(glm::mat4(1.0f), m_size);
 	m_transform_rotation = glm::rotate(glm::mat4(1.0f), m_rad_angles.roll, glm::vec3(0.0f, 0.0f, 1.0f));
 	m_transform_pos      = glm::translate(glm::mat4(1.0f), glm::vec3(m_center.x, m_center.y, m_center.z));
 	m_texture_scalar     = glm::mat2{ a_size };
 
-	m_shape_obj = std::make_unique<VAO>(data, a_wireframe);
-	m_shape_obj->reuse_pos(a_VBOs.VERTS);
-	m_shape_obj->reuse_normals(a_VBOs.NORMALS);
-	m_shape_obj->reuse_texture(a_VBOs.TEXTURE);
-	if (a_VBOs.INDICIES != EMPTY_VBO && data.buffer_type == BufferType::ELEMENT)
-		m_shape_obj->reuse_elements(a_VBOs.INDICIES);
-	
-	m_shape_obj->data.vert_sum = a_VBOs.vert_sum;
+	m_shape_obj = std::make_shared<VAO>(a_data_type, a_VBOs, a_wireframe);
 }
 
 void Shape::set_color(const std::vector<float>& a_color, bool a_multi, std::vector<std::vector<int>> a_color_order) {
@@ -345,21 +332,11 @@ void Shape::set_material_map(const MaterialMap& a_material_map) {
 void Shape::draw(ShaderProgram& a_shader) {
 	a_shader.use();
 
-	// if (std::string model_name = a_shader.get_uniform_name(UniformType::MODEL_MAT); model_name != "")
-	// 	a_shader[model_name] = get_model();
-
 	if (a_shader.get_depth_testing()) {
 		glEnable(GL_DEPTH_TEST);
 	} else {
 		glDisable(GL_DEPTH_TEST);
 	}
-
-	// if (m_material_map_used) {
-	// 	a_shader[a_shader.get_uniform_name(UniformType::MATERIAL) + ".shininess"] = m_material_map.shininess;
-	// 	m_material_map.diffuse_map->activate();
-	// 	m_material_map.specular_map->activate();
-	// 	m_material_map.emission_map->activate();
-	// }
 
 	m_shape_obj->draw_vertices();
 }
@@ -545,4 +522,15 @@ void Shape::_texture_resize(float a_ratio) {
 	overwrite_texture_pos();
 	m_shape_obj->update_texture();
 }
+
+Shape::Shape(const Shape& a_shape)
+	:m_center{ a_shape.m_center }, m_size{ a_shape.m_size }, m_rad_angles{ a_shape.m_rad_angles }, m_shape_obj{ new VAO(*a_shape.m_shape_obj) },
+	 m_texture_ratio{ a_shape.m_texture_ratio }, m_material_map{ a_shape.m_material_map }, m_reused_VBOs{ a_shape.m_reused_VBOs }
+{
+	if (m_reused_VBOs.VERTS != EMPTY_VBO) m_shape_obj->reuse_pos(m_reused_VBOs.VERTS);
+	if (m_reused_VBOs.NORMALS != EMPTY_VBO) m_shape_obj->reuse_pos(m_reused_VBOs.NORMALS);
+	if (m_reused_VBOs.TEXTURE != EMPTY_VBO) m_shape_obj->reuse_pos(m_reused_VBOs.TEXTURE);
+	if (m_reused_VBOs.INDICIES != EMPTY_VBO && m_shape_obj->data.buffer_type == BufferType::ELEMENT) m_shape_obj->reuse_pos(m_reused_VBOs.INDICIES);
+}
+
 */
