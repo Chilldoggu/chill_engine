@@ -17,7 +17,7 @@ uniform mat3 normal_mat;
 void main() {
 	TexCord = aTexCord;
 	Normal = normal_mat * aNormal;
-	FragPos = vec3(view * model * vec4(aPos, 1.0f));
+	FragPos = vec3(model * vec4(aPos, 1.0f));
 
 	gl_Position = projection * view * model * vec4(aPos, 1.0);
 }

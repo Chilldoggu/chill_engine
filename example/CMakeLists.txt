@@ -11,18 +11,19 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 23)
 
 
-project(ChillEngine_example)
-add_executable(ChillEngine_example)
-target_sources(ChillEngine_example PUBLIC main.cpp)
+project(OpenGL_lightning)
+add_executable(OpenGL_lightning)
+target_sources(OpenGL_lightning PUBLIC main.cpp)
 
-# Debug
-# target_compile_options(ChillEngine_example PUBLIC "-g")
+# For Debug possibility
+target_compile_options(OpenGL_lightning PUBLIC "-g")
 
 # Libraries
 add_subdirectory("chill_engine")
 
-target_link_libraries(ChillEngine_example
+target_link_libraries(OpenGL_lightning 
 	PUBLIC PkgConfig::glfw3
+	PUBLIC PkgConfig::assimp
 	PUBLIC glad
 	PUBLIC window
 	PUBLIC buffer_obj
@@ -30,6 +31,7 @@ target_link_libraries(ChillEngine_example
 	PUBLIC figures
 	PUBLIC camera
 	PUBLIC app
-	PUBLIC light)
+	PUBLIC light
+	PUBLIC imgui)
 
-target_include_directories(ChillEngine_example PUBLIC ./chill_engine/include)
+target_include_directories(OpenGL_lightning PUBLIC ./chill_engine/include)

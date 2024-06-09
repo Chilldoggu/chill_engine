@@ -1,16 +1,9 @@
 #version 330 core
 
-struct Light {
-	vec3 color;
-};
-
-in vec2 TexCord;
-in vec3 Normal;
-in vec3 FragPos;
 out vec4 FragColor;
 
-uniform Light light_source;
+uniform vec3 light_color;
 
 void main() {
-	FragColor = vec4(light_source.color, 1.0f);
+	FragColor = vec4(light_color, 1.0f);
 }
