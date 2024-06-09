@@ -4,7 +4,6 @@ cmake_minimum_required(VERSION 3.28)
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(glfw3 REQUIRED IMPORTED_TARGET glfw3)
-pkg_check_modules(assimp REQUIRED IMPORTED_TARGET assimp)
 
 set(CMAKE_CXX_COMPILER g++)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -23,7 +22,6 @@ add_subdirectory("chill_engine")
 
 target_link_libraries(OpenGL_lightning 
 	PUBLIC PkgConfig::glfw3
-	PUBLIC PkgConfig::assimp
 	PUBLIC glad
 	PUBLIC window
 	PUBLIC buffer_obj
