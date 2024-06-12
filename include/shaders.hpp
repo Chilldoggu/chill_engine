@@ -15,9 +15,6 @@
 #include "figures.hpp"
 
 #define INFO_LOG_SIZ 1024
-#define DIFFUSE_MAP_ID  0
-#define SPECULAR_MAP_ID 1
-#define EMISSION_MAP_ID 2
 
 enum class ShaderType {
 	VERTEX,
@@ -123,6 +120,8 @@ public:
 private:
 	auto push_uniform(const std::string& a_uniform_var) -> void;
 	auto push_uniform_struct(const std::string& uniform_var, std::initializer_list<std::string> a_members) -> void;
+	template<typename It>
+	auto push_uniform_struct(const std::string& a_uniform_var, It a_member_name_first, It a_member_name_last) -> void;
 	auto check_linking() -> void;
 
 	int m_success;

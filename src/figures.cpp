@@ -1,222 +1,24 @@
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/fwd.hpp"
-#include <iterator>
+#include <format>
 #include <memory>
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 
 #include <string>
 #include <iostream>
-#include <filesystem>
-#include <format>
-
-#include "assert.hpp"
 #include "figures.hpp"
 #include "shaders.hpp"
-#include "buffer_obj.hpp"
+#include "meshes.hpp"
 #include "figures_constants.hpp"
-
-namespace fs = std::filesystem;
-
-static fs::path get_asset_path() {
-	fs::path p = fs::current_path();
-	if (p.filename() == "build") {
-		p = p.parent_path();
-	}
-	
-	for (auto& i : fs::directory_iterator{ p }) {
-		if (i.is_directory() && i.path().filename() == "assets") {
-			p = i.path();
-			break;
-		}
-	}
-
-	if (p.filename() != "assets") {
-		ERROR("No assets directory.");
-		throw Error_code::file_not_found;
-	}
-
-	return p;
-}
-
-Texture::Texture() :m_name{ "" }, m_type{ TextureType::NONE }, m_texture_id{ 0 }, m_texture_unit{ 0 }, m_width{ 0 }, m_height{ 0 }, m_deletable{ false } { }
-
-Texture::Texture(std::string a_name, TextureType a_type, int a_texture_unit) {
-	// generate_texture deletes older texture if m_deletable is true
-	// before generating a new one.
-	m_deletable = false;
-	generate_texture(a_name, a_type, a_texture_unit);
-}
-
-Texture::Texture(const Texture& a_texture) 
-	:m_name{ a_texture.m_name }, m_type{ a_texture.m_type }, m_texture_id{ a_texture.m_texture_id },
-	 m_texture_unit{ a_texture.m_texture_unit }, m_width{ a_texture.m_width }, m_height{ a_texture.m_height }, m_deletable{ false } { }
-
-Texture::Texture(Texture&& a_texture) {
-	m_name         = std::move(a_texture.m_name);
-	m_type         = a_texture.m_type;
-	m_width        = a_texture.m_width;
-	m_height       = a_texture.m_height;
-	m_deletable    = a_texture.m_deletable;
-	m_texture_id   = a_texture.m_texture_id;
-	m_texture_unit = a_texture.m_texture_unit;
-	a_texture.m_deletable = false;
-}
-
-Texture::~Texture() {
-	if (m_deletable && m_type != TextureType::NONE)
-		glDeleteTextures(1, &m_texture_id);
-}
-
-Texture& Texture::operator=(const Texture& a_texture) {
-    m_type         = a_texture.m_type;
-    m_name         = a_texture.m_name;
-    m_width        = a_texture.m_width;
-    m_height       = a_texture.m_height;
-    m_texture_id   = a_texture.m_texture_id;
-    m_texture_unit = a_texture.m_texture_unit;
-
-    m_deletable = false;
-	
-	return *this;
-}
-
-Texture& Texture::operator=(Texture&& a_texture) {
-    m_name         = std::move(a_texture.m_name);
-    m_type         = a_texture.m_type;
-    m_width        = a_texture.m_width;
-    m_height       = a_texture.m_height;
-    m_deletable    = a_texture.m_deletable;
-    m_texture_id   = a_texture.m_texture_id;
-    m_texture_unit = a_texture.m_texture_unit;
-
-	a_texture.m_deletable = false;
-
-	return *this;
-}
-
-void Texture::generate_texture(std::string a_name, TextureType a_type, int a_texture_unit) {
-	if (m_deletable && a_type != TextureType::NONE)
-		glDeleteTextures(1, &m_texture_id);
-
-	m_name = a_name;
-	m_type = a_type;
-	m_texture_unit = a_texture_unit;
-	m_deletable = true;
-
-	fs::path p = get_asset_path();
-	p /= m_name;
-
-	glGenTextures(1, &m_texture_id);
-	glBindTexture(GL_TEXTURE_2D, m_texture_id);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // GL_NEAREST variations available
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // GL_NEAREST available
-
-	int nrChannels{ 0 };
-	stbi_set_flip_vertically_on_load(true);
-	unsigned char* data = stbi_load(p.c_str(), &m_width, &m_height, &nrChannels, 0);
-	if (data) {
-		std::string extension = p.extension().string();
-		if (extension == ".jpeg" || extension == ".jpg") {
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
-		} else if (extension == ".png") {
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
-		} else { // If extension not handled just guess
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
-		}
-	} else {
-		ERROR(std::format("Couldn't load texture data {}.", m_name).data());
-		throw Error_code::init_error;
-	}
-	stbi_image_free(data);
-}
-
-void Texture::activate() {
-	if (m_type != TextureType::NONE) {
-		glActiveTexture(GL_TEXTURE0 + m_texture_unit);
-		glBindTexture(GL_TEXTURE_2D, m_texture_id);
-	}
-}
-
-int Texture::get_width() const {
-	return m_width;
-}
-
-int Texture::get_height() const {
-	return m_height;
-}
-
-TextureType Texture::get_type() const {
-	return m_type;
-}
-
-std::string Texture::get_name() const {
-	return m_name;
-}
-
-unsigned int Texture::get_texture_id() const {
-	return m_texture_id;
-}
 
 Angle::Angle(float a_roll, float a_pitch, float a_yaw) :roll{ a_roll }, pitch{ a_pitch }, yaw{ a_yaw } { }
 
-Material::Material() :ambient(0.0f), diffuse(0.0f), specular(0.0f), shininess(0.0f) { }
-
-Material::Material(glm::vec3 a_ambient, glm::vec3 a_diffuse, glm::vec3 a_specular, float a_shininess)
-	:ambient(a_ambient), diffuse(a_diffuse), specular(a_specular), shininess(a_shininess) { }
-
-MaterialMap::MaterialMap(std::string a_diffuse_map, std::string a_specular_map, std::string a_emission_map, float a_shininess)
-	:diffuse_map { (a_diffuse_map  != "") ? new Texture{ a_diffuse_map,  TextureType::TEX_2D, DIFFUSE_MAP_ID  } : new Texture{} },
-	 specular_map{ (a_specular_map != "") ? new Texture{ a_specular_map, TextureType::TEX_2D, SPECULAR_MAP_ID } : new Texture{} },
-	 emission_map{ (a_emission_map != "") ? new Texture{ a_emission_map, TextureType::TEX_2D, EMISSION_MAP_ID } : new Texture{} },
-	 shininess{ a_shininess } { }
-
-void MaterialMap::set_diffuse_map(std::string a_diffuse_map) {
-	if (a_diffuse_map == "")
-		diffuse_map.reset(new Texture{});
-	else
-		diffuse_map.reset(new  Texture{ a_diffuse_map,  TextureType::TEX_2D, DIFFUSE_MAP_ID });
-}
-
-void MaterialMap::set_specular_map(std::string a_specular_map) {
-	if (a_specular_map == "")
-		specular_map.reset(new Texture{});
-	else
-		specular_map.reset(new Texture{ a_specular_map, TextureType::TEX_2D, SPECULAR_MAP_ID });
-}
-
-void MaterialMap::set_emission_map(std::string a_emission_map) {
-	if (a_emission_map == "")
-		emission_map.reset(new Texture{});
-	else
-		emission_map.reset(new Texture{ a_emission_map, TextureType::TEX_2D, EMISSION_MAP_ID });
-}
-
-void MaterialMap::set_shininess(float a_shininess) {
-	shininess = a_shininess;
-}
-
-VBO_FIGURES::~VBO_FIGURES() {
-	// glDeleteBuffers(1, &VERTS);
-	// glDeleteBuffers(1, &TEXTURE);
-	// glDeleteBuffers(1, &INDICIES);
-	// glDeleteBuffers(1, &NORMALS);
-}
-
-Shape::Shape(glm::vec3 a_center, float a_size, float a_degree_angle, BufferType a_data_type, std::vector<float> a_verts, std::vector<int> a_elem_indices, bool a_wireframe)
+Shape::Shape(glm::vec3 a_center, float a_size, float a_degree_angle, BufferType a_data_type, std::vector<glm::vec3> a_positions, std::vector<unsigned int> a_elem_indices, bool a_wireframe)
 	:m_center{ a_center }, m_size{ a_size, a_size, a_size }, m_rad_angles{ glm::radians(a_degree_angle), 0.0f, 0.0f }
 {
 	Buffer_data data{ a_data_type };
-	if (!a_verts.empty()) {
-		data.verts = a_verts;
+
+	if (!a_positions.empty()) {
+		data.positions = a_positions;
 	}
 	if (!a_elem_indices.empty() && data.buffer_type == BufferType::ELEMENT) {
 		data.indicies = a_elem_indices;
@@ -227,11 +29,10 @@ Shape::Shape(glm::vec3 a_center, float a_size, float a_degree_angle, BufferType 
 	m_transform_pos      = glm::translate(glm::mat4(1.0f), glm::vec3(m_center.x, m_center.y, m_center.z));
 	m_texture_scalar     = glm::mat2{ a_size };
 
-	m_shape_obj = std::make_shared<VAO>(data, a_wireframe);
-	m_shape_obj->data.vert_sum = a_verts.size() / 3;
+	m_shape_obj = std::make_shared<Mesh>(data, a_wireframe);
 }
 
-Shape::Shape(glm::vec3 a_center, float a_size, float a_degree_angle, BufferType a_data_type, const VBO_FIGURES& a_VBOs, bool a_wireframe)
+Shape::Shape(glm::vec3 a_center, float a_size, float a_degree_angle, BufferType a_data_type, const VBO_COLLECTION& a_VBOs, bool a_wireframe)
 	:m_center{ a_center }, m_size{ a_size, a_size, a_size }, m_rad_angles{ glm::radians(a_degree_angle), 0.0f, 0.0f }, m_reused_VBOs{ a_VBOs }
 {
 	m_transform_scale    = glm::scale(glm::mat4(1.0f), m_size);
@@ -239,94 +40,25 @@ Shape::Shape(glm::vec3 a_center, float a_size, float a_degree_angle, BufferType 
 	m_transform_pos      = glm::translate(glm::mat4(1.0f), glm::vec3(m_center.x, m_center.y, m_center.z));
 	m_texture_scalar     = glm::mat2{ a_size };
 
-	m_shape_obj = std::make_shared<VAO>(a_data_type, a_VBOs, a_wireframe);
+	m_shape_obj = std::make_shared<Mesh>(a_data_type, a_VBOs, a_wireframe);
 }
 
-void Shape::set_color(const std::vector<float>& a_color, bool a_multi, std::vector<std::vector<int>> a_color_order) {
-	// Shift every component to the right
-	auto rshift_color_vector = [](std::vector<float>& a_color_dst) { 
-		auto tmp = a_color_dst[a_color_dst.size() - 1];
-		for (auto j = a_color_dst.size() - 1; j  > 0; j--) {
-			a_color_dst[j] = a_color_dst[j-1];
-		}
-		a_color_dst[0] = tmp;
-	};
-
-	if (!m_shape_obj->data.colors.empty())
-		m_shape_obj->data.colors.clear();
-
-	if (!a_multi) {
-		for (auto i = 0; i < m_shape_obj->data.vert_sum; i++) {
-			for (auto j = 0; j < 3; j++) { // For each color component
-				m_shape_obj->data.colors.push_back(a_color[j]);
-			}
-		}
-	} else {
-		if (a_color_order.empty()) {
-			std::vector<float> color_dst = a_color;
-			for (auto i = 0; i < m_shape_obj->data.vert_sum; i++) {
-				for (auto j = 0; j < 3; j++) { // For each color component
-					m_shape_obj->data.colors.push_back(color_dst[j]);
-				}
-
-				rshift_color_vector(color_dst);
-			}
-		} else {
-			m_shape_obj->data.colors.resize(m_shape_obj->data.vert_sum * 3);
-
-			std::vector<float> color_dst = a_color;
-			for (int vertex = 0; vertex < a_color_order.size(); vertex++) {
-				for (int buffer_pos = 0; buffer_pos < a_color_order[vertex].size(); buffer_pos++) {
-					for (int i = 0; i < 3; i++) {
-						m_shape_obj->data.colors[a_color_order[vertex][buffer_pos] * 3 + i] = color_dst[i];
-					}
-				}
-				rshift_color_vector(color_dst);
-			}
-		}
-	}
-
-	m_shape_obj->set_color();
-}
-
-void Shape::set_normals(const std::vector<float>& a_normals) {
-	if (!m_shape_obj->data.normals.empty())
-		m_shape_obj->data.normals.clear();
+void Shape::set_normals(const std::vector<glm::vec3>& a_normals) {
+	if (!m_shape_obj->m_data.normals.empty())
+		m_shape_obj->m_data.normals.clear();
 
 	for (const auto& normal : a_normals)
-		m_shape_obj->data.normals.push_back(normal);
+		m_shape_obj->m_data.normals.push_back(normal);
 
 	m_shape_obj->set_normals();
 }
 
-void Shape::set_texture_buf(std::vector<float> a_texture_cords, float a_ratio) {
-	m_texture_ratio = a_ratio;
-
-	if (!m_shape_obj->data.texture.empty())
-		m_shape_obj->data.texture.clear();
-
-	if (!a_texture_cords.empty()) {
-		for (auto cord : a_texture_cords) {
-			m_shape_obj->data.texture.push_back(cord * m_texture_ratio);
-		}
-	} else {
-		// Put coordinates to <(0.0, 0.0), (1.0, 1.0)> window.
-		// texture_ratio = 2.f; // Usually you would want to map texture 1:1 to figure but if you feeling wacky then change it
-		int i{ 0 };
-		for (const auto& vert : m_shape_obj->data.verts) {
-			m_shape_obj->data.texture.push_back((vert / m_size[(i++ % 3)]  + 0.5f) * m_texture_ratio); // skip z coord
-			// else shape_obj->data.vert_texture.push_back(vert / size * texture_ratio);
-		}
-	}
-
-	m_shape_obj->set_texture();
+void Shape::set_texture_coords(std::vector<glm::vec2> a_texture_coords) {
+	m_shape_obj->set_texture_coords(a_texture_coords);
 }
 
 void Shape::set_material_map(const MaterialMap& a_material_map) {
-	m_material_map.diffuse_map.reset(new Texture(*a_material_map.diffuse_map));
-	m_material_map.specular_map.reset(new Texture(*a_material_map.specular_map));
-	m_material_map.emission_map.reset(new Texture(*a_material_map.emission_map));
-	m_material_map.shininess = a_material_map.shininess;
+	m_material_map = a_material_map;
 }
 
 void Shape::draw(ShaderProgram& a_shader) {
@@ -395,7 +127,7 @@ MaterialMap& Shape::get_material_map() {
 }
 
 Buffer_data Shape::get_obj_data() const {
-	return m_shape_obj->data;
+	return m_shape_obj->m_data;
 }
 
 glm::vec3 Shape::get_size() const {
@@ -421,17 +153,15 @@ bool Shape::inside_viewport() const {
 }
 
 void Shape::print_verts() const {
-	int i{ 0 };
-	for(const auto& x : this->m_shape_obj->data.verts) {
-		std::cout << x << ((++i % 3) ? ", " : "\n");
+	for(const auto& position : m_shape_obj->m_data.positions) {
+		std::cout << std::format("({}, {}, {})\n", position[0], position[1], position[2]);
 	}
 	std::cout << std::endl;
 }
 
 void Shape::print_texture_verts() const {
-	int i{ 0 };
-	for(const auto& x : this->m_shape_obj->data.texture) {
-		std::cout << x << ((++i % 3) ? ", " : "\n");
+	for(const auto& texture_coord : this->m_shape_obj->m_data.texture_coords) {
+		std::cout << std::format("({}, {})\n", texture_coord[0], texture_coord[1]);
 	}
 	std::cout << std::endl;
 }
@@ -439,19 +169,19 @@ void Shape::print_texture_verts() const {
 Triangle2D::Triangle2D(glm::vec3 a_center, float a_size, float a_degree_angle, bool a_wireframe)
 	:Shape(a_center, a_size, a_degree_angle, BufferType::VERTEX,
 		     { // Verticies
-				  0.0f,  0.5f, 0.0f,
-				  0.5f, -0.5f, 0.0f,
-				 -0.5f, -0.5f, 0.0f,
+				glm::vec3(0.0f,  0.5f, 0.0f),
+				glm::vec3(0.5f, -0.5f, 0.0f),
+				glm::vec3(-0.5f, -0.5f, 0.0f),
 		     }, {  }, a_wireframe)
 { }
 
 Rectangle2D::Rectangle2D(glm::vec3 a_center, float a_size, float a_degree_angle, bool a_wireframe)
 	:Shape(a_center, a_size, a_degree_angle, BufferType::ELEMENT,
 		  { // Verticies
-			   0.5f,  0.5f, 0.0f,
-			   0.5f, -0.5f, 0.0f,
-			  -0.5f, -0.5f, 0.0f,
-			  -0.5f,  0.5f, 0.0f,
+			 glm::vec3(0.5f,  0.5f, 0.0f),
+			 glm::vec3(0.5f, -0.5f, 0.0f),
+			 glm::vec3(-0.5f, -0.5f, 0.0f),
+			 glm::vec3(-0.5f,  0.5f, 0.0f),
 		  },
 		  { // Element indicies
 			   0, 1, 3,
@@ -460,9 +190,9 @@ Rectangle2D::Rectangle2D(glm::vec3 a_center, float a_size, float a_degree_angle,
 { }
 
 Cube::Cube(glm::vec3 a_center, float a_size, float a_degree_angle, bool a_wireframe)
-	:Shape(a_center, a_size, a_degree_angle, BufferType::VERTEX, CUBE_VERT_CORDS, { }, a_wireframe) {  }
+	:Shape(a_center, a_size, a_degree_angle, BufferType::VERTEX, CUBE_POSITIONS, { }, a_wireframe) {  }
 
-Cube::Cube(glm::vec3 a_center, float a_size, float a_degree_angle, const VBO_FIGURES& a_VBOs, bool a_wireframe)
+Cube::Cube(glm::vec3 a_center, float a_size, float a_degree_angle, const VBO_COLLECTION& a_VBOs, bool a_wireframe)
 	:Shape(a_center, a_size, a_degree_angle, BufferType::VERTEX, a_VBOs, a_wireframe) { }
 
 /*********************
@@ -532,5 +262,53 @@ Shape::Shape(const Shape& a_shape)
 	if (m_reused_VBOs.TEXTURE != EMPTY_VBO) m_shape_obj->reuse_pos(m_reused_VBOs.TEXTURE);
 	if (m_reused_VBOs.INDICIES != EMPTY_VBO && m_shape_obj->data.buffer_type == BufferType::ELEMENT) m_shape_obj->reuse_pos(m_reused_VBOs.INDICIES);
 }
+
+void Shape::set_color(const std::vector<float>& a_color, bool a_multi, std::vector<std::vector<int>> a_color_order) {
+	// Shift every component to the right
+	auto rshift_color_vector = [](std::vector<float>& a_color_dst) { 
+		auto tmp = a_color_dst[a_color_dst.size() - 1];
+		for (auto j = a_color_dst.size() - 1; j  > 0; j--) {
+			a_color_dst[j] = a_color_dst[j-1];
+		}
+		a_color_dst[0] = tmp;
+	};
+
+	if (!m_shape_obj->mdata.colors.empty())
+		m_shape_obj->data.colors.clear();
+
+	if (!a_multi) {
+		for (auto i = 0; i < m_shape_obj->data.vert_sum; i++) {
+			for (auto j = 0; j < 3; j++) { // For each color component
+				m_shape_obj->data.colors.push_back(a_color[j]);
+			}
+		}
+	} else {
+		if (a_color_order.empty()) {
+			std::vector<float> color_dst = a_color;
+			for (auto i = 0; i < m_shape_obj->data.vert_sum; i++) {
+				for (auto j = 0; j < 3; j++) { // For each color component
+					m_shape_obj->data.colors.push_back(color_dst[j]);
+				}
+
+				rshift_color_vector(color_dst);
+			}
+		} else {
+			m_shape_obj->data.colors.resize(m_shape_obj->data.vert_sum * 3);
+
+			std::vector<float> color_dst = a_color;
+			for (int vertex = 0; vertex < a_color_order.size(); vertex++) {
+				for (int buffer_pos = 0; buffer_pos < a_color_order[vertex].size(); buffer_pos++) {
+					for (int i = 0; i < 3; i++) {
+						m_shape_obj->data.colors[a_color_order[vertex][buffer_pos] * 3 + i] = color_dst[i];
+					}
+				}
+				rshift_color_vector(color_dst);
+			}
+		}
+	}
+
+	m_shape_obj->set_color();
+}
+
 
 */

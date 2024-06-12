@@ -1,6 +1,7 @@
 #pragma once
 
-#include "figures.hpp"
+#include <vector>
+#include "glm/glm.hpp"
 
 namespace ColorsRGB {
     const std::vector<float> RED{ 1.0f, 0.0f, 0.0f };
@@ -14,91 +15,91 @@ namespace ColorsRGB {
     const std::vector<float> LIGHT_SALMON{ 1.0f, 0.6f, 0.5f };
 };
 
-const std::vector<float> CUBE_VERT_CORDS = {
-   -0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f,  0.5f,  0.5f, -0.5f, // BACK
-    0.5f,  0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f, -0.5f, -0.5f, // FACE
+const std::vector<glm::vec3> CUBE_POSITIONS = {
+	glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3( 0.5f, -0.5f, -0.5f), glm::vec3( 0.5f,  0.5f, -0.5f), // BACK
+    glm::vec3( 0.5f,  0.5f, -0.5f), glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(-0.5f, -0.5f, -0.5f), // FACE
 
-   -0.5f, -0.5f,  0.5f,  0.5f, -0.5f,  0.5f,  0.5f,  0.5f,  0.5f, // FRONT
-    0.5f,  0.5f,  0.5f, -0.5f,  0.5f,  0.5f, -0.5f, -0.5f,  0.5f, // FACE
+	glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3( 0.5f, -0.5f,  0.5f), glm::vec3( 0.5f,  0.5f,  0.5f), // FRONT
+	glm::vec3( 0.5f,  0.5f,  0.5f), glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(-0.5f, -0.5f,  0.5f), // FACE
 
-   -0.5f,  0.5f,  0.5f, -0.5f,  0.5f, -0.5f, -0.5f, -0.5f, -0.5f, // LEFT
-   -0.5f, -0.5f, -0.5f, -0.5f, -0.5f,  0.5f, -0.5f,  0.5f,  0.5f, // FACE
+	glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(-0.5f, -0.5f, -0.5f), // LEFT
+	glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(-0.5f,  0.5f,  0.5f), // FACE
 
-    0.5f,  0.5f,  0.5f,  0.5f,  0.5f, -0.5f,  0.5f, -0.5f, -0.5f, // RIGHT
-    0.5f, -0.5f, -0.5f,  0.5f, -0.5f,  0.5f,  0.5f,  0.5f,  0.5f, // FACE
+	glm::vec3( 0.5f,  0.5f,  0.5f), glm::vec3( 0.5f,  0.5f, -0.5f), glm::vec3( 0.5f, -0.5f, -0.5f), // RIGHT
+	glm::vec3( 0.5f, -0.5f, -0.5f), glm::vec3( 0.5f, -0.5f,  0.5f), glm::vec3( 0.5f,  0.5f,  0.5f), // FACE
 
-   -0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f,  0.5f, -0.5f,  0.5f, // DOWN
-    0.5f, -0.5f,  0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f, -0.5f, // FACE
+	glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3( 0.5f, -0.5f, -0.5f), glm::vec3( 0.5f, -0.5f,  0.5f), // DOWN
+	glm::vec3( 0.5f, -0.5f,  0.5f), glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(-0.5f, -0.5f, -0.5f), // FACE
 
-   -0.5f,  0.5f, -0.5f,  0.5f,  0.5f, -0.5f,  0.5f,  0.5f,  0.5f, // UP
-    0.5f,  0.5f,  0.5f, -0.5f,  0.5f,  0.5f, -0.5f,  0.5f, -0.5f, // FACE
+	glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3( 0.5f,  0.5f, -0.5f), glm::vec3( 0.5f,  0.5f,  0.5f), // UP
+	glm::vec3( 0.5f,  0.5f,  0.5f), glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(-0.5f,  0.5f, -0.5f), // FACE
 };
 
-const std::vector<float> CUBE_TEXTURE_CORDS = {
-    0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-    1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+const std::vector<glm::vec2> CUBE_TEXTURE_COORDS = {
+	glm::vec2(0.0f, 0.0f), glm::vec2(1.0f, 0.0f), glm::vec2(1.0f, 1.0f),
+    glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 1.0f), glm::vec2(0.0f, 0.0f),
 
-    0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-    1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+    glm::vec2(0.0f, 0.0f), glm::vec2(1.0f, 0.0f), glm::vec2(1.0f, 1.0f),
+    glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 1.0f), glm::vec2(0.0f, 0.0f),
 
-    1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
-    0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+    glm::vec2(1.0f, 0.0f), glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 1.0f),
+    glm::vec2(0.0f, 1.0f), glm::vec2(0.0f, 0.0f), glm::vec2(1.0f, 0.0f),
 
-    1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
-    0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+    glm::vec2(1.0f, 0.0f), glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 1.0f),
+    glm::vec2(0.0f, 1.0f), glm::vec2(0.0f, 0.0f), glm::vec2(1.0f, 0.0f),
 
-    0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
-    1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+    glm::vec2(0.0f, 1.0f), glm::vec2(1.0f, 1.0f), glm::vec2(1.0f, 0.0f),
+    glm::vec2(1.0f, 0.0f), glm::vec2(0.0f, 0.0f), glm::vec2(0.0f, 1.0f),
 
-    0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
-    1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f
+    glm::vec2(0.0f, 1.0f), glm::vec2(1.0f, 1.0f), glm::vec2(1.0f, 0.0f),
+    glm::vec2(1.0f, 0.0f), glm::vec2(0.0f, 0.0f), glm::vec2(0.0f, 1.0f)
 };
 
-const std::vector<float> CUBE_NORMAL_CORDS = {
-     0.0f,  0.0f, -1.0f,
-     0.0f,  0.0f, -1.0f, 
-     0.0f,  0.0f, -1.0f, 
-     0.0f,  0.0f, -1.0f, 
-     0.0f,  0.0f, -1.0f, 
-     0.0f,  0.0f, -1.0f, 
+const std::vector<glm::vec3> CUBE_NORMAL_COORDS = {
+	 glm::vec3(0.0f,  0.0f, -1.0f),
+     glm::vec3(0.0f,  0.0f, -1.0f),
+     glm::vec3(0.0f,  0.0f, -1.0f),
+     glm::vec3(0.0f,  0.0f, -1.0f),
+     glm::vec3(0.0f,  0.0f, -1.0f),
+     glm::vec3(0.0f,  0.0f, -1.0f),
 
-     0.0f,  0.0f, 1.0f,
-     0.0f,  0.0f, 1.0f,
-     0.0f,  0.0f, 1.0f,
-     0.0f,  0.0f, 1.0f,
-     0.0f,  0.0f, 1.0f,
-     0.0f,  0.0f, 1.0f,
+     glm::vec3(0.0f,  0.0f, 1.0f),
+     glm::vec3(0.0f,  0.0f, 1.0f),
+     glm::vec3(0.0f,  0.0f, 1.0f),
+     glm::vec3(0.0f,  0.0f, 1.0f),
+     glm::vec3(0.0f,  0.0f, 1.0f),
+     glm::vec3(0.0f,  0.0f, 1.0f),
 
-    -1.0f,  0.0f,  0.0f,
-    -1.0f,  0.0f,  0.0f,
-    -1.0f,  0.0f,  0.0f,
-    -1.0f,  0.0f,  0.0f,
-    -1.0f,  0.0f,  0.0f,
-    -1.0f,  0.0f,  0.0f,
+     glm::vec3(-1.0f,  0.0f,  0.0f),
+     glm::vec3(-1.0f,  0.0f,  0.0f),
+     glm::vec3(-1.0f,  0.0f,  0.0f),
+     glm::vec3(-1.0f,  0.0f,  0.0f),
+     glm::vec3(-1.0f,  0.0f,  0.0f),
+     glm::vec3(-1.0f,  0.0f,  0.0f),
 
-     1.0f,  0.0f,  0.0f,
-     1.0f,  0.0f,  0.0f,
-     1.0f,  0.0f,  0.0f,
-     1.0f,  0.0f,  0.0f,
-     1.0f,  0.0f,  0.0f,
-     1.0f,  0.0f,  0.0f,
+     glm::vec3(1.0f,  0.0f,  0.0f),
+     glm::vec3(1.0f,  0.0f,  0.0f),
+     glm::vec3(1.0f,  0.0f,  0.0f),
+     glm::vec3(1.0f,  0.0f,  0.0f),
+     glm::vec3(1.0f,  0.0f,  0.0f),
+     glm::vec3(1.0f,  0.0f,  0.0f),
 
-     0.0f, -1.0f,  0.0f,
-     0.0f, -1.0f,  0.0f,
-     0.0f, -1.0f,  0.0f,
-     0.0f, -1.0f,  0.0f,
-     0.0f, -1.0f,  0.0f,
-     0.0f, -1.0f,  0.0f,
+     glm::vec3(0.0f, -1.0f,  0.0f),
+     glm::vec3(0.0f, -1.0f,  0.0f),
+     glm::vec3(0.0f, -1.0f,  0.0f),
+     glm::vec3(0.0f, -1.0f,  0.0f),
+     glm::vec3(0.0f, -1.0f,  0.0f),
+     glm::vec3(0.0f, -1.0f,  0.0f),
 
-     0.0f,  1.0f,  0.0f,
-     0.0f,  1.0f,  0.0f,
-     0.0f,  1.0f,  0.0f,
-     0.0f,  1.0f,  0.0f,
-     0.0f,  1.0f,  0.0f,
-     0.0f,  1.0f,  0.0f
+     glm::vec3(0.0f,  1.0f,  0.0f),
+     glm::vec3(0.0f,  1.0f,  0.0f),
+     glm::vec3(0.0f,  1.0f,  0.0f),
+     glm::vec3(0.0f,  1.0f,  0.0f),
+     glm::vec3(0.0f,  1.0f,  0.0f),
+     glm::vec3(0.0f,  1.0f,  0.0f),
 };
 
-const std::vector<std::vector<int>> CUBE_COLOR_ORDER = {
+/* const std::vector<std::vector<int>> CUBE_COLOR_ORDER = {
     { 6, 11, 16, 28 },	      // front bottom left  vertex
     { 7, 22, 26, 27 },	      // front bottom right vertex
     { 8, 9, 18, 23, 32, 33 }, // front top    right vertex
@@ -107,9 +108,9 @@ const std::vector<std::vector<int>> CUBE_COLOR_ORDER = {
     { 1, 20, 21, 25 },	      // back  bottom right vertex
     { 2, 3, 19, 31 },	      // back  top    right vertex
     { 4, 13, 30, 35 }	      // back  top    left  vertex
-};
+}; */
 
-namespace Materials {
+/* namespace Materials {
     const Material GOLD      { glm::vec3(0.247250, 0.199500, 0.074500), glm::vec3(0.751640, 0.606480, 0.226480), glm::vec3(0.628281, 0.555802, 0.366065), 0.40000000 * 128 };
     const Material JADE      { glm::vec3(0.135000, 0.222500, 0.157500), glm::vec3(0.540000, 0.890000, 0.630000), glm::vec3(0.316228, 0.316228, 0.316228), 0.10000000 * 128 };
     const Material RUBY      { glm::vec3(0.174500, 0.011750, 0.011750), glm::vec3(0.614240, 0.041360, 0.041360), glm::vec3(0.727811, 0.626959, 0.626959), 0.60000000 * 128 };
@@ -136,4 +137,4 @@ namespace Materials {
     const Material GREEN_RUBBER  { glm::vec3(0.00, 0.05, 0.00), glm::vec3(0.40, 0.50, 0.40), glm::vec3(0.04, 0.70, 0.04), 0.078125 * 128 };
     const Material WHITE_RUBBER  { glm::vec3(0.05, 0.05, 0.05), glm::vec3(0.50, 0.50, 0.50), glm::vec3(0.70, 0.70, 0.70), 0.078125 * 128 };
     const Material YELLOW_RUBBER { glm::vec3(0.05, 0.05, 0.00), glm::vec3(0.50, 0.50, 0.40), glm::vec3(0.70, 0.70, 0.04), 0.078125 * 128 };
-};
+}; */

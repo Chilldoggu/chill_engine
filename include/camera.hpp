@@ -29,6 +29,8 @@ public:
            float yaw, float pitch, float near_plane = NEAR_PLANE, float far_plane = FAR_PLANE);
 
     auto set_fov(float a_fov) -> void;
+    auto set_target(glm::vec3 a_target) -> void;
+    auto set_position(glm::vec3 a_position) -> void;
     auto set_far_plane(float a_far) -> void;
     auto set_near_plane(float a_near) -> void;
     auto set_movement_speed(float a_speed) -> void;

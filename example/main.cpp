@@ -16,7 +16,6 @@
 #include "window.hpp"
 #include "shaders.hpp"
 #include "figures.hpp"
-#include "figures_constants.hpp"
 
 void imgui_pointlight(PointLight& pointlight_source);
 void imgui_dirlight(DirLight& dirlight_source);
@@ -29,11 +28,7 @@ int main() {
 	Window& win = app.get_win();
 
 	// Create Cube VBOs for later reuse
-	VBO_FIGURES VBO_CUBE;
-	VBO_CUBE.vert_sum = CUBE_VERT_CORDS.size() / 3;
-	VBO_CUBE.VERTS = VBO_generate(CUBE_VERT_CORDS);
-	VBO_CUBE.TEXTURE = VBO_generate(CUBE_TEXTURE_CORDS);
-	VBO_CUBE.NORMALS = VBO_generate(CUBE_NORMAL_CORDS);
+	VBO_CUBE VBO_cube;
 
 	// Configure player attributes
 	cam.set_movement_speed(8.0f);
@@ -58,18 +53,15 @@ int main() {
 	// Set point light sources cube representations
 	std::vector<Cube> pointlight_cubes;
 	for (auto i = 0; i < pointlight_sources.size(); i++)
-		pointlight_cubes.emplace_back(pointlight_sources[i].get_pos(), 0.5f, 0.0f, VBO_CUBE);
+		pointlight_cubes.emplace_back(pointlight_sources[i].get_pos(), 0.5f, 0.0f, VBO_cube);
 
-	MaterialMap container;
-	container.set_diffuse_map("container2.png");
-	container.set_specular_map("container2_specular.png");
-	container.set_shininess(32.f);
+	MaterialMap container{ {{"container2.png", TextureType::DIFFUSE}, {"container2_specular.png", TextureType::SPECULAR}}, 32.f };
 
 	std::vector<Cube> boxes {
-		Cube(glm::vec3(), 1.0f, 0.0f, VBO_CUBE),
-		Cube(glm::vec3(3.0f, 0.0f, 0.0f), 1.0f, 0.0f, VBO_CUBE),
-		Cube(glm::vec3(8.0f, 0.0f, 0.0f), 1.0f, 0.0f, VBO_CUBE),
-		Cube(glm::vec3(15.0f, 0.0f, 0.0f), 1.0f, 0.0f, VBO_CUBE)
+		Cube(glm::vec3(), 1.0f, 0.0f, VBO_cube),
+		Cube(glm::vec3(3.0f, 0.0f, 0.0f), 1.0f, 0.0f, VBO_cube),
+		Cube(glm::vec3(8.0f, 0.0f, 0.0f), 1.0f, 0.0f, VBO_cube),
+		Cube(glm::vec3(15.0f, 0.0f, 0.0f), 1.0f, 0.0f, VBO_cube)
 	};
 
 	for (auto& box : boxes)
@@ -114,13 +106,15 @@ int main() {
 			}
 			if (ImGui::Button("Create point light")) {
 				pointlight_sources.push_back(PointLight(50, cam.get_position() + cam.get_target()));
-				pointlight_cubes.emplace_back(cam.get_position() + cam.get_target(), 0.5f, 0.0f, VBO_CUBE);
+				pointlight_cubes.emplace_back(cam.get_position() + cam.get_target(), 0.5f, 0.0f, VBO_cube);
 			}
 		}
 
 		// Performance
 		ImGui::SeparatorText("Misc");
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / im_io->Framerate, im_io->Framerate);
+		ImGui::Text("Camera front vector: (%.2f, %.2f, %.2f)", cam.get_target()[0], cam.get_target()[1], cam.get_target()[2]);
+		ImGui::Text("Camera position vector: (%.2f, %.2f, %.2f)", cam.get_position()[0], cam.get_position()[1], cam.get_position()[2]);
 		ImGui::End();
 	};
 

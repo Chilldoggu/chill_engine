@@ -6,7 +6,6 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
-#include <memory>
 #include <stdexcept>
 
 #include "assert.hpp"
@@ -142,6 +141,14 @@ void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, std::i
 	}
 }
 
+template<typename It>
+void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, It a_member_name_first, It a_member_name_last) {
+	for (auto member_name = a_member_name_first; member_name != a_member_name_last; member_name++) {
+		std::string full_name = a_uniform_var + "." + *member_name;
+		m_uniforms[full_name] = Uniform(full_name, glGetUniformLocation(m_shader_program, full_name.c_str()), m_shader_program);
+	}
+}
+
 void ShaderProgram::push_uniform(const std::string& uniform_var) {
 	m_uniforms[uniform_var] = Uniform(uniform_var, glGetUniformLocation(m_shader_program, uniform_var.c_str()), m_shader_program);
 }
@@ -200,16 +207,37 @@ void ShaderProgram::set_uniform(const std::string& a_spotlight_name, const SpotL
 
 // WARNING: Exception abuse
 void ShaderProgram::set_uniform(const std::string& a_material_name, const MaterialMap& a_material) {
+	auto diffuse_maps = a_material.get_diffuse_maps();
+	auto specular_maps = a_material.get_specular_maps();
+	auto emission_maps = a_material.get_emission_maps();
 	try {
-		m_uniforms.at(a_material_name + ".shininess") = a_material.shininess;
-		a_material.diffuse_map->activate();
-		a_material.specular_map->activate();
-		a_material.emission_map->activate();
+		m_uniforms.at(a_material_name + ".shininess") = a_material.get_shininess();
+
+		for (const auto& diffuse_map : diffuse_maps)
+			diffuse_map->activate();
+		for (const auto& specular_map : specular_maps)
+			specular_map->activate();
+		for (const auto& emission_map : emission_maps)
+			emission_map->activate();
 	} catch (std::out_of_range) {
-		push_uniform_struct(a_material_name, { "shininess", "diffuse_map", "specular_map", "emission_map" });
-		m_uniforms.at(a_material_name + ".diffuse_map")  = DIFFUSE_MAP_ID;
-		m_uniforms.at(a_material_name + ".specular_map") = SPECULAR_MAP_ID;
-		m_uniforms.at(a_material_name + ".emission_map") = EMISSION_MAP_ID;
+		std::vector<std::string> maps = {};
+		for (int i = 0; i < diffuse_maps.size(); i++)
+			maps.push_back(std::format("diffuse_maps[{}]", i));
+		for (int i = 0; i < specular_maps.size(); i++)
+			maps.push_back(std::format("specular_maps[{}]", i));
+		for (int i = 0; i < emission_maps.size(); i++)
+			maps.push_back(std::format("emission_maps[{}]", i));
+		maps.push_back("shininess");
+
+		push_uniform_struct(a_material_name, maps.begin(), maps.end());
+
+		for (int i = 0; i < diffuse_maps.size(); i++)
+			m_uniforms.at(std::format("{}.diffuse_maps[{}]", a_material_name, i)) = diffuse_maps[i]->get_texture_unit();
+		for (int i = 0; i < specular_maps.size(); i++)
+			m_uniforms.at(std::format("{}.specular_maps[{}]", a_material_name, i)) = specular_maps[i]->get_texture_unit();
+		for (int i = 0; i < emission_maps.size(); i++)
+			m_uniforms.at(std::format("{}.emission_maps[{}]", a_material_name, i)) = emission_maps[i]->get_texture_unit();
+		m_uniforms.at(a_material_name + ".shininess") = a_material.get_shininess();
 	}
 }
 
