@@ -1,9 +1,9 @@
 #pragma once
 
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include "glm/fwd.hpp"
-#include "glm/gtc/type_ptr.hpp"
+#include "glad/glad.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include <map>
 #include <string>
@@ -12,7 +12,7 @@
 
 #include "assert.hpp"
 #include "light.hpp"
-#include "figures.hpp"
+#include "meshes.hpp"
 
 #define INFO_LOG_SIZ 1024
 
@@ -129,6 +129,5 @@ private:
 	bool m_depth_testing;
 	unsigned int m_shader_program;
 	std::string m_name;
-	// std::map<UniformType, std::string> m_names;
 	std::map<std::string, Uniform> m_uniforms;
 };

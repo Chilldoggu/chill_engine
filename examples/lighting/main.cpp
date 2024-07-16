@@ -15,7 +15,7 @@
 #include "app.hpp"
 #include "window.hpp"
 #include "shaders.hpp"
-#include "figures.hpp"
+#include "model.hpp"
 
 void imgui_pointlight(PointLight& pointlight_source);
 void imgui_dirlight(DirLight& dirlight_source);
@@ -26,9 +26,6 @@ int main() {
 	App app{ 1920, 1080, "OpenGL", CursorMode::NORMAL, glm::vec3(0.0f, 0.0f, 10.0f) };
 	Camera& cam = app.get_cam();
 	Window& win = app.get_win();
-
-	// Create Cube VBOs for later reuse
-	VBO_CUBE VBO_cube;
 
 	// Configure player attributes
 	cam.set_movement_speed(8.0f);
@@ -51,21 +48,17 @@ int main() {
 	};
 
 	// Set point light sources cube representations
-	std::vector<Cube> pointlight_cubes;
-	for (auto i = 0; i < pointlight_sources.size(); i++)
-		pointlight_cubes.emplace_back(pointlight_sources[i].get_pos(), 0.5f, 0.0f, VBO_cube);
+	std::vector<Model> pointlight_cubes(pointlight_sources.size(), Model("assets/container/container.obj"));
+	for (size_t i = 0; i < pointlight_sources.size(); i++) {
+		pointlight_cubes[i].set_pos(pointlight_sources[i].get_pos());
+		pointlight_cubes[i].set_size(0.5);
+	}
 
-	MaterialMap container{ {{"container2.png", TextureType::DIFFUSE}, {"container2_specular.png", TextureType::SPECULAR}}, 32.f };
-
-	std::vector<Cube> boxes {
-		Cube(glm::vec3(), 1.0f, 0.0f, VBO_cube),
-		Cube(glm::vec3(3.0f, 0.0f, 0.0f), 1.0f, 0.0f, VBO_cube),
-		Cube(glm::vec3(8.0f, 0.0f, 0.0f), 1.0f, 0.0f, VBO_cube),
-		Cube(glm::vec3(15.0f, 0.0f, 0.0f), 1.0f, 0.0f, VBO_cube)
-	};
-
-	for (auto& box : boxes)
-	  box.set_material_map(container);
+	std::vector<Model> boxes(4, Model("assets/container/container.obj"));
+	boxes[0].set_pos(glm::vec3(0.0f, 0.0f, 0.0f));
+	boxes[1].set_pos(glm::vec3(3.0f, 0.0f, 0.0f));
+	boxes[2].set_pos(glm::vec3(8.0f, 0.0f, 0.0f));
+	boxes[3].set_pos(glm::vec3(15.0f, 0.0f, 0.0f));
 
 	auto imgui_body = [&]{
 		ImGui::ShowDemoWindow();
@@ -92,7 +85,7 @@ int main() {
 				ImGui::Spacing();
 			}
 
-			for (auto i = 0; i < pointlight_sources.size(); i++) {
+			for (size_t i = 0; i < pointlight_sources.size(); i++) {
 				if (ImGui::TreeNode(std::format("Point light {}", i).c_str())) {
 					imgui_pointlight(pointlight_sources[i]);
 					if (ImGui::Button("Pop")) {
@@ -106,7 +99,9 @@ int main() {
 			}
 			if (ImGui::Button("Create point light")) {
 				pointlight_sources.push_back(PointLight(50, cam.get_position() + cam.get_target()));
-				pointlight_cubes.emplace_back(cam.get_position() + cam.get_target(), 0.5f, 0.0f, VBO_cube);
+				pointlight_cubes.emplace_back("assets/container/container.obj");
+				pointlight_cubes.back().set_pos(cam.get_position() + cam.get_target());
+				pointlight_cubes.back().set_size(0.5);
 			}
 		}
 
@@ -155,24 +150,23 @@ int main() {
 		// Set light source uniforms
 		multi_light_shader.set_uniform("dirlight_source", dirlight_source);
 		multi_light_shader.set_uniform("spotlight_source", spotlight_source);
-		for (auto i = 0; i < pointlight_sources.size(); i++) {
+		for (size_t i = 0; i < pointlight_sources.size(); i++) {
 			multi_light_shader.set_uniform(std::format("pointlight_sources[{}]", i), pointlight_sources[i]);
 		}
 
 		lightbulb_shader["view"] = view_mat;
 		lightbulb_shader["projection"] = projection_mat;
 
-		for (auto i = 0; i < pointlight_cubes.size(); i++) {
-			lightbulb_shader["model"] = pointlight_cubes[i].get_model();
+		for (size_t i = 0; i < pointlight_cubes.size(); i++) {
+			lightbulb_shader["model"] = pointlight_cubes[i].get_model_mat();
 			lightbulb_shader["light_color"] = pointlight_sources[i].get_color();
-			pointlight_cubes[i].draw(lightbulb_shader);
+			pointlight_cubes[i].draw(lightbulb_shader, "");
 		}
 
 		for (auto& box : boxes) {
-			multi_light_shader["normal_mat"] = glm::transpose(glm::inverse(glm::mat3(box.get_model()))); 
-			multi_light_shader["model"] = box.get_model();
-			multi_light_shader.set_uniform("material", box.get_material_map());
-			box.draw(multi_light_shader);
+			multi_light_shader["normal_mat"] = box.get_normal_mat();
+			multi_light_shader["model"] = box.get_model_mat();
+			box.draw(multi_light_shader, "material");
 		}
 	};
 
