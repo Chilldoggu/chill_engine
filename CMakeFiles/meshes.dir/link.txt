@@ -1,2 +1,0 @@
-/usr/bin/ar qc libmeshes.a CMakeFiles/meshes.dir/src/meshes.cpp.o
-/usr/bin/ranlib libmeshes.a
