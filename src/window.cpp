@@ -29,18 +29,15 @@ Window::Window(int a_width, int a_height, const std::string& a_title, CursorMode
 	glfwMakeContextCurrent(m_window);
 
 	switch (a_mode) {
-		case CursorMode::NORMAL : {
+		case CursorMode::NORMAL:
 			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			break;
-		}
-		case CursorMode::IDLE : {
+		case CursorMode::IDLE:
 			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			break;
-		}
-		case CursorMode::FIRST_PERSON : {
+		case CursorMode::FIRST_PERSON:
 			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			break;
-		}
 	}
 
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -162,21 +159,18 @@ void Window::toggle_mouse_focus() {
 
 auto Window::change_cursor_mode(CursorMode a_mode) -> void {
 	switch (a_mode) {
-		case CursorMode::NORMAL : {
+		case CursorMode::NORMAL:
 			m_cur_mode = CursorMode::NORMAL;
 			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			break;
-		}
-		case CursorMode::FIRST_PERSON : {
+		case CursorMode::FIRST_PERSON:
 			m_cur_mode = CursorMode::FIRST_PERSON;
 			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			break;
-		}
-		case CursorMode::IDLE : {
+		case CursorMode::IDLE:
 			m_cur_mode = CursorMode::IDLE;
 			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			break;
-		}
 	}
 }
 

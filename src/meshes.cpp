@@ -109,21 +109,18 @@ MaterialMap::MaterialMap(std::initializer_list<std::pair<std::string, TextureTyp
 	for (const auto& a_texture_map : a_texture_maps) {
 		m_texture_unit_counter.push_back(i);
 		switch (a_texture_map.second) {
-			case TextureType::DIFFUSE: {
+			case TextureType::DIFFUSE:
 				m_diffuse_maps.push_back(std::make_shared<Texture>(a_texture_map.first, a_texture_map.second, i++));
 				break;
-			}
-			case TextureType::SPECULAR: {
+			case TextureType::SPECULAR:
 				m_specular_maps.push_back(std::make_shared<Texture>(a_texture_map.first, a_texture_map.second, i++));
 				break;
-			}
-			case TextureType::EMISSION: {
+			case TextureType::EMISSION:
 				m_emission_maps.push_back(std::make_shared<Texture>(a_texture_map.first, a_texture_map.second, i++));
 				break;
-			}
-			case TextureType::NONE: {
-				break;
-			}
+			case TextureType::NONE:
+				ERROR(std::format("Bad texture type for {}", a_texture_map.first).c_str());
+				throw Error_code::bad_type;
 		}
 	}
 }
@@ -138,24 +135,17 @@ void MaterialMap::set_textures(std::vector<std::shared_ptr<Texture>> a_textures)
 		m_texture_unit_counter.push_back(texture_ptr->get_texture_unit());
 
 		switch (texture_ptr->get_type()) {
-			case TextureType::DIFFUSE: {
+			case TextureType::DIFFUSE:
 				m_diffuse_maps.push_back(texture_ptr);
 				break;
-			}
-
-			case TextureType::SPECULAR: {
+			case TextureType::SPECULAR:
 				m_specular_maps.push_back(texture_ptr);
 				break;
-			}
-
-			case TextureType::EMISSION: {
+			case TextureType::EMISSION:
 				m_emission_maps.push_back(texture_ptr);
 				break;
-			}
-			
-			case TextureType::NONE: {
+			case TextureType::NONE:
 				break;
-			}
 		}
 	}
 }
@@ -351,18 +341,15 @@ void Mesh::draw(ShaderProgram& a_shader) {
 	else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	switch(m_data.buffer_type) {
-		case (BufferData::Type::VERTEX) : {
+		case BufferData::Type::VERTEX:
 			glDrawArrays(GL_TRIANGLES, 0, m_data.vert_sum);
 			break;
-		}
-		case (BufferData::Type::ELEMENT) : {
+		case BufferData::Type::ELEMENT:
 			glDrawElements(GL_TRIANGLES, m_data.indicies_sum, GL_UNSIGNED_INT, 0);
 			break;
-		}
-		default : {
+		default:
 			ERROR("Unhandled draw type for buffer object type.");
 			throw Error_code::bad_match;
-		}
 	}
 
 	glBindVertexArray(0);

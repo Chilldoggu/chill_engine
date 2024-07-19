@@ -30,20 +30,17 @@ ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::string& a_filename)
 	:shader_type{ a_shader_type }, filename{ a_filename }, success{ false }
 {
 	switch(shader_type) {
-		case ShaderType::VERTEX : {
+		case ShaderType::VERTEX:
 			shader_name = "VERTEX";
 			shader_obj = glCreateShader(GL_VERTEX_SHADER);
 			break;
-		}
-		case ShaderType::FRAGMENT : {
+		case ShaderType::FRAGMENT:
 			shader_name = "FRAGMENT";
 			shader_obj = glCreateShader(GL_FRAGMENT_SHADER);
 			break;
-		}
-		default: {
+		default:
 			ERROR("Shader type not compatible.");
 			throw Error_code::glsl_bad_shader_type;
-		}
 	}
 
 	load_code(filename);
@@ -56,18 +53,15 @@ void ShaderSrc::load_code(const std::string& filename) {
 
 	if (!file_vertex_shader.is_open()) {
 		switch (shader_type) {
-			case ShaderType::VERTEX: {
+			case ShaderType::VERTEX:
 				ERROR(std::format("Vertex shader source file {} couldn't be loaded.", filename).data());
 				break;
-			}
-			case ShaderType::FRAGMENT: {
+			case ShaderType::FRAGMENT:
 				ERROR(std::format("Fragment shader source file {} couldn't be loaded.", filename).data());
 				break;
-			}
-			default: {
+			default:
 				ERROR(std::format("Unhandled shader type with source file {} couldn't be loaded.", filename).data());
 				break;
-			}
 		}
 		throw Error_code::file_init;
 	}

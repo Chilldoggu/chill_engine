@@ -11,20 +11,49 @@ namespace fs = std::filesystem;
 
 extern fs::path get_proj_path();
 
-Model::Model(std::string a_dir) :m_transform_pos{ 1.0f }, m_transform_scale{ 1.0f }, m_transform_rotation{ 1.0f } {
+Model::Model(std::string a_dir) 
+	:m_transform_pos{ 1.0f }, m_transform_scale{ 1.0f }, m_transform_rotation{ 1.0f }, m_pos{ 0.0 }, m_size{ 1.0 }
+{
 	m_dir = fs::path(a_dir).parent_path();
 	m_name = fs::path(a_dir).filename();
 	load_model();
 }
 
 void Model::set_pos(glm::vec3 a_pos) {
+	m_pos = a_pos;
 	m_transform_pos = glm::mat4(1.0f);
 	m_transform_pos = glm::translate(m_transform_pos, a_pos);
 }
 
 void Model::set_size(float a_size) {
+	m_size = glm::vec3(a_size);
 	m_transform_scale = glm::mat4(1.0f);
-	m_transform_scale = glm::scale(m_transform_scale, glm::vec3(a_size, a_size, a_size));
+	m_transform_scale = glm::scale(m_transform_scale, glm::vec3(a_size));
+}
+
+void Model::set_size(glm::vec3 a_size) {
+	m_size = a_size;
+	m_transform_scale = glm::mat4(1.0f);
+	m_transform_scale = glm::scale(m_transform_scale, a_size);
+}
+
+void Model::move(glm::vec3 a_vec) {
+	m_pos += a_vec;
+	m_transform_pos = glm::translate(m_transform_pos, a_vec);
+}
+
+void Model::rotate(float a_angle, Axis a_axis) {
+	switch (a_axis) {
+		case Axis::X:
+			m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_angle), glm::vec3(1.0, 0.0, 0.0));
+			break;
+		case Axis::Y:
+			m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_angle), glm::vec3(0.0, 1.0, 0.0));
+			break;
+		case Axis::Z:
+			m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_angle), glm::vec3(0.0, 0.0, 1.0));
+			break;
+	}
 }
 
 void Model::draw(ShaderProgram &a_shader, std::string a_material_map_uniform_name) {
@@ -33,6 +62,14 @@ void Model::draw(ShaderProgram &a_shader, std::string a_material_map_uniform_nam
 			a_shader.set_uniform(a_material_map_uniform_name, mesh.get_material_map());
 		mesh.draw(a_shader);
 	}
+}
+
+glm::vec3 Model::get_pos() const {
+	return m_pos;
+}
+
+glm::vec3 Model::get_size() const {
+	return m_size;
 }
 
 std::string Model::get_dir() const {

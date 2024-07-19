@@ -81,6 +81,13 @@ Uniform& Uniform::operator=(T val) {
 }
 
 struct ShaderSrc {
+	ShaderSrc(ShaderType a_shader_type, const std::string& a_filename);
+	~ShaderSrc();
+
+	auto load_code(const std::string& filename) -> void;
+	auto compile_shader(char** code) -> void;
+	auto check_compilation() -> void;
+
 	int success;
 	char infoLog[INFO_LOG_SIZ];
 	char* code = nullptr;
@@ -88,13 +95,6 @@ struct ShaderSrc {
 	std::string filename;
 	std::string shader_name;
 	unsigned int shader_obj;
-
-	ShaderSrc(ShaderType a_shader_type, const std::string& a_filename);
-
-	auto load_code(const std::string& filename) -> void;
-	auto compile_shader(char** code) -> void;
-	auto check_compilation() -> void;
-	~ShaderSrc();
 };
 
 class ShaderProgram {

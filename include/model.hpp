@@ -9,14 +9,23 @@
 #include "meshes.hpp"
 #include "shaders.hpp"
 
+enum class Axis {
+	X, Y, Z
+};
+
 class Model {
 public:
 	Model(std::string a_name);
 
 	auto set_pos(glm::vec3 a_pos) -> void;
 	auto set_size(float a_size) -> void;
+	auto set_size(glm::vec3 a_size) -> void;
+	auto move(glm::vec3 a_vec) -> void;
+	auto rotate(float a_angle, Axis a_axis = Axis::X) -> void;
 	auto draw(ShaderProgram &a_shader, std::string a_material_map_uniform_name) -> void;
 
+	auto get_pos() const -> glm::vec3;
+	auto get_size() const -> glm::vec3;
     auto get_dir() const -> std::string;
     auto get_name() const -> std::string;
 	auto get_model_mat() const -> glm::mat4;
@@ -27,6 +36,8 @@ private:
 	auto process_node(aiNode *a_node, const aiScene *a_scene) -> void;
 	auto process_mesh(aiMesh *a_mesh, const aiScene *a_scene) -> Mesh;
 
+	glm::vec3 m_pos;
+	glm::vec3 m_size;
 	glm::mat4 m_transform_scale;
 	glm::mat4 m_transform_rotation;
 	glm::mat4 m_transform_pos;
