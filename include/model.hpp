@@ -22,7 +22,7 @@ public:
 	auto set_size(glm::vec3 a_size) -> void;
 	auto move(glm::vec3 a_vec) -> void;
 	auto rotate(float a_angle, Axis a_axis = Axis::X) -> void;
-	auto draw(ShaderProgram &a_shader, std::string a_material_map_uniform_name) -> void;
+	auto draw(ShaderProgram &a_shader, std::string a_material_map_uniform_name = "") -> void;
 
 	auto get_pos() const -> glm::vec3;
 	auto get_size() const -> glm::vec3;
@@ -35,6 +35,7 @@ private:
 	auto load_model() -> void;
 	auto process_node(aiNode *a_node, const aiScene *a_scene) -> void;
 	auto process_mesh(aiMesh *a_mesh, const aiScene *a_scene) -> Mesh;
+	auto process_texture(std::vector<std::shared_ptr<Texture>>& a_textures, aiMaterial* a_mat, aiTextureType a_ai_tex_type, int a_unit_id = 0) -> void;
 
 	glm::vec3 m_pos;
 	glm::vec3 m_size;

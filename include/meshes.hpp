@@ -131,6 +131,6 @@ public:
 private:
 	bool m_wireframe;
 	BufferData m_data;
-	MaterialMap m_material_map; // WARNING: When copying Model objects old MaterialMap get's deleted (probably) but it doesn't affect the textures because their shared pointers are copied aswell.
+	MaterialMap m_material_map;
 	std::shared_ptr<BufferObjects> m_VBOs;
 };

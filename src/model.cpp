@@ -113,6 +113,39 @@ void Model::process_node(aiNode *a_node, const aiScene *a_scene) {
 	}
 }
 
+void Model::process_texture(std::vector<std::shared_ptr<Texture>>& a_textures, aiMaterial* a_mat, aiTextureType a_ai_tex_type, int a_unit_id) {
+	aiString texture_name;
+	TextureType tex_type{ TextureType::NONE };
+	switch (a_ai_tex_type) {
+		case aiTextureType::aiTextureType_DIFFUSE:
+			tex_type = TextureType::DIFFUSE;
+			break;
+		case aiTextureType::aiTextureType_SPECULAR:
+			tex_type = TextureType::SPECULAR;
+			break;
+		case aiTextureType::aiTextureType_EMISSIVE:
+			tex_type = TextureType::EMISSION;
+			break;
+	}
+	auto lamb_texture_name_compare = [&texture_name, this](const std::shared_ptr<Texture>& texture){
+		return texture->get_dir() == (this->m_dir / texture_name.C_Str()).c_str(); 
+	};
+
+	for (size_t i = 0; i < a_mat->GetTextureCount(a_ai_tex_type); i++) {
+		a_mat->GetTexture(a_ai_tex_type, i, &texture_name);
+		auto it = std::find_if(m_textures_loaded.begin(), m_textures_loaded.end(), lamb_texture_name_compare);
+		if (it != m_textures_loaded.end()) {
+			a_textures.push_back(*it);
+		} else {
+			// std::string texture_dir = (this->m_dir / formatted_texture_name).c_str();
+			std::string texture_dir = (this->m_dir / texture_name.C_Str()).c_str();
+			std::shared_ptr<Texture> texture_ptr = std::make_shared<Texture>(texture_dir, tex_type, a_unit_id++);
+			a_textures.push_back(texture_ptr);
+			m_textures_loaded.push_back(texture_ptr);
+		}
+	}
+}
+
 Mesh Model::process_mesh(aiMesh *a_mesh, const aiScene *a_scene) {
 	BufferData data;
 	std::vector<std::shared_ptr<Texture>> textures;
@@ -137,39 +170,9 @@ Mesh Model::process_mesh(aiMesh *a_mesh, const aiScene *a_scene) {
 	
 	if(a_mesh->mMaterialIndex >= 0) {
 		aiMaterial *material = a_scene->mMaterials[a_mesh->mMaterialIndex];
-		aiString texture_name;
-		int unit_id{ 0 };
-		auto lamb_texture_name_compare = [&texture_name, this](const std::shared_ptr<Texture>& texture){ 
-			return texture->get_dir() == (this->m_dir / texture_name.C_Str()).c_str(); 
-		};
 
-		for (size_t i = 0; i < material->GetTextureCount(aiTextureType_DIFFUSE); i++) {
-			material->GetTexture(aiTextureType_DIFFUSE, i, &texture_name);
-			std::string formatted_texture_name = fs::path(texture_name.C_Str()).filename();
-			auto it = std::find_if(m_textures_loaded.begin(), m_textures_loaded.end(), lamb_texture_name_compare);
-			if (it != m_textures_loaded.end()) {
-				textures.push_back(*it);
-			} else {
-				std::string texture_dir = (this->m_dir / formatted_texture_name).c_str();
-				std::shared_ptr<Texture> ptr = std::make_shared<Texture>(texture_dir, TextureType::DIFFUSE, unit_id++);
-				textures.push_back(ptr);
-				m_textures_loaded.push_back(ptr);
-			}
-		}
-
-		for (size_t i = 0; i < material->GetTextureCount(aiTextureType_SPECULAR); i++) {
-			material->GetTexture(aiTextureType_SPECULAR, i, &texture_name);
-			std::string formatted_texture_name = fs::path(texture_name.C_Str()).filename();
-			auto it = std::find_if(m_textures_loaded.begin(), m_textures_loaded.end(), lamb_texture_name_compare);
-			if (it != m_textures_loaded.end()) {
-				textures.push_back(*it);
-			} else {
-				std::string texture_dir = (this->m_dir / formatted_texture_name).c_str();
-				std::shared_ptr<Texture> ptr = std::make_shared<Texture>(texture_dir, TextureType::SPECULAR, unit_id++);
-				textures.push_back(ptr);
-				m_textures_loaded.push_back(ptr);
-			}
-		}
+		process_texture(textures, material, aiTextureType_DIFFUSE, 0);
+		process_texture(textures, material, aiTextureType_SPECULAR, (int)material->GetTextureCount(aiTextureType_DIFFUSE));
 	}
 	mat.set_textures(textures);
 

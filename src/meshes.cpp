@@ -60,13 +60,38 @@ void Texture::generate_texture(std::string a_dir, TextureType a_type, int a_text
 	int height{ };
 	unsigned char* data = stbi_load(p.c_str(), &width, &height, &nrChannels, 0);
 
+	unsigned format;
+	if (nrChannels == 3) {
+		format = GL_RGB;
+	} else if (nrChannels == 4) {
+		// WARNING:
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		format = GL_RGBA;
+	} else {
+		ERROR(std::format("Unsupported texture format for {} number of channels.", nrChannels).c_str());
+		throw Error_code::init_error;
+	}
+
+	// INFO: Testing
 	if (data) {
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	} else {
+		ERROR(std::format("Couldn't load texture data {}", m_dir).data());
+		throw Error_code::init_error;
+	}
+
+	/* if (data) {
 		std::string extension = p.extension().string();
 		if (extension == ".jpeg" || extension == ".jpg") {
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 			glGenerateMipmap(GL_TEXTURE_2D);
 		} else if (extension == ".png") {
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		} else if (extension == ".tga") {
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 			glGenerateMipmap(GL_TEXTURE_2D);
 		} else { // If extension not handled just guess
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
@@ -75,7 +100,8 @@ void Texture::generate_texture(std::string a_dir, TextureType a_type, int a_text
 	} else {
 		ERROR(std::format("Couldn't load texture data {}", m_dir).data());
 		throw Error_code::init_error;
-	}
+	} */
+
 	stbi_image_free(data);
 }
 
@@ -328,12 +354,6 @@ void Mesh::set_material_map(const MaterialMap& a_material_map) {
 
 void Mesh::draw(ShaderProgram& a_shader) {
 	a_shader.use();
-
-	if (a_shader.get_depth_testing()) {
-		glEnable(GL_DEPTH_TEST);
-	} else {
-		glDisable(GL_DEPTH_TEST);
-	}
 
 	glBindVertexArray(m_VBOs->m_VAO);
 

@@ -250,6 +250,12 @@ void ShaderProgram::check_linking() {
 
 void ShaderProgram::use() {
 	glUseProgram(m_shader_program);
+
+	if (m_depth_testing) {
+		glEnable(GL_DEPTH_TEST);
+	} else {
+		glDisable(GL_DEPTH_TEST);
+	}
 }
 
 ShaderProgram::~ShaderProgram() {
