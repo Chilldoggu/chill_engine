@@ -11,9 +11,7 @@ namespace fs = std::filesystem;
 
 extern fs::path get_proj_path();
 
-Model::Model(std::string a_dir) 
-	:m_transform_pos{ 1.0f }, m_transform_scale{ 1.0f }, m_transform_rotation{ 1.0f }, m_pos{ 0.0 }, m_size{ 1.0 }
-{
+Model::Model(std::string a_dir) {
 	m_dir = fs::path(a_dir).parent_path();
 	m_name = fs::path(a_dir).filename();
 	load_model();
@@ -54,6 +52,50 @@ void Model::rotate(float a_angle, Axis a_axis) {
 			m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_angle), glm::vec3(0.0, 0.0, 1.0));
 			break;
 	}
+}
+
+void Model::draw_outlined(float a_thickness, ShaderProgram &a_object_shader, ShaderProgram &a_outline_shader, std::string a_model_uniform_name, std::string a_material_map_uniform_name) {
+	// Save shader options
+	bool obj_depth = a_object_shader.get_depth_testing();
+	bool obj_stencil = a_object_shader.get_stencil_testing();
+	bool out_depth = a_outline_shader.get_depth_testing();
+	bool out_stencil = a_outline_shader.get_stencil_testing();
+
+	// Render object and write 1's to stencil buffer.
+	a_object_shader.set_stencil_testing(true);
+	glStencilMask(0xFF);
+	glStencilFunc(GL_ALWAYS, 1, 0xFF); // Stencil test always passes
+	glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
+
+	draw(a_object_shader, a_material_map_uniform_name);
+	
+	// Render object's outline by rendering bigger object and checking wheter 
+	// it's fragments stencil values are equal to 0, if yes then they are part
+	// of outline.
+	
+	a_outline_shader.set_stencil_testing(true);
+	a_outline_shader.set_depth_testing(false);
+	glStencilMask(0x00);
+	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+
+	auto tmp_scale_mat = m_transform_scale;
+	auto tmp_size = m_size;
+	set_size(get_size() * a_thickness);
+	a_outline_shader[a_model_uniform_name] = get_model_mat();
+
+	draw(a_outline_shader);
+
+	// Restore
+	m_transform_scale = tmp_scale_mat;
+	m_size = tmp_size;
+	glStencilFunc(GL_ALWAYS, 0, 0xFF); // Stencil test always passes
+	glStencilMask(0xFF);
+	glClear(GL_STENCIL_BUFFER_BIT);
+	
+	a_object_shader.set_depth_testing(obj_depth);
+	a_object_shader.set_stencil_testing(obj_stencil);
+	a_outline_shader.set_depth_testing(out_depth);
+	a_outline_shader.set_stencil_testing(out_stencil);
 }
 
 void Model::draw(ShaderProgram &a_shader, std::string a_material_map_uniform_name) {

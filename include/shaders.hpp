@@ -24,7 +24,7 @@ enum class ShaderType {
 class Uniform {
 public:
 	Uniform(std::string a_name, int a_location, unsigned int a_program);
-	Uniform();
+	Uniform() = default;
 
 	auto get_name() const -> std::string;
 
@@ -32,9 +32,9 @@ public:
 	auto operator=(T val) -> Uniform&;
 
 private:
-	int m_uniform_location;
-	unsigned int m_shader_program;
-	std::string m_name;
+	int m_uniform_location = -1;
+	unsigned int m_shader_program = 0;
+	std::string m_name = "";
 };
 
 template<typename T>
@@ -88,19 +88,17 @@ struct ShaderSrc {
 	auto compile_shader(char** code) -> void;
 	auto check_compilation() -> void;
 
-	int success;
+	int success = false;
 	char infoLog[INFO_LOG_SIZ];
 	char* code = nullptr;
 	ShaderType shader_type;
 	std::string filename;
-	std::string shader_name;
 	unsigned int shader_obj;
 };
 
 class ShaderProgram {
 public:
 	ShaderProgram(std::initializer_list<ShaderSrc> a_shaders);
-	ShaderProgram(const ShaderProgram& a_shader_prog);
 	~ShaderProgram();
 
 	auto operator[](const std::string& a_uniform_var) -> Uniform&;
@@ -110,9 +108,11 @@ public:
 	auto set_uniform(const std::string& a_spotlight_name, const SpotLight& a_light) -> void;
 	auto set_uniform(const std::string& a_material_name, const MaterialMap& a_material) -> void;
 	auto set_depth_testing(bool option) -> void;
+	auto set_stencil_testing(bool option) -> void;
 	auto use() -> void;
 
 	auto get_depth_testing() const -> bool;
+	auto get_stencil_testing() const -> bool;
 	auto get_shader_program() const -> unsigned int;
 
 	auto debug() const -> void;
@@ -126,8 +126,9 @@ private:
 
 	int m_success;
 	char m_infoLog[INFO_LOG_SIZ];
-	bool m_depth_testing;
-	unsigned int m_shader_program;
-	std::string m_name;
+	bool m_depth_testing = true;
+	bool m_stencil_testing = false;
+	unsigned int m_shader_program = glCreateProgram();
+	std::string m_name = "";
 	std::map<std::string, Uniform> m_uniforms;
 };

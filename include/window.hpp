@@ -1,11 +1,9 @@
 #pragma once
 
-#include "glm/ext/vector_float3.hpp"
 #include "imgui/imgui.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include <functional>
 #include <string>
 
 enum class CursorMode {
@@ -20,7 +18,6 @@ public:
 	Window();
 	~Window();
 
-	auto draw(glm::vec3 a_backgoround_color, std::function<void(void)> draw_body, std::function<void(void)> custom_input, std::function<void(void)> imgui_body) -> void;
 	auto closed() -> bool;
 	auto set_width(float width) -> void;
 	auto set_height(float height) -> void;
@@ -46,13 +43,13 @@ public:
 	auto get_mouse_focus_status() const -> bool;
 
 private:
-	float m_delta_time;
-	float m_last_frame;
-	float m_current_frame;
+	float m_delta_time    = 0.0f;
+	float m_last_frame    = 0.0f;
+	float m_current_frame = 0.0f;
 
 	int m_width;
 	int m_height;
-	bool m_mouse_focus;
+	bool m_mouse_focus = false;
 	float m_mouse_pos_x;
 	float m_mouse_pos_y;
 	CursorMode m_cur_mode;

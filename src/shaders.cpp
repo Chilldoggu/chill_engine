@@ -19,23 +19,18 @@ Uniform::Uniform(std::string a_name, int a_location, unsigned int a_program)
 	}
 }
 
-Uniform::Uniform()
-	:m_name{ "" }, m_uniform_location{ -1 }, m_shader_program{ 0 } { }
-
 std::string Uniform::get_name() const {
 	return m_name;
 }
 
 ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::string& a_filename) 
-	:shader_type{ a_shader_type }, filename{ a_filename }, success{ false }
+	:shader_type{ a_shader_type }, filename{ a_filename }
 {
 	switch(shader_type) {
 		case ShaderType::VERTEX:
-			shader_name = "VERTEX";
 			shader_obj = glCreateShader(GL_VERTEX_SHADER);
 			break;
 		case ShaderType::FRAGMENT:
-			shader_name = "FRAGMENT";
 			shader_obj = glCreateShader(GL_FRAGMENT_SHADER);
 			break;
 		default:
@@ -86,7 +81,13 @@ void ShaderSrc::check_compilation() {
 
 	if (!success) {
 		glGetShaderInfoLog(shader_obj, 1024, nullptr, infoLog);
-		ERROR(std::format("{} shader \"{}\" can't compile.\nGLSL error message:\n{}", shader_name, filename, infoLog).data());
+		if (shader_type == ShaderType::VERTEX) {
+			ERROR(std::format("{} shader \"VERTEX\" can't compile.\nGLSL error message:\n{}", filename, infoLog).data());
+		} else if (shader_type == ShaderType::FRAGMENT) {
+			ERROR(std::format("{} shader \"FRAGMENT\" can't compile.\nGLSL error message:\n{}", filename, infoLog).data());
+		} else {
+			ERROR(std::format("{} shader \"UNKNOWN\" can't compile.\nGLSL error message:\n{}", filename, infoLog).data());
+		}
 		throw Error_code::glsl_bad_compilation;
 	}
 }
@@ -97,9 +98,7 @@ ShaderSrc::~ShaderSrc() {
 	delete[] code;
 }
 
-ShaderProgram::ShaderProgram(std::initializer_list<ShaderSrc> a_shaders)
-	:m_name{ "" }, m_shader_program{ glCreateProgram() }, m_depth_testing{ true }
-{
+ShaderProgram::ShaderProgram(std::initializer_list<ShaderSrc> a_shaders) {
 	if (!std::find_if(a_shaders.begin(), a_shaders.end(), [](const ShaderSrc& sh){ return sh.shader_type == ShaderType::VERTEX; })) {
 		ERROR("Shader initializer list lacks vertex shader.");
 		throw Error_code::glsl_bad_shader_type;
@@ -115,9 +114,6 @@ ShaderProgram::ShaderProgram(std::initializer_list<ShaderSrc> a_shaders)
 	glLinkProgram(m_shader_program);
 	check_linking();
 }
-
-ShaderProgram::ShaderProgram(const ShaderProgram& a_shader_prog)
-	:m_name{ a_shader_prog.m_name }, m_shader_program{ a_shader_prog.m_shader_program }, m_depth_testing{ a_shader_prog.m_depth_testing } { }
 
 Uniform& ShaderProgram::operator[](const std::string& uniform_var) {
 	try {
@@ -239,6 +235,10 @@ void ShaderProgram::set_depth_testing(bool a_option) {
 	m_depth_testing = a_option;
 }
 
+void ShaderProgram::set_stencil_testing(bool a_option) {
+	m_stencil_testing = a_option;
+}
+
 void ShaderProgram::check_linking() {
 	glGetProgramiv(m_shader_program, GL_LINK_STATUS, &m_success);
 	if (!m_success) {
@@ -256,6 +256,12 @@ void ShaderProgram::use() {
 	} else {
 		glDisable(GL_DEPTH_TEST);
 	}
+
+	if (m_stencil_testing) {
+		glEnable(GL_STENCIL_TEST);
+	} else {
+		glDisable(GL_STENCIL_TEST);
+	}
 }
 
 ShaderProgram::~ShaderProgram() {
@@ -264,6 +270,10 @@ ShaderProgram::~ShaderProgram() {
 
 bool ShaderProgram::get_depth_testing() const {
 	return m_depth_testing;
+}
+
+bool ShaderProgram::get_stencil_testing() const {
+	return m_stencil_testing;
 }
 
 unsigned int ShaderProgram::get_shader_program() const { 

@@ -8,8 +8,7 @@
 #include <GLFW/glfw3.h>
 
 Window::Window(int a_width, int a_height, const std::string& a_title, CursorMode a_mode) 
-	:m_width{ a_width }, m_height{ a_height }, m_title{ a_title }, m_mouse_pos_x{ a_width / 2.f }, m_mouse_pos_y{ a_height / 2.f }, m_mouse_focus{ false },
-	 m_delta_time{ 0.0f }, m_last_frame{ 0.0f }, m_current_frame{ 0.0f }, m_cur_mode{ a_mode }
+	:m_width{ a_width }, m_height{ a_height }, m_title{ a_title }, m_mouse_pos_x{ a_width / 2.f }, m_mouse_pos_y{ a_height / 2.f }, m_cur_mode{ a_mode }
 {
 	if (!glfwInit()) {
 		ERROR("Couldn't initialise glfw.");
@@ -108,33 +107,6 @@ void Window::title_rshift(int n) {
 
 void Window::title_change() {
 	glfwSetWindowTitle(m_window, m_title.c_str());
-}
-
-void Window::draw(glm::vec3 a_background_color, std::function<void(void)> draw_body, std::function<void(void)> custom_input, std::function<void(void)> imgui_body) {
-	while (!closed()) {
-		glfwPollEvents();
-
-		process_input();
-		custom_input();
-
-		glClearColor(a_background_color[0], a_background_color[1], a_background_color[2], 1.0);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// Rendering
-		draw_body();
-
-		// ImGui
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-
-		imgui_body();
-
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-		glfwSwapBuffers(this->m_window);
-	}
 }
 
 void Window::set_mouse_x(float x_pos) {

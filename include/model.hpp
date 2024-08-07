@@ -23,6 +23,7 @@ public:
 	auto move(glm::vec3 a_vec) -> void;
 	auto rotate(float a_angle, Axis a_axis = Axis::X) -> void;
 	auto draw(ShaderProgram &a_shader, std::string a_material_map_uniform_name = "") -> void;
+	auto draw_outlined(float a_thickness, ShaderProgram &a_object_shader, ShaderProgram& a_outline_shader, std::string a_model_uniform_name, std::string a_material_map_uniform_name) -> void;
 
 	auto get_pos() const -> glm::vec3;
 	auto get_size() const -> glm::vec3;
@@ -37,13 +38,13 @@ private:
 	auto process_mesh(aiMesh *a_mesh, const aiScene *a_scene) -> Mesh;
 	auto process_texture(std::vector<std::shared_ptr<Texture>>& a_textures, aiMaterial* a_mat, aiTextureType a_ai_tex_type, int a_unit_id = 0) -> void;
 
-	glm::vec3 m_pos;
-	glm::vec3 m_size;
-	glm::mat4 m_transform_scale;
-	glm::mat4 m_transform_rotation;
-	glm::mat4 m_transform_pos;
+	glm::vec3 m_pos  = glm::vec3(0.0f);
+	glm::vec3 m_size = glm::vec3(1.0f);
+	glm::mat4 m_transform_scale    = 1.0f;
+	glm::mat4 m_transform_rotation = 1.0f;
+	glm::mat4 m_transform_pos      = 1.0f;
 	std::vector<Mesh> m_meshes;
 	std::vector<std::shared_ptr<Texture>> m_textures_loaded;
-	std::filesystem::path m_dir;
-	std::filesystem::path m_name;
+	std::filesystem::path m_dir = "";
+	std::filesystem::path m_name = "";
 };
