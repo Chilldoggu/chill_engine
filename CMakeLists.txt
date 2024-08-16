@@ -33,7 +33,7 @@ target_include_directories(window      PUBLIC "include")
 target_include_directories(shaders     PUBLIC "include")
 target_include_directories(meshes      PUBLIC "include")
 target_include_directories(model       PUBLIC "include")
-target_include_directories(imgui       PUBLIC ${IMGUI_DIR} ${IMGUI_BACKEND_DIR})
+target_include_directories(imgui       PUBLIC ${IMGUI_DIR} ${IMGUI_BACKEND_DIR} "include")
 
 target_link_libraries(model          PUBLIC meshes)
 target_link_libraries(window         PUBLIC assert imgui)
