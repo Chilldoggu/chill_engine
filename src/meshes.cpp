@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 
 fs::path get_proj_path() {
 	fs::path p = fs::current_path();
-	if (p.filename() == "build") {
+	if (p.filename() == "build" || p.filename() == "install") {
 		p = p.parent_path();
 	}
 
@@ -48,8 +48,6 @@ void Texture::generate_texture(std::string a_dir, TextureType a_type, int a_text
 	glGenTextures(1, &m_texture_id);
 	glBindTexture(GL_TEXTURE_2D, m_texture_id);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
 	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // GL_NEAREST variations available
@@ -64,11 +62,20 @@ void Texture::generate_texture(std::string a_dir, TextureType a_type, int a_text
 	unsigned format;
 	if (nrChannels == 3) {
 		format = GL_RGB;
-	} else if (nrChannels == 4) {
-		// WARNING:
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	} else if (nrChannels == 4) { 
+		format = GL_RGBA;
+
+		// Interpolation of transparent borders with GL_REPEAT colors them
+		// with opposite border color. With GL_CLAMP_TO_EDGE we make sure to 
+		// spread transparency across the edges.
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		format = GL_RGBA;
 	} else {
 		ERROR(std::format("Unsupported texture format for {} number of channels.", nrChannels).c_str());
 		throw Error_code::init_error;
@@ -82,26 +89,6 @@ void Texture::generate_texture(std::string a_dir, TextureType a_type, int a_text
 		ERROR(std::format("Couldn't load texture data {}", m_dir).data());
 		throw Error_code::init_error;
 	}
-
-	/* if (data) {
-		std::string extension = p.extension().string();
-		if (extension == ".jpeg" || extension == ".jpg") {
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
-		} else if (extension == ".png") {
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
-		} else if (extension == ".tga") {
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
-		} else { // If extension not handled just guess
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
-		}
-	} else {
-		ERROR(std::format("Couldn't load texture data {}", m_dir).data());
-		throw Error_code::init_error;
-	} */
 
 	stbi_image_free(data);
 }
@@ -275,6 +262,7 @@ Mesh::Mesh(const BufferData& a_data, const MaterialMap& a_mat, bool a_wireframe)
 		set_elements();
 	}
 }
+
 void Mesh::gen_VAO() {
 	if (m_VBOs->m_VAO == EMPTY_VBO)
 		glGenVertexArrays(1, &m_VBOs->m_VAO);

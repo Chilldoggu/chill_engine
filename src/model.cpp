@@ -17,6 +17,10 @@ Model::Model(std::string a_dir) {
 	load_model();
 }
 
+Model::Model(std::vector<Mesh> a_meshes) {
+	m_meshes = a_meshes;
+}
+
 void Model::set_pos(glm::vec3 a_pos) {
 	m_pos = a_pos;
 	m_transform_pos = glm::mat4(1.0f);

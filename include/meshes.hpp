@@ -18,6 +18,7 @@
 class ShaderProgram;
 
 std::filesystem::path get_asset_path();
+std::filesystem::path get_proj_path();
 
 enum class TextureType {
 	DIFFUSE,

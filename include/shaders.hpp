@@ -91,7 +91,6 @@ struct ShaderSrc {
 	int m_compilation_success = false;
 	char m_infoLog[INFO_LOG_SIZ];
 	std::shared_ptr<char*> m_code;
-	// std::string m_code = {};
 	ShaderType m_type;
 	std::string m_path;
 	unsigned int m_obj;

@@ -15,7 +15,8 @@ enum class Axis {
 
 class Model {
 public:
-	Model(std::string a_name);
+	Model(std::string a_dir);
+	Model(std::vector<Mesh> a_meshes);
 
 	auto set_pos(glm::vec3 a_pos) -> void;
 	auto set_size(float a_size) -> void;

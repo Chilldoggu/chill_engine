@@ -9,6 +9,9 @@
 #include <stdexcept>
 
 #include "assert.hpp"
+#include "meshes.hpp"
+
+extern std::filesystem::path get_proj_path();
 
 Uniform::Uniform(std::string a_name, int a_location, unsigned int a_program)
 	:m_name{ a_name }, m_uniform_location{ a_location }, m_shader_program{ a_program }
@@ -24,7 +27,7 @@ std::string Uniform::get_name() const {
 }
 
 ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::string& a_path) 
-	:m_type{ a_shader_type }, m_path{ a_path }
+	:m_type{ a_shader_type }, m_path{ (get_proj_path() / a_path).string() }
 {
 	switch(m_type) {
 		case ShaderType::VERTEX:
