@@ -27,8 +27,8 @@ public:
 
 	auto get_pos() const -> glm::vec3;
 	auto get_size() const -> glm::vec3;
-    auto get_dir() const -> std::string;
-    auto get_name() const -> std::string;
+	auto get_dir() const -> std::string;
+	auto get_name() const -> std::string;
 	auto get_model_mat() const -> glm::mat4;
 	auto get_normal_mat() const -> glm::mat3;
 

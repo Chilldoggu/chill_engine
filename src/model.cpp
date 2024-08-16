@@ -115,11 +115,11 @@ glm::vec3 Model::get_size() const {
 }
 
 std::string Model::get_dir() const {
-	return m_dir.c_str();
+	return m_dir.string();
 }
 
 std::string Model::get_name() const {
-	return m_name.c_str();
+	return m_name.string();
 }
 
 glm::mat4 Model::get_model_mat() const {
@@ -134,7 +134,7 @@ glm::mat3 Model::get_normal_mat() const {
 void Model::load_model() {
 	Assimp::Importer importer;
 	fs::path p = get_proj_path() / m_dir / m_name;
-	const aiScene *scene = importer.ReadFile(p.c_str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
+	const aiScene *scene = importer.ReadFile(p.string(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
 
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
 		ERROR(std::format("ASSIMP::{}", importer.GetErrorString()).c_str());
@@ -145,12 +145,12 @@ void Model::load_model() {
 }
 
 void Model::process_node(aiNode *a_node, const aiScene *a_scene) {
-	for (size_t i = 0; i < a_node->mNumMeshes; i++) {
+	for (int i = 0; i < a_node->mNumMeshes; i++) {
 		aiMesh *mesh = a_scene->mMeshes[a_node->mMeshes[i]];
 		m_meshes.push_back(process_mesh(mesh, a_scene));
 	}
 
-	for (size_t i = 0; i < a_node->mNumChildren; i++) {
+	for (int i = 0; i < a_node->mNumChildren; i++) {
 		process_node(a_node->mChildren[i], a_scene);
 	}
 }
@@ -170,17 +170,17 @@ void Model::process_texture(std::vector<std::shared_ptr<Texture>>& a_textures, a
 			break;
 	}
 	auto lamb_texture_name_compare = [&texture_name, this](const std::shared_ptr<Texture>& texture){
-		return texture->get_dir() == (this->m_dir / texture_name.C_Str()).c_str(); 
+		return texture->get_dir() == (this->m_dir / texture_name.C_Str()).string(); 
 	};
 
-	for (size_t i = 0; i < a_mat->GetTextureCount(a_ai_tex_type); i++) {
+	for (int i = 0; i < a_mat->GetTextureCount(a_ai_tex_type); i++) {
 		a_mat->GetTexture(a_ai_tex_type, i, &texture_name);
 		auto it = std::find_if(m_textures_loaded.begin(), m_textures_loaded.end(), lamb_texture_name_compare);
 		if (it != m_textures_loaded.end()) {
 			a_textures.push_back(*it);
 		} else {
 			// std::string texture_dir = (this->m_dir / formatted_texture_name).c_str();
-			std::string texture_dir = (this->m_dir / texture_name.C_Str()).c_str();
+			std::string texture_dir = (this->m_dir / texture_name.C_Str()).string();
 			std::shared_ptr<Texture> texture_ptr = std::make_shared<Texture>(texture_dir, tex_type, a_unit_id++);
 			a_textures.push_back(texture_ptr);
 			m_textures_loaded.push_back(texture_ptr);
@@ -193,7 +193,7 @@ Mesh Model::process_mesh(aiMesh *a_mesh, const aiScene *a_scene) {
 	std::vector<std::shared_ptr<Texture>> textures;
 	MaterialMap mat;
 
-	for (size_t i = 0; i < a_mesh->mNumVertices; i++) {
+	for (int i = 0; i < a_mesh->mNumVertices; i++) {
 		data.positions.push_back(glm::vec3(a_mesh->mVertices[i].x, a_mesh->mVertices[i].y, a_mesh->mVertices[i].z));
 		data.normals.push_back(glm::vec3(a_mesh->mNormals[i].x, a_mesh->mNormals[i].y, a_mesh->mNormals[i].z));
 		if (a_mesh->mTextureCoords[0]) 
@@ -203,8 +203,8 @@ Mesh Model::process_mesh(aiMesh *a_mesh, const aiScene *a_scene) {
 	}
 	data.vert_sum = data.positions.size();
 
-	for (size_t i = 0; i < a_mesh->mNumFaces; i++)
-		for (size_t j = 0; j < a_mesh->mFaces[i].mNumIndices; j++)
+	for (int i = 0; i < a_mesh->mNumFaces; i++)
+		for (int j = 0; j < a_mesh->mFaces[i].mNumIndices; j++)
 			data.indicies.push_back(a_mesh->mFaces[i].mIndices[j]);
 	data.indicies_sum = data.indicies.size();
 

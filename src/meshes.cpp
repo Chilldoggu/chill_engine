@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <memory>
+#include <string>
 #include <utility>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -58,7 +59,7 @@ void Texture::generate_texture(std::string a_dir, TextureType a_type, int a_text
 	stbi_set_flip_vertically_on_load(true);
 	int width{ };
 	int height{ };
-	unsigned char* data = stbi_load(p.c_str(), &width, &height, &nrChannels, 0);
+	unsigned char* data = stbi_load(p.string().c_str(), &width, &height, &nrChannels, 0);
 
 	unsigned format;
 	if (nrChannels == 3) {

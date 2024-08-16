@@ -23,93 +23,94 @@ std::string Uniform::get_name() const {
 	return m_name;
 }
 
-ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::string& a_filename) 
-	:shader_type{ a_shader_type }, filename{ a_filename }
+ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::string& a_path) 
+	:m_type{ a_shader_type }, m_path{ a_path }
 {
-	switch(shader_type) {
+	switch(m_type) {
 		case ShaderType::VERTEX:
-			shader_obj = glCreateShader(GL_VERTEX_SHADER);
+			m_obj = glCreateShader(GL_VERTEX_SHADER);
 			break;
 		case ShaderType::FRAGMENT:
-			shader_obj = glCreateShader(GL_FRAGMENT_SHADER);
+			m_obj = glCreateShader(GL_FRAGMENT_SHADER);
 			break;
 		default:
 			ERROR("Shader type not compatible.");
 			throw Error_code::glsl_bad_shader_type;
 	}
-
-	load_code(filename);
-	compile_shader(&code);
+ 
+	m_code = std::make_shared<char*>(load_code());
+	compile_shader();
 }
 
-void ShaderSrc::load_code(const std::string& filename) {
+char* ShaderSrc::load_code() {
 	using std::ios;
-	std::ifstream file_vertex_shader{ "../" + filename, ios::in | ios::binary };
+	std::ifstream shader_file{ m_path, ios::in | ios::binary };
 
-	if (!file_vertex_shader.is_open()) {
-		switch (shader_type) {
+	if (!shader_file.is_open()) {
+		switch (m_type) {
 			case ShaderType::VERTEX:
-				ERROR(std::format("Vertex shader source file {} couldn't be loaded.", filename).data());
+				ERROR(std::format("Vertex shader source file {} couldn't be loaded.", m_path).data());
 				break;
 			case ShaderType::FRAGMENT:
-				ERROR(std::format("Fragment shader source file {} couldn't be loaded.", filename).data());
+				ERROR(std::format("Fragment shader source file {} couldn't be loaded.", m_path).data());
 				break;
 			default:
-				ERROR(std::format("Unhandled shader type with source file {} couldn't be loaded.", filename).data());
+				ERROR(std::format("Unhandled shader type with source file {} couldn't be loaded.", m_path).data());
 				break;
 		}
 		throw Error_code::file_init;
 	}
 
-	file_vertex_shader.seekg(0, file_vertex_shader.end);
-	int len = file_vertex_shader.tellg();
-	file_vertex_shader.seekg(0, file_vertex_shader.beg);
+	shader_file.seekg(0, shader_file.end);
+	int len = shader_file.tellg();
+	shader_file.seekg(0, shader_file.beg);
 
-	code = new char[len];
-	file_vertex_shader.read(code, len);
+	char* code = new char[len];
+	shader_file.read(code, len);
 	code[len-1] = '\0';
+	return code;
 }
 
-void ShaderSrc::compile_shader(char** code) {
-	glShaderSource(shader_obj, 1, code, nullptr);
-	glCompileShader(shader_obj);
+void ShaderSrc::compile_shader() {
+	auto tmp = m_code.get();
+	glShaderSource(m_obj, 1, tmp, nullptr);
+	glCompileShader(m_obj);
 	check_compilation();
 }
 
 void ShaderSrc::check_compilation() {
-	glGetShaderiv(shader_obj, GL_COMPILE_STATUS, &success);
+	glGetShaderiv(m_obj, GL_COMPILE_STATUS, &m_compilation_success);
 
-	if (!success) {
-		glGetShaderInfoLog(shader_obj, 1024, nullptr, infoLog);
-		if (shader_type == ShaderType::VERTEX) {
-			ERROR(std::format("{} shader \"VERTEX\" can't compile.\nGLSL error message:\n{}", filename, infoLog).data());
-		} else if (shader_type == ShaderType::FRAGMENT) {
-			ERROR(std::format("{} shader \"FRAGMENT\" can't compile.\nGLSL error message:\n{}", filename, infoLog).data());
+	if (!m_compilation_success) {
+		glGetShaderInfoLog(m_obj, 1024, nullptr, m_infoLog);
+		if (m_type == ShaderType::VERTEX) {
+			ERROR(std::format("{} shader \"VERTEX\" can't compile.\nGLSL error message:\n{}", m_path, m_infoLog).data());
+		} else if (m_type == ShaderType::FRAGMENT) {
+			ERROR(std::format("{} shader \"FRAGMENT\" can't compile.\nGLSL error message:\n{}", m_path, m_infoLog).data());
 		} else {
-			ERROR(std::format("{} shader \"UNKNOWN\" can't compile.\nGLSL error message:\n{}", filename, infoLog).data());
+			ERROR(std::format("{} shader \"UNKNOWN\" can't compile.\nGLSL error message:\n{}", m_path, m_infoLog).data());
 		}
 		throw Error_code::glsl_bad_compilation;
 	}
 }
 
 ShaderSrc::~ShaderSrc() {
-	glDeleteShader(shader_obj);
-	shader_obj = 0;
-	delete[] code;
+	glDeleteShader(m_obj);
+	m_obj = 0;
 }
 
 ShaderProgram::ShaderProgram(std::initializer_list<ShaderSrc> a_shaders) {
-	if (!std::find_if(a_shaders.begin(), a_shaders.end(), [](const ShaderSrc& sh){ return sh.shader_type == ShaderType::VERTEX; })) {
+	if (!std::find_if(a_shaders.begin(), a_shaders.end(), [](const ShaderSrc& sh){ return sh.m_type == ShaderType::VERTEX; })) {
 		ERROR("Shader initializer list lacks vertex shader.");
 		throw Error_code::glsl_bad_shader_type;
 	}
-	if (!std::find_if(a_shaders.begin(), a_shaders.end(), [](const ShaderSrc& sh){ return sh.shader_type == ShaderType::FRAGMENT; })) {
+	if (!std::find_if(a_shaders.begin(), a_shaders.end(), [](const ShaderSrc& sh){ return sh.m_type == ShaderType::FRAGMENT; })) {
 		ERROR("Shader initializer list lacks fragment shader.");
 		throw Error_code::glsl_bad_shader_type;
 	}
 
 	for (auto& shader : a_shaders) {
-		glAttachShader(m_shader_program, shader.shader_obj);
+		glAttachShader(m_shader_program, shader.m_obj);
 	}
 	glLinkProgram(m_shader_program);
 	check_linking();
