@@ -341,8 +341,11 @@ void Mesh::set_material_map(const MaterialMap& a_material_map) {
 	m_material_map = a_material_map;
 }
 
-void Mesh::draw(ShaderProgram& a_shader) {
-	a_shader.use();
+
+void Mesh::draw() {
+	// Optimization: Shader is being used from Model object draw method to
+	// reduce redundant glEnable()/glDisable() calls to OpenGL on every single mesh.
+	// a_shader.use();
 
 	glBindVertexArray(m_VBOs->m_VAO);
 

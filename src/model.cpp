@@ -60,10 +60,10 @@ void Model::rotate(float a_angle, Axis a_axis) {
 
 void Model::draw_outlined(float a_thickness, ShaderProgram &a_object_shader, ShaderProgram &a_outline_shader, std::string a_model_uniform_name, std::string a_material_map_uniform_name) {
 	// Save shader options
-	bool obj_depth = a_object_shader.get_depth_testing();
-	bool obj_stencil = a_object_shader.get_stencil_testing();
-	bool out_depth = a_outline_shader.get_depth_testing();
-	bool out_stencil = a_outline_shader.get_stencil_testing();
+	bool obj_depth = a_object_shader.get_state("DEPTH_TEST");
+	bool obj_stencil = a_object_shader.get_state("STENCIL_TEST");
+	bool out_depth = a_outline_shader.get_state("DEPTH_TEST");
+	bool out_stencil = a_outline_shader.get_state("STENCIL_TEST");
 
 	// Render object and write 1's to stencil buffer.
 	a_object_shader.set_stencil_testing(true);
@@ -103,10 +103,12 @@ void Model::draw_outlined(float a_thickness, ShaderProgram &a_object_shader, Sha
 }
 
 void Model::draw(ShaderProgram &a_shader, std::string a_material_map_uniform_name) {
+	a_shader.use();
+
 	for (auto& mesh : m_meshes) {
 		if (a_material_map_uniform_name != "")
 			a_shader.set_uniform(a_material_map_uniform_name, mesh.get_material_map());
-		mesh.draw(a_shader);
+		mesh.draw();
 	}
 }
 

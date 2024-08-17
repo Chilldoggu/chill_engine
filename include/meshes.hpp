@@ -117,7 +117,7 @@ public:
 	Mesh();
 	Mesh(const BufferData& a_data, const MaterialMap& a_mat, bool a_wireframe = false);
 
-	auto draw(ShaderProgram& a_shader) -> void;
+	auto draw() -> void;
 	auto gen_VAO() -> void;
 
 	auto set_pos(const std::vector<glm::vec3>& a_pos = {}) -> void;

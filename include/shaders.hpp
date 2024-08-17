@@ -107,12 +107,14 @@ public:
 	auto set_uniform(const std::string& a_pointlight_name, const PointLight& a_light) -> void;
 	auto set_uniform(const std::string& a_spotlight_name, const SpotLight& a_light) -> void;
 	auto set_uniform(const std::string& a_material_name, const MaterialMap& a_material) -> void;
+	auto set_face_culling(bool option) -> void;
 	auto set_depth_testing(bool option) -> void;
 	auto set_stencil_testing(bool option) -> void;
 	auto use() -> void;
 
 	auto get_depth_testing() const -> bool;
 	auto get_stencil_testing() const -> bool;
+	auto get_state(std::string a_state) const -> bool;
 	auto get_shader_program() const -> unsigned int;
 
 	auto debug() const -> void;
@@ -126,9 +128,12 @@ private:
 
 	int m_success;
 	char m_infoLog[INFO_LOG_SIZ];
-	bool m_depth_testing = true;
-	bool m_stencil_testing = false;
 	unsigned int m_shader_program = glCreateProgram();
 	std::string m_name = "";
 	std::map<std::string, Uniform> m_uniforms;
+	std::map<std::string, bool> m_states{
+		{"DEPTH_TEST",   true},
+		{"FACE_CULLING", true},
+		{"STENCIL_TEST", false},
+	};
 };

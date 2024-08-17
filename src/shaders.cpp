@@ -235,12 +235,16 @@ void ShaderProgram::set_uniform(const std::string& a_material_name, const Materi
 	}
 }
 
+void ShaderProgram::set_face_culling(bool a_option) {
+	m_states.at("FACE_CULLING") = a_option;
+}
+
 void ShaderProgram::set_depth_testing(bool a_option) {
-	m_depth_testing = a_option;
+	m_states.at("DEPTH_TEST") = a_option;
 }
 
 void ShaderProgram::set_stencil_testing(bool a_option) {
-	m_stencil_testing = a_option;
+	m_states.at("STENCIL_TEST") = a_option;
 }
 
 void ShaderProgram::check_linking() {
@@ -255,13 +259,19 @@ void ShaderProgram::check_linking() {
 void ShaderProgram::use() {
 	glUseProgram(m_shader_program);
 
-	if (m_depth_testing) {
+	if (m_states.at("FACE_CULLING")) {
+		glEnable(GL_CULL_FACE);
+	} else {
+		glDisable(GL_CULL_FACE);
+	}
+
+	if (m_states.at("DEPTH_TEST")) {
 		glEnable(GL_DEPTH_TEST);
 	} else {
 		glDisable(GL_DEPTH_TEST);
 	}
 
-	if (m_stencil_testing) {
+	if (m_states.at("STENCIL_TEST")) {
 		glEnable(GL_STENCIL_TEST);
 	} else {
 		glDisable(GL_STENCIL_TEST);
@@ -272,12 +282,8 @@ ShaderProgram::~ShaderProgram() {
 	glDeleteProgram(m_shader_program);
 }
 
-bool ShaderProgram::get_depth_testing() const {
-	return m_depth_testing;
-}
-
-bool ShaderProgram::get_stencil_testing() const {
-	return m_stencil_testing;
+bool ShaderProgram::get_state(std::string a_state) const {
+	return m_states.at(a_state);
 }
 
 unsigned int ShaderProgram::get_shader_program() const { 
