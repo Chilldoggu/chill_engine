@@ -4,6 +4,12 @@
 
 #include <string>
 #include <iostream>
+#include <stdexcept>
+
+class GenericException : public std::runtime_error {
+public:
+    GenericException(std::string const& msg) : std::runtime_error(msg) {}
+};
 
 void my_error_handler(const char* file, int line, const char* message);
 

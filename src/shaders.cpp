@@ -10,6 +10,7 @@
 
 #include "assert.hpp"
 #include "meshes.hpp"
+#include "file_manager.hpp" // wstos
 
 extern std::filesystem::path get_proj_path();
 
@@ -26,8 +27,8 @@ std::string Uniform::get_name() const {
 	return m_name;
 }
 
-ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::string& a_path) 
-	:m_type{ a_shader_type }, m_path{ (get_proj_path() / a_path).string() }
+ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path) 
+	:m_type{ a_shader_type }, m_path{ (get_proj_path() / a_path).wstring() }
 {
 	switch(m_type) {
 		case ShaderType::VERTEX:
@@ -52,13 +53,13 @@ char* ShaderSrc::load_code() {
 	if (!shader_file.is_open()) {
 		switch (m_type) {
 			case ShaderType::VERTEX:
-				ERROR(std::format("Vertex shader source file {} couldn't be loaded.", m_path).data());
+				ERROR(std::format("Vertex shader source file {} couldn't be loaded.", wstos(m_path)).data());
 				break;
 			case ShaderType::FRAGMENT:
-				ERROR(std::format("Fragment shader source file {} couldn't be loaded.", m_path).data());
+				ERROR(std::format("Fragment shader source file {} couldn't be loaded.", wstos(m_path)).data());
 				break;
 			default:
-				ERROR(std::format("Unhandled shader type with source file {} couldn't be loaded.", m_path).data());
+				ERROR(std::format("Unhandled shader type with source file {} couldn't be loaded.", wstos(m_path)).data());
 				break;
 		}
 		throw Error_code::file_init;
@@ -87,11 +88,11 @@ void ShaderSrc::check_compilation() {
 	if (!m_compilation_success) {
 		glGetShaderInfoLog(m_obj, 1024, nullptr, m_infoLog);
 		if (m_type == ShaderType::VERTEX) {
-			ERROR(std::format("{} shader \"VERTEX\" can't compile.\nGLSL error message:\n{}", m_path, m_infoLog).data());
+			ERROR(std::format("{} shader \"VERTEX\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog).data());
 		} else if (m_type == ShaderType::FRAGMENT) {
-			ERROR(std::format("{} shader \"FRAGMENT\" can't compile.\nGLSL error message:\n{}", m_path, m_infoLog).data());
+			ERROR(std::format("{} shader \"FRAGMENT\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog).data());
 		} else {
-			ERROR(std::format("{} shader \"UNKNOWN\" can't compile.\nGLSL error message:\n{}", m_path, m_infoLog).data());
+			ERROR(std::format("{} shader \"UNKNOWN\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog).data());
 		}
 		throw Error_code::glsl_bad_compilation;
 	}

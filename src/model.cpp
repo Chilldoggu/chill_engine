@@ -6,12 +6,20 @@
 
 #include "model.hpp"
 #include "meshes.hpp"
+#include "file_manager.hpp"
 
 namespace fs = std::filesystem;
 
 extern fs::path get_proj_path();
 
-Model::Model(std::string a_dir) {
+Model::Model(std::wstring a_dir) {
+	if (a_dir == L"") {
+		std::vector<std::pair<std::wstring, std::wstring>> filters{
+			{L"Wavefront (*.obj)", L"*.obj"},
+			{L"All Files (*.*)",   L"*.*"},
+		};
+		a_dir = basic_file_open(L"Import model", filters);
+	}
 	m_dir = fs::path(a_dir).parent_path();
 	m_name = fs::path(a_dir).filename();
 	load_model();
@@ -120,12 +128,12 @@ glm::vec3 Model::get_size() const {
 	return m_size;
 }
 
-std::string Model::get_dir() const {
-	return m_dir.string();
+std::wstring Model::get_dir() const {
+	return m_dir.wstring();
 }
 
-std::string Model::get_name() const {
-	return m_name.string();
+std::wstring Model::get_name() const {
+	return m_name.wstring();
 }
 
 glm::mat4 Model::get_model_mat() const {
@@ -176,7 +184,7 @@ void Model::process_texture(std::vector<std::shared_ptr<Texture>>& a_textures, a
 			break;
 	}
 	auto lamb_texture_name_compare = [&texture_name, this](const std::shared_ptr<Texture>& texture){
-		return texture->get_dir() == (this->m_dir / texture_name.C_Str()).string(); 
+		return texture->get_dir() == (this->m_dir / texture_name.C_Str()).wstring(); 
 	};
 
 	for (int i = 0; i < a_mat->GetTextureCount(a_ai_tex_type); i++) {
@@ -186,7 +194,7 @@ void Model::process_texture(std::vector<std::shared_ptr<Texture>>& a_textures, a
 			a_textures.push_back(*it);
 		} else {
 			// std::string texture_dir = (this->m_dir / formatted_texture_name).c_str();
-			std::string texture_dir = (this->m_dir / texture_name.C_Str()).string();
+			std::wstring texture_dir = (this->m_dir / texture_name.C_Str()).wstring();
 			std::shared_ptr<Texture> texture_ptr = std::make_shared<Texture>(texture_dir, tex_type, a_unit_id++);
 			a_textures.push_back(texture_ptr);
 			m_textures_loaded.push_back(texture_ptr);

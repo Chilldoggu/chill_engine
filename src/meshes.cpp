@@ -11,6 +11,7 @@
 #include "meshes.hpp"
 #include "assert.hpp"
 #include "shaders.hpp"
+#include "file_manager.hpp" // wstos
 
 namespace fs = std::filesystem;
 
@@ -23,9 +24,9 @@ fs::path get_proj_path() {
 	return p;
 }
 
-Texture::Texture() :m_dir{ "" }, m_type{ TextureType::NONE }, m_texture_id{ 0 }, m_texture_unit{ 0 } { }
+Texture::Texture() :m_dir{ L"" }, m_type{ TextureType::NONE }, m_texture_id{ 0 }, m_texture_unit{ 0 } { }
 
-Texture::Texture(std::string a_dir, TextureType a_type, int a_texture_unit) {
+Texture::Texture(std::wstring a_dir, TextureType a_type, int a_texture_unit) {
 	generate_texture(a_dir, a_type, a_texture_unit);
 }
 
@@ -34,7 +35,7 @@ Texture::~Texture() {
 		glDeleteTextures(1, &m_texture_id);
 }
 
-void Texture::generate_texture(std::string a_dir, TextureType a_type, int a_texture_unit) {
+void Texture::generate_texture(std::wstring a_dir, TextureType a_type, int a_texture_unit) {
 	if (a_type != TextureType::NONE)
 		glDeleteTextures(1, &m_texture_id);
 
@@ -86,7 +87,7 @@ void Texture::generate_texture(std::string a_dir, TextureType a_type, int a_text
 		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
 	} else {
-		ERROR(std::format("Couldn't load texture data {}", m_dir).data());
+		ERROR(std::format("Couldn't load texture data {}", wstos(m_dir)).data());
 		throw Error_code::init_error;
 	}
 
@@ -104,7 +105,7 @@ TextureType Texture::get_type() const {
 	return m_type;
 }
 
-std::string Texture::get_dir() const {
+std::wstring Texture::get_dir() const {
 	return m_dir;
 }
 
@@ -116,7 +117,7 @@ int Texture::get_texture_unit() const {
 	return m_texture_unit;
 }
 
-MaterialMap::MaterialMap(std::initializer_list<std::pair<std::string, TextureType>> a_texture_maps, float a_shininess) 
+MaterialMap::MaterialMap(std::initializer_list<std::pair<std::wstring, TextureType>> a_texture_maps, float a_shininess) 
 	:m_shininess{ a_shininess }, m_diffuse_maps{ }, m_specular_maps{ }, m_emission_maps{ }, m_texture_unit_counter{ } 
 {
 	int i{ 0 };
@@ -133,7 +134,7 @@ MaterialMap::MaterialMap(std::initializer_list<std::pair<std::string, TextureTyp
 				m_emission_maps.push_back(std::make_shared<Texture>(a_texture_map.first, a_texture_map.second, i++));
 				break;
 			case TextureType::NONE:
-				ERROR(std::format("Bad texture type for {}", a_texture_map.first).c_str());
+				ERROR(std::format("Bad texture type for {}", wstos(a_texture_map.first)).c_str());
 				throw Error_code::bad_type;
 		}
 	}
@@ -165,7 +166,7 @@ void MaterialMap::set_textures(std::vector<std::shared_ptr<Texture>> a_textures)
 }
 
 // FIXME: Fragmentation in m_texture_unit_counter
-void MaterialMap::set_diffuse_maps(std::vector<std::string> a_diffuse_maps_names) {
+void MaterialMap::set_diffuse_maps(std::vector<std::wstring> a_diffuse_maps_names) {
 	for (const auto m_diffuse_map : m_diffuse_maps)
 		m_texture_unit_counter.erase(std::find(m_texture_unit_counter.begin(), m_texture_unit_counter.end(), m_diffuse_map->get_texture_id()));
 	m_diffuse_maps.clear();
@@ -179,7 +180,7 @@ void MaterialMap::set_diffuse_maps(std::vector<std::string> a_diffuse_maps_names
 }
 
 // FIXME: Fragmentation in m_texture_unit_counter
-void MaterialMap::set_specular_maps(std::vector<std::string> a_specular_maps_names) {
+void MaterialMap::set_specular_maps(std::vector<std::wstring> a_specular_maps_names) {
 	for (const auto m_specular_map : m_specular_maps)
 		m_texture_unit_counter.erase(std::find(m_texture_unit_counter.begin(), m_texture_unit_counter.end(), m_specular_map->get_texture_id()));
 	m_specular_maps.clear();
@@ -193,7 +194,7 @@ void MaterialMap::set_specular_maps(std::vector<std::string> a_specular_maps_nam
 }
 
 // FIXME: Fragmentation in m_texture_unit_counter
-void MaterialMap::set_emission_maps(std::vector<std::string> a_emission_maps_names) {
+void MaterialMap::set_emission_maps(std::vector<std::wstring> a_emission_maps_names) {
 	for (const auto m_emission_map : m_emission_maps)
 		m_texture_unit_counter.erase(std::find(m_texture_unit_counter.begin(), m_texture_unit_counter.end(), m_emission_map->get_texture_id()));
 	m_emission_maps.clear();

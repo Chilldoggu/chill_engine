@@ -8,32 +8,11 @@ set(IMGUI_BACKEND_DIR "include/imgui/backend/")
 set(SRC "src")
 if (WIN32)
 	set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS 1)
-endif (WIN32)
+endif ()
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 
-if (UNIX)
-	find_package(PkgConfig REQUIRED)
-	pkg_check_modules(glfw3 REQUIRED IMPORTED_TARGET glfw3)
-	pkg_check_modules(assimp REQUIRED IMPORTED_TARGET assimp)
-endif (UNIX)
-
-if (WIN32) 
-	add_library(glfw3 SHARED IMPORTED)
-	set_target_properties(glfw3 PROPERTIES
-		IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/lib/glfw3.dll"
-		IMPORTED_IMPLIB "${PROJECT_SOURCE_DIR}/lib/glfw3dll.lib"
-		INTERFACE_INCLUDE_DIRECTORIES "${PROJECT_SOURCE_DIR}/include/GLFW"
-	) 
-
-	add_library(assimp SHARED IMPORTED)
-	set_target_properties(assimp PROPERTIES
-		IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/lib/assimp-vc143-mtd.dll"
-		IMPORTED_IMPLIB "${PROJECT_SOURCE_DIR}/lib/assimp-vc143-mtd.lib"
-		INTERFACE_INCLUDE_DIRECTORIES "${PROJECT_SOURCE_DIR}/include/assimp"
-	) 
-endif (WIN32)
-
+# Create chill_engine library
 add_library(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PUBLIC
 	"${SRC}/app.cpp" 
@@ -45,10 +24,12 @@ target_sources(${PROJECT_NAME} PUBLIC
 	"${SRC}/model.cpp" 
 	"${SRC}/light.cpp" 
 )
-target_include_directories(${PROJECT_NAME} PUBLIC "include")
+ 
+# Create GLAD module
+add_library(glad STATIC ./src/glad.c) 
+target_include_directories(glad PUBLIC "include")
 
-add_library(glad STATIC ./src/glad.c)
-
+# Create ImGui module
 add_library(imgui STATIC)
 target_sources(imgui PUBLIC
 	"${IMGUI_DIR}/imgui.cpp"
@@ -58,25 +39,47 @@ target_sources(imgui PUBLIC
 	"${IMGUI_DIR}/imgui_widgets.cpp"
 	"${IMGUI_BACKEND_DIR}/imgui_impl_glfw.cpp"
 	"${IMGUI_BACKEND_DIR}/imgui_impl_opengl3.cpp"
-)
+) 
+target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${IMGUI_BACKEND_DIR} "include")
 
-target_include_directories(glad         PUBLIC "include")
-target_include_directories(imgui        PUBLIC ${IMGUI_DIR} ${IMGUI_BACKEND_DIR} "include")
-
-if (UNIX)
-	target_link_libraries(chill_engine PUBLIC 
-		glad 
-		imgui 
-		PkgConfig::glfw3 
-		PkgConfig::assimp
-	)
-endif (UNIX)
-
+# Link chill_engine library to platform specific implementations and external dependencies (Assimp, GLFW3, ImGui, GLAD):
+#    1. Windows: load previously built .dll/.lib libraries from ./lib directory.
+#    2. Linux: load previously built libraries from PkgConfig interface.
 if (WIN32)
-	target_link_libraries(chill_engine PUBLIC 
+	target_sources(${PROJECT_NAME} PUBLIC "${SRC}/file_manager_win32.cpp") 
+
+	add_library(glfw3 SHARED IMPORTED)
+	set_target_properties(glfw3 PROPERTIES
+		IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/lib/glfw3.dll"
+		IMPORTED_IMPLIB "${PROJECT_SOURCE_DIR}/lib/glfw3dll.lib"
+		INTERFACE_INCLUDE_DIRECTORIES "${PROJECT_SOURCE_DIR}/include/GLFW"
+	) 
+	add_library(assimp SHARED IMPORTED)
+	set_target_properties(assimp PROPERTIES
+		IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/lib/assimp-vc143-mtd.dll"
+		IMPORTED_IMPLIB "${PROJECT_SOURCE_DIR}/lib/assimp-vc143-mtd.lib"
+		INTERFACE_INCLUDE_DIRECTORIES "${PROJECT_SOURCE_DIR}/include/assimp"
+	) 
+	# Link external dependencies to chill_engine
+	target_link_libraries(${PROJECT_NAME} PUBLIC 
 		glad 
 		imgui 
 		glfw3 
 		assimp
 	)
-endif (WIN32)
+elseif (UNIX)
+	# target_sources(${PROJECT_NAME} PUBLIC "${SRC}/file_manager_linux.cpp") 
+
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(glfw3 REQUIRED IMPORTED_TARGET glfw3)
+	pkg_check_modules(assimp REQUIRED IMPORTED_TARGET assimp)
+	# Link external dependencies to chill_engine
+	target_link_libraries(${PROJECT_NAME} PUBLIC 
+		glad 
+		imgui 
+		PkgConfig::glfw3 
+		PkgConfig::assimp
+	)
+endif ()
+ 
+target_include_directories(${PROJECT_NAME} PUBLIC "include")

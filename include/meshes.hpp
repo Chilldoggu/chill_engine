@@ -29,33 +29,33 @@ enum class TextureType {
 
 class Texture {
 public:
-    Texture(std::string a_name, TextureType a_type, int texture_unit);
+    Texture(std::wstring a_dir, TextureType a_type, int texture_unit);
     Texture();
     ~Texture();
 
-    auto generate_texture(std::string a_name, TextureType a_type, int a_texture_unit) -> void;
+    auto generate_texture(std::wstring a_name, TextureType a_type, int a_texture_unit) -> void;
     auto activate() const -> void;
 
     auto get_type() const -> TextureType;
-    auto get_dir() const -> std::string;
+    auto get_dir() const -> std::wstring;
     auto get_texture_id() const -> unsigned int;
 	auto get_texture_unit() const -> int;
 
 private:
     int m_texture_unit;
     TextureType m_type;
-    std::string m_dir;
+    std::wstring m_dir;
     unsigned int m_texture_id;
 };
 
 class MaterialMap {
 public:
-    MaterialMap(std::initializer_list<std::pair<std::string, TextureType>> a_texture_maps = {}, float a_shininess = 32.f);
+    MaterialMap(std::initializer_list<std::pair<std::wstring, TextureType>> a_texture_maps = {}, float a_shininess = 32.f);
 
 	auto set_textures(std::vector<std::shared_ptr<Texture>> a_textures) -> void;
-	auto set_diffuse_maps(std::vector<std::string> a_diffuse_map) -> void;
-	auto set_specular_maps(std::vector<std::string> a_specular_map) -> void;
-	auto set_emission_maps(std::vector<std::string> a_emission_map) -> void;
+	auto set_diffuse_maps(std::vector<std::wstring> a_diffuse_map) -> void;
+	auto set_specular_maps(std::vector<std::wstring> a_specular_map) -> void;
+	auto set_emission_maps(std::vector<std::wstring> a_emission_map) -> void;
 	auto set_shininess(float a_shininess) -> void;
 
 	auto get_diffuse_maps() const -> std::vector<std::shared_ptr<Texture>>;

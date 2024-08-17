@@ -5,9 +5,11 @@
 #include <assimp/postprocess.h>
 
 #include <vector>
+#include <filesystem>
 
 #include "meshes.hpp"
 #include "shaders.hpp"
+
 
 enum class Axis {
 	X, Y, Z
@@ -15,7 +17,7 @@ enum class Axis {
 
 class Model {
 public:
-	Model(std::string a_dir);
+	Model(std::wstring a_dir = L"");
 	Model(std::vector<Mesh> a_meshes);
 
 	auto set_pos(glm::vec3 a_pos) -> void;
@@ -28,8 +30,8 @@ public:
 
 	auto get_pos() const -> glm::vec3;
 	auto get_size() const -> glm::vec3;
-	auto get_dir() const -> std::string;
-	auto get_name() const -> std::string;
+	auto get_dir() const -> std::wstring;
+	auto get_name() const -> std::wstring;
 	auto get_model_mat() const -> glm::mat4;
 	auto get_normal_mat() const -> glm::mat3;
 
@@ -46,6 +48,6 @@ private:
 	glm::mat4 m_transform_pos      = 1.0f;
 	std::vector<Mesh> m_meshes;
 	std::vector<std::shared_ptr<Texture>> m_textures_loaded;
-	std::filesystem::path m_dir = "";
-	std::filesystem::path m_name = "";
+	std::filesystem::path m_dir = L"";
+	std::filesystem::path m_name = L"";
 };

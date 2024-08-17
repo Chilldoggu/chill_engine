@@ -81,7 +81,7 @@ Uniform& Uniform::operator=(T val) {
 }
 
 struct ShaderSrc {
-	ShaderSrc(ShaderType a_shader_type, const std::string& a_path);
+	ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path);
 	~ShaderSrc();
 
 	auto load_code() -> char*;
@@ -92,7 +92,7 @@ struct ShaderSrc {
 	char m_infoLog[INFO_LOG_SIZ];
 	std::shared_ptr<char*> m_code;
 	ShaderType m_type;
-	std::string m_path;
+	std::wstring m_path;
 	unsigned int m_obj;
 };
 
