@@ -9,11 +9,15 @@
 #include <filesystem>
 
 #define EMPTY_VBO 0
-#define MAX_SAMPLER_SIZ 16
 #define ATTRIB_POS_LOCATION    0
 #define ATTRIB_COLOR_LOCATION  1
 #define ATTRIB_TEX_LOCATION    2
 #define ATTRIB_NORMAL_LOCATION 3
+ 
+#define MAX_SAMPLER_SIZ  16
+#define DIFFUSE_UNIT_ID  0
+#define SPECULAR_UNIT_ID 16
+#define EMISSION_UNIT_ID 32
 
 class ShaderProgram;
 
@@ -33,11 +37,12 @@ public:
     Texture();
     ~Texture();
 
-    auto generate_texture(std::wstring a_name, TextureType a_type, int a_texture_unit) -> void;
-    auto activate() const -> void;
+	auto set_texture_unit(int a_unit_id) -> void;
+    auto generate_texture(std::wstring a_name, TextureType a_type, int a_texture_unit, bool a_flip_UVs = true) -> void;
+    auto activate() const -> void; 
 
-    auto get_type() const -> TextureType;
     auto get_dir() const -> std::wstring;
+    auto get_type() const -> TextureType;
     auto get_texture_id() const -> unsigned int;
 	auto get_texture_unit() const -> int;
 
@@ -64,8 +69,12 @@ public:
 	auto get_shininess() const -> float;
 
 private:
-    float m_shininess;
-	std::vector<int> m_texture_unit_counter;
+	auto check_unit_id_limits() const -> void;
+
+    float m_shininess = 32.f;
+	int m_cur_diffuse_unit_id{ DIFFUSE_UNIT_ID };
+	int m_cur_specular_unit_id{ SPECULAR_UNIT_ID };
+	int m_cur_emission_unit_id{ EMISSION_UNIT_ID };
 	std::vector<std::shared_ptr<Texture>> m_diffuse_maps;
 	std::vector<std::shared_ptr<Texture>> m_specular_maps;
 	std::vector<std::shared_ptr<Texture>> m_emission_maps;
@@ -121,16 +130,22 @@ public:
 	auto gen_VAO() -> void;
 
 	auto set_pos(const std::vector<glm::vec3>& a_pos = {}) -> void;
-	auto set_type(BufferData::Type a_type) -> void;
 	auto set_normals(const std::vector<glm::vec3>& a_normals = {}) -> void;
 	auto set_elements(const std::vector<unsigned int>& a_elem_indicies = {}) -> void;
 	auto set_material_map(const MaterialMap& a_material_map) -> void;
 	auto set_texture_coords(const std::vector<glm::vec2>& a_texture_coords = {}) -> void;
+	auto set_wireframe(bool a_option) -> void;
+	auto set_visibility(bool a_option) -> void;
 
 	auto get_material_map() -> MaterialMap&;
+	auto get_wireframe() -> bool;
+	auto get_visibility() -> bool;
 
 private:
-	bool m_wireframe;
+	auto set_type(BufferData::Type a_type) -> void;
+
+	bool m_wireframe = false;
+	bool m_visibility = true;
 	BufferData m_data;
 	MaterialMap m_material_map;
 	std::shared_ptr<BufferObjects> m_VBOs;

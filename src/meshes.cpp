@@ -12,7 +12,7 @@
 #include "assert.hpp"
 #include "shaders.hpp"
 #include "file_manager.hpp" // wstos
-
+ 
 namespace fs = std::filesystem;
 
 fs::path get_proj_path() {
@@ -35,7 +35,11 @@ Texture::~Texture() {
 		glDeleteTextures(1, &m_texture_id);
 }
 
-void Texture::generate_texture(std::wstring a_dir, TextureType a_type, int a_texture_unit) {
+void Texture::set_texture_unit(int a_unit_id) {
+	m_texture_unit = a_unit_id;
+}
+
+void Texture::generate_texture(std::wstring a_dir, TextureType a_type, int a_texture_unit, bool a_flip_UVs) {
 	if (a_type != TextureType::NONE)
 		glDeleteTextures(1, &m_texture_id);
 
@@ -55,7 +59,7 @@ void Texture::generate_texture(std::wstring a_dir, TextureType a_type, int a_tex
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // GL_NEAREST available
 
 	int nrChannels{ };
-	stbi_set_flip_vertically_on_load(true);
+	stbi_set_flip_vertically_on_load(a_flip_UVs);
 	int width{ };
 	int height{ };
 	unsigned char* data = stbi_load(p.string().c_str(), &width, &height, &nrChannels, 0);
@@ -118,93 +122,96 @@ int Texture::get_texture_unit() const {
 }
 
 MaterialMap::MaterialMap(std::initializer_list<std::pair<std::wstring, TextureType>> a_texture_maps, float a_shininess) 
-	:m_shininess{ a_shininess }, m_diffuse_maps{ }, m_specular_maps{ }, m_emission_maps{ }, m_texture_unit_counter{ } 
+	:m_shininess{ a_shininess }, m_diffuse_maps{ }, m_specular_maps{ }, m_emission_maps{ }
 {
-	int i{ 0 };
 	for (const auto& a_texture_map : a_texture_maps) {
-		m_texture_unit_counter.push_back(i);
 		switch (a_texture_map.second) {
 			case TextureType::DIFFUSE:
-				m_diffuse_maps.push_back(std::make_shared<Texture>(a_texture_map.first, a_texture_map.second, i++));
+				m_diffuse_maps.push_back(std::make_shared<Texture>(a_texture_map.first, a_texture_map.second, m_cur_diffuse_unit_id++));
 				break;
 			case TextureType::SPECULAR:
-				m_specular_maps.push_back(std::make_shared<Texture>(a_texture_map.first, a_texture_map.second, i++));
+				m_specular_maps.push_back(std::make_shared<Texture>(a_texture_map.first, a_texture_map.second, m_cur_specular_unit_id++));
 				break;
 			case TextureType::EMISSION:
-				m_emission_maps.push_back(std::make_shared<Texture>(a_texture_map.first, a_texture_map.second, i++));
+				m_emission_maps.push_back(std::make_shared<Texture>(a_texture_map.first, a_texture_map.second, m_cur_emission_unit_id++));
 				break;
 			case TextureType::NONE:
 				ERROR(std::format("Bad texture type for {}", wstos(a_texture_map.first)).c_str());
 				throw Error_code::bad_type;
-		}
+		} 
 	}
+	check_unit_id_limits();
 }
 
 void MaterialMap::set_textures(std::vector<std::shared_ptr<Texture>> a_textures) {
 	m_diffuse_maps.clear();
 	m_specular_maps.clear();
 	m_emission_maps.clear();
-	m_texture_unit_counter.clear();
+
+	int max_diffuse_unit_id  = DIFFUSE_UNIT_ID;
+	int max_specular_unit_id = SPECULAR_UNIT_ID;
+	int max_emission_unit_id = EMISSION_UNIT_ID;
 
 	for (const auto& texture_ptr : a_textures) {
-		m_texture_unit_counter.push_back(texture_ptr->get_texture_unit());
-
 		switch (texture_ptr->get_type()) {
 			case TextureType::DIFFUSE:
 				m_diffuse_maps.push_back(texture_ptr);
+				if (int id = texture_ptr->get_texture_unit(); id > max_diffuse_unit_id)
+					max_diffuse_unit_id = id;
 				break;
 			case TextureType::SPECULAR:
 				m_specular_maps.push_back(texture_ptr);
+				if (int id = texture_ptr->get_texture_unit(); id > max_specular_unit_id)
+					max_specular_unit_id = id;
 				break;
 			case TextureType::EMISSION:
 				m_emission_maps.push_back(texture_ptr);
+				if (int id = texture_ptr->get_texture_unit(); id > max_emission_unit_id)
+					max_emission_unit_id = id;
 				break;
 			case TextureType::NONE:
 				break;
 		}
 	}
+ 
+	m_cur_diffuse_unit_id  = max_diffuse_unit_id;
+	m_cur_specular_unit_id = max_specular_unit_id;
+	m_cur_emission_unit_id = max_emission_unit_id;
+
+	check_unit_id_limits();
 }
 
 // FIXME: Fragmentation in m_texture_unit_counter
 void MaterialMap::set_diffuse_maps(std::vector<std::wstring> a_diffuse_maps_names) {
-	for (const auto m_diffuse_map : m_diffuse_maps)
-		m_texture_unit_counter.erase(std::find(m_texture_unit_counter.begin(), m_texture_unit_counter.end(), m_diffuse_map->get_texture_id()));
 	m_diffuse_maps.clear();
+	m_cur_diffuse_unit_id = DIFFUSE_UNIT_ID; 
 
-	int max_id = *std::max_element(m_texture_unit_counter.begin(), m_texture_unit_counter.end()) + 1;
-
-	for (size_t i = 0; i < a_diffuse_maps_names.size(); i++) {
-		m_texture_unit_counter.push_back(max_id + i);
-		m_diffuse_maps.push_back(std::make_shared<Texture>(a_diffuse_maps_names[i], TextureType::DIFFUSE, max_id + i));
-	}
+	for (auto& mat_map_name : a_diffuse_maps_names) {
+		m_diffuse_maps.push_back(std::make_shared<Texture>(mat_map_name, TextureType::DIFFUSE, m_cur_diffuse_unit_id++));
+	} 
+	check_unit_id_limits();
 }
 
 // FIXME: Fragmentation in m_texture_unit_counter
 void MaterialMap::set_specular_maps(std::vector<std::wstring> a_specular_maps_names) {
-	for (const auto m_specular_map : m_specular_maps)
-		m_texture_unit_counter.erase(std::find(m_texture_unit_counter.begin(), m_texture_unit_counter.end(), m_specular_map->get_texture_id()));
 	m_specular_maps.clear();
+	m_cur_specular_unit_id = SPECULAR_UNIT_ID; 
 
-	int max_id = *std::max_element(m_texture_unit_counter.begin(), m_texture_unit_counter.end()) + 1;
-
-	for (size_t i = 0; i < a_specular_maps_names.size(); i++) {
-		m_texture_unit_counter.push_back(max_id + i);
-		m_specular_maps.push_back(std::make_shared<Texture>(a_specular_maps_names[i], TextureType::SPECULAR, max_id + i));
-	}
+	for (auto& mat_map_name : a_specular_maps_names) {
+		m_specular_maps.push_back(std::make_shared<Texture>(mat_map_name, TextureType::SPECULAR, m_cur_specular_unit_id++));
+	} 
+	check_unit_id_limits();
 }
 
 // FIXME: Fragmentation in m_texture_unit_counter
 void MaterialMap::set_emission_maps(std::vector<std::wstring> a_emission_maps_names) {
-	for (const auto m_emission_map : m_emission_maps)
-		m_texture_unit_counter.erase(std::find(m_texture_unit_counter.begin(), m_texture_unit_counter.end(), m_emission_map->get_texture_id()));
 	m_emission_maps.clear();
+	m_cur_emission_unit_id = EMISSION_UNIT_ID; 
 
-	int max_id = *std::max_element(m_texture_unit_counter.begin(), m_texture_unit_counter.end()) + 1;
-
-	for (size_t i = 0; i < a_emission_maps_names.size(); i++) {
-		m_texture_unit_counter.push_back(max_id + i);
-		m_emission_maps.push_back(std::make_shared<Texture>(a_emission_maps_names[i], TextureType::EMISSION, max_id + i));
-	}
+	for (auto& mat_map_name : a_emission_maps_names) {
+		m_emission_maps.push_back(std::make_shared<Texture>(mat_map_name, TextureType::EMISSION, m_cur_emission_unit_id++));
+	} 
+	check_unit_id_limits();
 }
 
 void MaterialMap::set_shininess(float a_shininess) {
@@ -225,6 +232,17 @@ std::vector<std::shared_ptr<Texture>> MaterialMap::get_emission_maps() const {
 
 float MaterialMap::get_shininess() const {
 	return m_shininess;
+}
+
+void MaterialMap::check_unit_id_limits() const {
+	auto dif_siz  = DIFFUSE_UNIT_ID - m_cur_diffuse_unit_id;
+	auto spec_siz = SPECULAR_UNIT_ID - m_cur_specular_unit_id;
+	auto em_siz   = EMISSION_UNIT_ID - m_cur_emission_unit_id;
+
+	if (dif_siz >= MAX_SAMPLER_SIZ || spec_siz >= MAX_SAMPLER_SIZ || em_siz >= MAX_SAMPLER_SIZ) {
+		ERROR(std::format("[ERROR] unit ids exceeded limit of sampler size {}. DIFFUSE: {}, SPECULAR: {}, EMISSION: {}\n", MAX_SAMPLER_SIZ, dif_siz, spec_siz, em_siz).c_str());
+		throw GenericException("Runtime error.");
+	}
 }
 
 BufferData::BufferData(BufferData::Type a_type)
@@ -342,32 +360,50 @@ void Mesh::set_material_map(const MaterialMap& a_material_map) {
 	m_material_map = a_material_map;
 }
 
+void Mesh::set_wireframe(bool a_option) {
+	m_wireframe = a_option;
+}
+
+void Mesh::set_visibility(bool a_option) {
+	m_visibility = a_option;
+}
+
 
 void Mesh::draw() {
 	// Optimization: Shader is being used from Model object draw method to
 	// reduce redundant glEnable()/glDisable() calls to OpenGL on every single mesh.
 	// a_shader.use();
 
-	glBindVertexArray(m_VBOs->m_VAO);
+	if (m_visibility) {
+		glBindVertexArray(m_VBOs->m_VAO);
 
-	if (m_wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		if (m_wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	switch(m_data.buffer_type) {
-		case BufferData::Type::VERTEX:
-			glDrawArrays(GL_TRIANGLES, 0, m_data.vert_sum);
-			break;
-		case BufferData::Type::ELEMENT:
-			glDrawElements(GL_TRIANGLES, m_data.indicies_sum, GL_UNSIGNED_INT, 0);
-			break;
-		default:
-			ERROR("Unhandled draw type for buffer object type.");
-			throw Error_code::bad_match;
+		switch(m_data.buffer_type) {
+			case BufferData::Type::VERTEX:
+				glDrawArrays(GL_TRIANGLES, 0, m_data.vert_sum);
+				break;
+			case BufferData::Type::ELEMENT:
+				glDrawElements(GL_TRIANGLES, m_data.indicies_sum, GL_UNSIGNED_INT, 0);
+				break;
+			default:
+				ERROR("Unhandled draw type for buffer object type.");
+				throw Error_code::bad_match;
+		}
+
+		glBindVertexArray(0); 
 	}
-
-	glBindVertexArray(0);
 }
 
 MaterialMap& Mesh::get_material_map() {
 	return m_material_map;
+}
+ 
+bool Mesh::get_wireframe() {
+	return m_wireframe;
+}
+
+bool Mesh::get_visibility() {
+	return m_visibility;
 }
