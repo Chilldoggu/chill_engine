@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <assimp/material.h>
 #include <assimp/postprocess.h>
+
 #include <format>
 #include <memory>
 
@@ -12,27 +13,199 @@ namespace fs = std::filesystem;
 
 extern fs::path get_proj_path();
 
-Model::Model(std::wstring a_dir) {
-	if (a_dir == L"") {
-		std::vector<std::pair<std::wstring, std::wstring>> filters{
-			{L"Wavefront (*.obj)", L"*.obj"},
-			{L"All Files (*.*)",   L"*.*"},
-		};
-		a_dir = basic_file_open(L"Import model", filters);
-	}
-	m_dir = fs::path(a_dir).parent_path();
-	m_name = fs::path(a_dir).filename();
-	load_model();
+Model::Model() {
+	clear_model();
+}
+
+Model::Model(std::wstring a_dir, bool a_flip_UVs) {
+	load_model(a_dir, a_flip_UVs);
 }
 
 Model::Model(std::vector<Mesh> a_meshes) {
 	m_meshes = a_meshes;
 }
 
+void Model::clear_model() {
+	m_pos  = glm::vec3(0.0f);
+	m_size = glm::vec3(1.0f);
+	m_transform_scale    = 1.0f;
+	m_transform_rotation = 1.0f;
+	m_transform_pos      = 1.0f;
+	m_meshes.clear();
+	m_textures_loaded.clear();
+	m_dir = L"";
+	m_name = L"";	
+}
+
+bool Model::load_model(fs::path a_model_path, bool a_flip_UVs) {
+	clear_model();
+
+	if (a_model_path == L"") {
+		std::vector<std::pair<std::wstring, std::wstring>> filters{
+			{L"Wavefront (*.obj)", L"*.obj"},
+			{L"All Files (*.*)",   L"*.*"},
+		};
+		a_model_path = basic_file_open(L"Import model", filters);
+		if (a_model_path.wstring() == L"" || fs::is_empty(a_model_path)) {
+			return false;
+		}
+	}
+
+	m_dir = fs::path(a_model_path).parent_path();
+	m_name = fs::path(a_model_path).filename();
+
+	Assimp::Importer importer;
+	fs::path p = get_proj_path() / a_model_path;
+	int flags = aiProcess_Triangulate | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_GenSmoothNormals;
+	if (a_flip_UVs) {
+		flags |= aiProcess_FlipUVs;
+	}
+	const aiScene *scene = importer.ReadFile(p.string(), flags);
+
+	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
+		ERROR(std::format("ASSIMP::{}", importer.GetErrorString()).c_str());
+		return false;
+    }
+
+	// Recursive method
+    // process_node(scene->mRootNode, scene);
+
+	// Iterative method
+	for (unsigned int meshIndex = 0; meshIndex < scene->mNumMeshes; meshIndex++) {
+		aiMesh* currentMesh = scene->mMeshes[meshIndex];
+		m_meshes.push_back(process_mesh(currentMesh, scene));
+	}
+
+	return true;
+}
+
+// Nodes are laid out in tree like fashion. Each aiNode::mMeshes is an array of indicies into
+// aiScene::mMeshes which contains Meshes we process.
+void Model::process_node(aiNode *a_node, const aiScene *a_scene) {
+	for (int i = 0; i < a_node->mNumMeshes; i++) {
+		aiMesh *mesh = a_scene->mMeshes[a_node->mMeshes[i]];
+		m_meshes.push_back(process_mesh(mesh, a_scene));
+	}
+
+	for (int i = 0; i < a_node->mNumChildren; i++) {
+		process_node(a_node->mChildren[i], a_scene);
+	}
+}
+
+Mesh Model::process_mesh(aiMesh *a_mesh, const aiScene *a_scene) { 
+	BufferData data;
+	MaterialMap mat;
+	std::vector<std::shared_ptr<Texture>> textures;
+
+	// Load VBO specific data
+	if (a_mesh->HasPositions()) {
+		auto has_UV_channels = a_mesh->GetNumUVChannels();
+		auto has_normals = a_mesh->HasNormals();
+		for (int i = 0; i < a_mesh->mNumVertices; i++) { 
+			// Load vertex positions.
+			data.positions.push_back(glm::vec3(a_mesh->mVertices[i].x, a_mesh->mVertices[i].y, a_mesh->mVertices[i].z));
+			data.vert_sum += 1;
+
+			// Load normals.
+			if (has_normals) {
+				data.normals.push_back(glm::vec3(a_mesh->mNormals[i].x, a_mesh->mNormals[i].y, a_mesh->mNormals[i].z));
+			} else { 
+				data.normals.push_back(glm::vec3(0));
+			}
+
+			// Load UVs from first UV channel.
+			// TODO: Manage situation when a_mesh->mNumUVComponents[n] is different than 2.
+			if (has_UV_channels && a_mesh->mNumUVComponents[0] == 2) {
+				data.texture_coords.push_back(glm::vec2(a_mesh->mTextureCoords[0][i].x, a_mesh->mTextureCoords[0][i].y)); 
+			} else {
+				data.texture_coords.push_back(glm::vec2(0));
+			} 
+		} 
+	}
+
+	if (a_mesh->HasFaces()) { 
+		data.buffer_type = BufferData::Type::ELEMENT;
+		// Iterate over mesh faces and save indicies if any.
+		for (int i = 0; i < a_mesh->mNumFaces; i++) {
+			aiFace face = a_mesh->mFaces[i];
+			// If mNumIndices is not 3 then face is not a triangle, which shouldn't happend in this importer.
+			assert(face.mNumIndices == 3);
+			for (int j = 0; j < 3; j++) {
+				data.indicies.push_back(a_mesh->mFaces[i].mIndices[j]); 
+				data.indicies_sum += 1;
+			}
+		}
+	} else {
+		data.buffer_type = BufferData::Type::VERTEX; 
+	}
+	
+	// Load mesh textures. I'm assuming that result of ambient calculations is the same as for diffuse (usual behaviour), 
+	// and so I don't process aiTextureType_AMBIENT. Might add support for more aiTextureTypes in the future.
+	if(a_scene->HasMaterials()) {
+		aiMaterial *material = a_scene->mMaterials[a_mesh->mMaterialIndex];
+
+		process_texture(textures, material, aiTextureType_DIFFUSE);
+		process_texture(textures, material, aiTextureType_SPECULAR);
+		process_texture(textures, material, aiTextureType_EMISSIVE);
+	}
+	mat.set_textures(textures);
+
+	return Mesh(data, mat);
+}
+
+void Model::process_texture(std::vector<std::shared_ptr<Texture>>& a_textures, aiMaterial* a_mat, aiTextureType a_ai_texture_type) {
+	aiString texture_name;
+	TextureType texture_type{ TextureType::NONE };
+	int unit_id{ 0 };
+
+	switch (a_ai_texture_type) {
+		case aiTextureType::aiTextureType_DIFFUSE:
+			texture_type = TextureType::DIFFUSE;
+			unit_id = DIFFUSE_UNIT_ID;
+			break;
+		case aiTextureType::aiTextureType_SPECULAR:
+			texture_type = TextureType::SPECULAR;
+			unit_id = SPECULAR_UNIT_ID;
+			break;
+		case aiTextureType::aiTextureType_EMISSIVE:
+			texture_type = TextureType::EMISSION;
+			unit_id = EMISSION_UNIT_ID;
+			break;
+	}
+
+	for (int i = 0; i < a_mat->GetTextureCount(a_ai_texture_type); i++) {
+		// Get texture path
+		a_mat->GetTexture(a_ai_texture_type, i, &texture_name);
+
+		// Check if texture has been loaded previously and if true use it rather than regenerating.
+		auto it = std::find_if(m_textures_loaded.begin(), m_textures_loaded.end(), [&texture_name, this](const std::shared_ptr<Texture>& texture){
+			return texture->get_dir() == (this->m_dir / texture_name.C_Str()).wstring(); 
+		});
+		if (it != m_textures_loaded.end()) {
+			std::shared_ptr<Texture> preloaded_texture = *it;
+			preloaded_texture->set_texture_unit(unit_id + i);
+			a_textures.push_back(preloaded_texture);
+		} else {
+			std::wstring texture_dir = (this->m_dir / texture_name.C_Str()).wstring();
+			std::shared_ptr<Texture> texture_ptr = std::make_shared<Texture>(texture_dir, texture_type, unit_id + i);
+			a_textures.push_back(texture_ptr);
+			m_textures_loaded.push_back(texture_ptr);
+		}
+	}
+}
+
 void Model::set_pos(glm::vec3 a_pos) {
 	m_pos = a_pos;
 	m_transform_pos = glm::mat4(1.0f);
 	m_transform_pos = glm::translate(m_transform_pos, a_pos);
+}
+
+void Model::set_rotation(glm::vec3 a_rotation) {
+	m_rotation = a_rotation;
+	m_transform_rotation = glm::mat4(1.0f);
+	m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_rotation[0]), glm::vec3(1.0, 0.0, 0.0));
+	m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_rotation[1]), glm::vec3(0.0, 1.0, 0.0));
+	m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_rotation[2]), glm::vec3(0.0, 0.0, 1.0));
 }
 
 void Model::set_size(float a_size) {
@@ -55,12 +228,15 @@ void Model::move(glm::vec3 a_vec) {
 void Model::rotate(float a_angle, Axis a_axis) {
 	switch (a_axis) {
 		case Axis::X:
+			m_rotation[0] += a_angle;
 			m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_angle), glm::vec3(1.0, 0.0, 0.0));
 			break;
 		case Axis::Y:
+			m_rotation[1] += a_angle;
 			m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_angle), glm::vec3(0.0, 1.0, 0.0));
 			break;
 		case Axis::Z:
+			m_rotation[2] += a_angle;
 			m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_angle), glm::vec3(0.0, 0.0, 1.0));
 			break;
 	}
@@ -128,12 +304,20 @@ glm::vec3 Model::get_size() const {
 	return m_size;
 }
 
+glm::vec3 Model::get_rotation() const {
+	return m_rotation;
+}
+
 std::wstring Model::get_dir() const {
 	return m_dir.wstring();
 }
 
 std::wstring Model::get_name() const {
 	return m_name.wstring();
+}
+
+std::vector<Mesh>& Model::get_meshes() {
+	return m_meshes;
 }
 
 glm::mat4 Model::get_model_mat() const {
@@ -145,92 +329,3 @@ glm::mat3 Model::get_normal_mat() const {
 	return glm::transpose(glm::inverse(glm::mat3(get_model_mat())));
 }
 
-void Model::load_model() {
-	Assimp::Importer importer;
-	fs::path p = get_proj_path() / m_dir / m_name;
-	const aiScene *scene = importer.ReadFile(p.string(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
-
-	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
-		ERROR(std::format("ASSIMP::{}", importer.GetErrorString()).c_str());
-		return;
-    }
-
-    process_node(scene->mRootNode, scene);
-}
-
-void Model::process_node(aiNode *a_node, const aiScene *a_scene) {
-	for (int i = 0; i < a_node->mNumMeshes; i++) {
-		aiMesh *mesh = a_scene->mMeshes[a_node->mMeshes[i]];
-		m_meshes.push_back(process_mesh(mesh, a_scene));
-	}
-
-	for (int i = 0; i < a_node->mNumChildren; i++) {
-		process_node(a_node->mChildren[i], a_scene);
-	}
-}
-
-void Model::process_texture(std::vector<std::shared_ptr<Texture>>& a_textures, aiMaterial* a_mat, aiTextureType a_ai_tex_type, int a_unit_id) {
-	aiString texture_name;
-	TextureType tex_type{ TextureType::NONE };
-	switch (a_ai_tex_type) {
-		case aiTextureType::aiTextureType_DIFFUSE:
-			tex_type = TextureType::DIFFUSE;
-			break;
-		case aiTextureType::aiTextureType_SPECULAR:
-			tex_type = TextureType::SPECULAR;
-			break;
-		case aiTextureType::aiTextureType_EMISSIVE:
-			tex_type = TextureType::EMISSION;
-			break;
-	}
-	auto lamb_texture_name_compare = [&texture_name, this](const std::shared_ptr<Texture>& texture){
-		return texture->get_dir() == (this->m_dir / texture_name.C_Str()).wstring(); 
-	};
-
-	for (int i = 0; i < a_mat->GetTextureCount(a_ai_tex_type); i++) {
-		a_mat->GetTexture(a_ai_tex_type, i, &texture_name);
-		auto it = std::find_if(m_textures_loaded.begin(), m_textures_loaded.end(), lamb_texture_name_compare);
-		if (it != m_textures_loaded.end()) {
-			a_textures.push_back(*it);
-		} else {
-			// std::string texture_dir = (this->m_dir / formatted_texture_name).c_str();
-			std::wstring texture_dir = (this->m_dir / texture_name.C_Str()).wstring();
-			std::shared_ptr<Texture> texture_ptr = std::make_shared<Texture>(texture_dir, tex_type, a_unit_id++);
-			a_textures.push_back(texture_ptr);
-			m_textures_loaded.push_back(texture_ptr);
-		}
-	}
-}
-
-Mesh Model::process_mesh(aiMesh *a_mesh, const aiScene *a_scene) {
-	BufferData data;
-	std::vector<std::shared_ptr<Texture>> textures;
-	MaterialMap mat;
-
-	for (int i = 0; i < a_mesh->mNumVertices; i++) {
-		data.positions.push_back(glm::vec3(a_mesh->mVertices[i].x, a_mesh->mVertices[i].y, a_mesh->mVertices[i].z));
-		data.normals.push_back(glm::vec3(a_mesh->mNormals[i].x, a_mesh->mNormals[i].y, a_mesh->mNormals[i].z));
-		if (a_mesh->mTextureCoords[0]) 
-			data.texture_coords.push_back(glm::vec2(a_mesh->mTextureCoords[0][i].x, a_mesh->mTextureCoords[0][i].y));
-		else 
-			data.texture_coords.push_back(glm::vec2(0));
-	}
-	data.vert_sum = data.positions.size();
-
-	for (int i = 0; i < a_mesh->mNumFaces; i++)
-		for (int j = 0; j < a_mesh->mFaces[i].mNumIndices; j++)
-			data.indicies.push_back(a_mesh->mFaces[i].mIndices[j]);
-	data.indicies_sum = data.indicies.size();
-
-	data.buffer_type = (data.indicies_sum) ? BufferData::Type::ELEMENT : BufferData::Type::VERTEX;
-	
-	if(a_mesh->mMaterialIndex >= 0) {
-		aiMaterial *material = a_scene->mMaterials[a_mesh->mMaterialIndex];
-
-		process_texture(textures, material, aiTextureType_DIFFUSE, 0);
-		process_texture(textures, material, aiTextureType_SPECULAR, (int)material->GetTextureCount(aiTextureType_DIFFUSE));
-	}
-	mat.set_textures(textures);
-
-	return Mesh(data, mat);
-}
