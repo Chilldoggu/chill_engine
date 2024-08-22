@@ -14,7 +14,7 @@ public:
 	Light(glm::vec4 pos = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec3 a_color = glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3 m_ambient = glm::vec3(0.3f), glm::vec3 m_diffuse = glm::vec3(0.8f), glm::vec3 m_specular = glm::vec3(1.0f));
 
 	auto set_color(glm::vec3 a_color) -> void;
-	auto set_pos_dir(glm::vec4 pos_dir) -> void;
+	auto set_pos_dir(glm::vec4 pos_dir) -> void; // 4th element decides whether light is positional or directional
 	auto set_ambient_intens(glm::vec3 a_intens)  -> void;
 	auto set_diffuse_intens(glm::vec3 a_intens)  -> void;
 	auto set_specular_intens(glm::vec3 a_intens) -> void;
@@ -53,15 +53,16 @@ public:
 	auto set_quadratic_att(float a_quadratic) -> void;
 
 	auto get_pos() const -> glm::vec3;
+	auto get_max_dist() const -> float;
 	auto get_linear() const -> float;
 	auto get_quadratic() const -> float;
 	auto get_constant() const -> float;
-	
+
 private:
 	float m_linear;
 	float m_quadratic;
-	float m_constant;
-	float m_max_distance;
+	float m_constant = 1.f;
+	float m_max_distance = 50.f;
 
 	// Function parameter approximation based on max distance at which we can perceive light.
 	// Works OK for distances <1, 2000>.

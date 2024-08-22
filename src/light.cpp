@@ -57,13 +57,17 @@ glm::vec3 DirLight::get_dir() const {
 
 // Light(LightType a_type, glm::vec4 a_pos = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec3 a_color = glm::vec3(1.0f, 1.0f, 1.0f), );
 PointLight::PointLight(float a_max_distance, glm::vec3 a_pos, glm::vec3 a_color, glm::vec3 a_ambient, glm::vec3 a_diffuse, glm::vec3 a_specular) 
-	:Light(glm::vec4(a_pos, 1.0f), a_color, a_ambient, a_diffuse, a_specular), m_constant{ 1.0f }, m_linear{ gen_att_linear(a_max_distance) }, m_quadratic{ gen_att_quadratic(a_max_distance) } { }
+	:Light(glm::vec4(a_pos, 1.0f), a_color, a_ambient, a_diffuse, a_specular), 
+	 m_linear{ gen_att_linear(a_max_distance) }, 
+	 m_quadratic{ gen_att_quadratic(a_max_distance) },
+	 m_max_distance{ a_max_distance } { }
 
 void PointLight::set_pos(glm::vec3 a_pos) {
 	m_pos_dir = glm::vec4(a_pos, 1.0f);
 }
 
 void PointLight::set_max_dist(float a_max_distance) {
+	m_max_distance = a_max_distance;
 	m_linear = gen_att_linear(a_max_distance);
 	m_quadratic = gen_att_quadratic(a_max_distance);
 }
@@ -82,6 +86,10 @@ void PointLight::set_quadratic_att(float a_quadratic) {
 
 glm::vec3 PointLight::get_pos() const {
 	return glm::vec3(m_pos_dir);
+}
+
+float PointLight::get_max_dist() const {
+	return m_max_distance;
 }
 
 float PointLight::get_linear() const {
@@ -105,7 +113,12 @@ float PointLight::gen_att_linear(float a_max_distance) {
 }
 
 SpotLight::SpotLight(float a_inner_cutoff_deg, float a_outer_cutoff_deg, glm::vec3 a_spot_dir, float a_max_distance, glm::vec3 pos, glm::vec3 a_color, glm::vec3 m_ambient, glm::vec3 m_diffuse, glm::vec3 m_specular)
-	:PointLight(a_max_distance, pos, a_color, m_ambient, m_diffuse, m_specular), m_inner_cutoff{ std::cos(glm::radians(a_inner_cutoff_deg)) }, m_outer_cutoff{ std::cos(glm::radians(a_outer_cutoff_deg)) }, m_inner_cutoff_deg{ a_inner_cutoff_deg }, m_outer_cutoff_deg{ a_outer_cutoff_deg }, m_spot_dir{ a_spot_dir } { }
+	:PointLight(a_max_distance, pos, a_color, m_ambient, m_diffuse, m_specular), 
+	 m_inner_cutoff{ std::cos(glm::radians(a_inner_cutoff_deg)) },
+	 m_outer_cutoff{ std::cos(glm::radians(a_outer_cutoff_deg)) },
+	 m_inner_cutoff_deg{ a_inner_cutoff_deg },
+	 m_outer_cutoff_deg{ a_outer_cutoff_deg },
+	 m_spot_dir{ a_spot_dir } { }
 
 void SpotLight::set_inner_cutoff(float a_cutoff_deg) {
 	m_inner_cutoff = std::cos(glm::radians(a_cutoff_deg));
