@@ -24,10 +24,29 @@ fs::path get_proj_path() {
 	return p;
 }
 
-Texture::Texture() :m_dir{ L"" }, m_type{ TextureType::NONE }, m_texture_id{ 0 }, m_texture_unit{ 0 } { }
+std::ostream& operator<<(std::ostream& os, const TextureType& a_type) {
+	std::string str_type;
+	switch (a_type) {
+	case TextureType::COLOR         : str_type = "COLOR";         break;
+	case TextureType::DEPTH         : str_type = "DEPTH";         break;
+	case TextureType::STENCIL       : str_type = "STENCIL";       break;
+	case TextureType::DIFFUSE       : str_type = "DIFFUSE";       break;
+	case TextureType::SPECULAR      : str_type = "SPECULAR";      break;
+	case TextureType::EMISSION      : str_type = "EMISSION";      break;
+	case TextureType::DEPTH_STENCIL : str_type = "DEPTH_STENCIL"; break;
+	case TextureType::NONE          : str_type = "NONE";          break;
+	default: str_type = "UNKNOWN"; break;
+	}
+	os << str_type; 
+	return os; 
+}
 
 Texture::Texture(std::wstring a_dir, TextureType a_type, int a_texture_unit) {
-	generate_texture(a_dir, a_type, a_texture_unit);
+	load_texture(a_dir, a_type, a_texture_unit);
+}
+
+Texture::Texture(int a_width, int a_height, TextureType a_type) {
+	gen_FBO_texture(a_width, a_height, a_type);
 }
 
 Texture::~Texture() {
@@ -35,14 +54,51 @@ Texture::~Texture() {
 		glDeleteTextures(1, &m_texture_id);
 }
 
+void Texture::clear() {
+	glDeleteTextures(1, &m_texture_id);
+    m_type = TextureType::NONE;
+    m_texture_unit = 0;
+    m_dir = L"";
+}
+
 void Texture::set_texture_unit(int a_unit_id) {
 	m_texture_unit = a_unit_id;
 }
 
-void Texture::generate_texture(std::wstring a_dir, TextureType a_type, int a_texture_unit, bool a_flip_UVs) {
-	if (a_type != TextureType::NONE)
-		glDeleteTextures(1, &m_texture_id);
+void Texture::set_texture_type(TextureType a_type) {
+	m_type = a_type;
+}
 
+void Texture::gen_FBO_texture(int a_viewport_w, int a_viewport_h, TextureType a_type) {
+	if (a_type != TextureType::COLOR && a_type != TextureType::DEPTH && a_type != TextureType::STENCIL && a_type != TextureType::DEPTH_STENCIL)
+		ERROR("[TEXTURE::GEN_FBO_TEXTURE] Bad texture type", Error_action::throwing); 
+
+	clear(); 
+	m_type = a_type;
+
+	glGenTextures(1, &m_texture_id);
+	glBindTexture(GL_TEXTURE_2D, m_texture_id);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // GL_NEAREST variations available
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // GL_NEAREST available
+
+
+	if (a_type == TextureType::COLOR)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, a_viewport_w, a_viewport_h, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	if (a_type == TextureType::DEPTH)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, a_viewport_w, a_viewport_h, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+	if (a_type == TextureType::STENCIL)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_STENCIL_INDEX, a_viewport_w, a_viewport_h, 0, GL_STENCIL_INDEX, GL_UNSIGNED_BYTE, NULL);
+	if (a_type == TextureType::DEPTH_STENCIL)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, a_viewport_w, a_viewport_h, 0, GL_DEPTH24_STENCIL8, GL_UNSIGNED_INT_24_8, NULL);
+
+}
+
+void Texture::load_texture(std::wstring a_dir, TextureType a_type, int a_texture_unit, bool a_flip_UVs) {
+	if (a_type != TextureType::DIFFUSE && a_type != TextureType::SPECULAR && a_type != TextureType::EMISSION)
+		ERROR("[TEXTURE::LOAD_TEXTURE] Bad texture type", Error_action::throwing); 
+
+	clear();
 	m_dir = a_dir;
 	m_type = a_type;
 	m_texture_unit = a_texture_unit;
@@ -82,8 +138,7 @@ void Texture::generate_texture(std::wstring a_dir, TextureType a_type, int a_tex
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	} else {
-		ERROR(std::format("Unsupported texture format for {} number of channels.", nrChannels).c_str());
-		throw Error_code::init_error;
+		ERROR(std::format("[TEXTURE::LOAD_TEXTURE] Unsupported texture format for {} number of channels.", nrChannels), Error_action::throwing);
 	}
 
 	// INFO: Testing
@@ -91,8 +146,7 @@ void Texture::generate_texture(std::wstring a_dir, TextureType a_type, int a_tex
 		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
 	} else {
-		ERROR(std::format("Couldn't load texture data {}", wstos(m_dir)).data());
-		throw Error_code::init_error;
+		ERROR(std::format("[TEXTURE::LOAD_TEXTURE] Couldn't load texture data {}", wstos(m_dir)), Error_action::throwing);
 	}
 
 	stbi_image_free(data);
@@ -136,8 +190,7 @@ MaterialMap::MaterialMap(std::initializer_list<std::pair<std::wstring, TextureTy
 				m_emission_maps.push_back(std::make_shared<Texture>(a_texture_map.first, a_texture_map.second, m_cur_emission_unit_id++));
 				break;
 			case TextureType::NONE:
-				ERROR(std::format("Bad texture type for {}", wstos(a_texture_map.first)).c_str());
-				throw Error_code::bad_type;
+				ERROR(std::format("[MATERIALMAP::MATERIALMAP] Bad texture type for {}", wstos(a_texture_map.first)), Error_action::throwing);
 		} 
 	}
 	check_unit_id_limits();
@@ -240,8 +293,7 @@ void MaterialMap::check_unit_id_limits() const {
 	auto em_siz   = EMISSION_UNIT_ID - m_cur_emission_unit_id;
 
 	if (dif_siz >= MAX_SAMPLER_SIZ || spec_siz >= MAX_SAMPLER_SIZ || em_siz >= MAX_SAMPLER_SIZ) {
-		ERROR(std::format("[ERROR] unit ids exceeded limit of sampler size {}. DIFFUSE: {}, SPECULAR: {}, EMISSION: {}\n", MAX_SAMPLER_SIZ, dif_siz, spec_siz, em_siz).c_str());
-		throw GenericException("Runtime error.");
+		ERROR(std::format("[MATERIALMAP::CHECK_UNIT_ID_LIMITS] Unit ids exceeded limit of sampler size {}. DIFFUSE: {}, SPECULAR: {}, EMISSION: {}\n", MAX_SAMPLER_SIZ, dif_siz, spec_siz, em_siz), Error_action::throwing);
 	}
 }
 
@@ -388,8 +440,7 @@ void Mesh::draw() {
 				glDrawElements(GL_TRIANGLES, m_data.indicies_sum, GL_UNSIGNED_INT, 0);
 				break;
 			default:
-				ERROR("Unhandled draw type for buffer object type.");
-				throw Error_code::bad_match;
+				ERROR("[MESH::DRAW] Unhandled draw type for buffer object type.", Error_action::throwing);
 		}
 
 		glBindVertexArray(0); 

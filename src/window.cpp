@@ -11,8 +11,7 @@ Window::Window(int a_width, int a_height, const std::string& a_title, CursorMode
 	:m_width{ a_width }, m_height{ a_height }, m_title{ a_title }, m_mouse_pos_x{ a_width / 2.f }, m_mouse_pos_y{ a_height / 2.f }, m_cur_mode{ a_mode }
 {
 	if (!glfwInit()) {
-		ERROR("Couldn't initialise glfw.");
-		throw Error_code::init_error;
+		ERROR("[WINDOW::WINDOW] Couldn't initialise glfw.", Error_action::throwing);
 	}
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -21,8 +20,7 @@ Window::Window(int a_width, int a_height, const std::string& a_title, CursorMode
 	m_window = glfwCreateWindow(m_width, m_height, m_title.c_str(), nullptr, nullptr);
 
 	if (m_window == nullptr) {
-		ERROR("Couldn't create a window.");
-		throw Error_code::init_error;
+		ERROR("[WINDOW::WINDOW] Couldn't create a window.", Error_action::throwing);
 	}
 
 	glfwMakeContextCurrent(m_window);
@@ -40,8 +38,7 @@ Window::Window(int a_width, int a_height, const std::string& a_title, CursorMode
 	}
 
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-		ERROR("Couldn't setup load glad function pointers.");
-		throw Error_code::init_error;
+		ERROR("[WINDOW:WINDOW] Couldn't load glad function pointers.", Error_action::throwing);
 	}
 
 	glViewport(0, 0, m_width, m_height);

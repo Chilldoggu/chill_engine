@@ -18,8 +18,7 @@ Uniform::Uniform(std::string a_name, int a_location, unsigned int a_program)
 	:m_name{ a_name }, m_uniform_location{ a_location }, m_shader_program{ a_program }
 {
 	if (m_uniform_location == -1) {
-		ERROR(std::format("Wrong uniform attribute name \"{}\"", m_name).data());
-		throw Error_code::bad_match;
+		ERROR(std::format("[UNIFORM::UNIFORM] Wrong uniform attribute name \"{}\"", m_name), Error_action::throwing);
 	}
 }
 
@@ -38,8 +37,7 @@ ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path)
 			m_obj = glCreateShader(GL_FRAGMENT_SHADER);
 			break;
 		default:
-			ERROR("Shader type not compatible.");
-			throw Error_code::glsl_bad_shader_type;
+			ERROR("[SHADERSRC::SHADERSRC] Shader type not compatible.", Error_action::throwing);
 	}
  
 	m_code = std::make_shared<char*>(load_code());
@@ -52,17 +50,13 @@ char* ShaderSrc::load_code() {
 
 	if (!shader_file.is_open()) {
 		switch (m_type) {
-			case ShaderType::VERTEX:
-				ERROR(std::format("Vertex shader source file {} couldn't be loaded.", wstos(m_path)).data());
-				break;
-			case ShaderType::FRAGMENT:
-				ERROR(std::format("Fragment shader source file {} couldn't be loaded.", wstos(m_path)).data());
-				break;
-			default:
-				ERROR(std::format("Unhandled shader type with source file {} couldn't be loaded.", wstos(m_path)).data());
-				break;
+		case ShaderType::VERTEX:
+			ERROR(std::format("[SHADERSRC::LOAD_CODE] Vertex shader source file {} couldn't be loaded.", wstos(m_path)), Error_action::throwing);
+		case ShaderType::FRAGMENT:
+			ERROR(std::format("[SHADERSRC::LOAD_CODE] Fragment shader source file {} couldn't be loaded.", wstos(m_path)), Error_action::throwing);
+		default:
+			ERROR(std::format("[SHADERSRC::LOAD_CODE] Unhandled shader type with source file {} couldn't be loaded.", wstos(m_path)), Error_action::throwing);
 		}
-		throw Error_code::file_init;
 	}
 
 	shader_file.seekg(0, shader_file.end);
@@ -87,14 +81,14 @@ void ShaderSrc::check_compilation() {
 
 	if (!m_compilation_success) {
 		glGetShaderInfoLog(m_obj, 1024, nullptr, m_infoLog);
-		if (m_type == ShaderType::VERTEX) {
-			ERROR(std::format("{} shader \"VERTEX\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog).data());
-		} else if (m_type == ShaderType::FRAGMENT) {
-			ERROR(std::format("{} shader \"FRAGMENT\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog).data());
-		} else {
-			ERROR(std::format("{} shader \"UNKNOWN\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog).data());
+		switch (m_type) {
+		case ShaderType::VERTEX:
+			ERROR(std::format("[SHADERSRC::CHECK_COMPILATION] {} shader \"VERTEX\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog), Error_action::throwing);
+		case ShaderType::FRAGMENT:
+			ERROR(std::format("[SHADERSRC::CHECK_COMPILATION] {} shader \"FRAGMENT\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog), Error_action::throwing);
+		default:
+			ERROR(std::format("[SHADERSRC::CHECK_COMPILATION] {} shader \"UNKNOWN\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog), Error_action::throwing);
 		}
-		throw Error_code::glsl_bad_compilation;
 	}
 }
 
@@ -105,12 +99,10 @@ ShaderSrc::~ShaderSrc() {
 
 ShaderProgram::ShaderProgram(std::initializer_list<ShaderSrc> a_shaders) {
 	if (!std::find_if(a_shaders.begin(), a_shaders.end(), [](const ShaderSrc& sh){ return sh.m_type == ShaderType::VERTEX; })) {
-		ERROR("Shader initializer list lacks vertex shader.");
-		throw Error_code::glsl_bad_shader_type;
+		ERROR("[SHADERPROGRAM::SHADERPROGRAM] Shader initializer list lacks vertex shader.", Error_action::throwing);
 	}
 	if (!std::find_if(a_shaders.begin(), a_shaders.end(), [](const ShaderSrc& sh){ return sh.m_type == ShaderType::FRAGMENT; })) {
-		ERROR("Shader initializer list lacks fragment shader.");
-		throw Error_code::glsl_bad_shader_type;
+		ERROR("[SHADERPROGRAM::SHADERPROGRAM] Shader initializer list lacks fragment shader.", Error_action::throwing);
 	}
 
 	for (auto& shader : a_shaders) {
@@ -252,8 +244,7 @@ void ShaderProgram::check_linking() {
 	glGetProgramiv(m_shader_program, GL_LINK_STATUS, &m_success);
 	if (!m_success) {
 		glGetProgramInfoLog(m_shader_program, 1024, nullptr, m_infoLog);
-		ERROR(std::format("Shader linking error.\nGLSL error message:\n{}", m_infoLog).data());
-		throw Error_code::glsl_bad_linking;
+		ERROR(std::format("[SHADERPROGRAM::CHECK_LINKING] Shader linking error.\nGLSL error message:\n{}", m_infoLog), Error_action::throwing);
 	}
 }
 

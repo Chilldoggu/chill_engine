@@ -63,7 +63,7 @@ bool Model::load_model(fs::path a_model_path, bool a_flip_UVs) {
 	const aiScene *scene = importer.ReadFile(p.string(), flags);
 
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
-		ERROR(std::format("ASSIMP::{}", importer.GetErrorString()).c_str());
+		ERROR(std::format("[MODEL::LOAD_MODEL] ASSIMP::{}", importer.GetErrorString()), Error_action::logging);
 		return false;
     }
 

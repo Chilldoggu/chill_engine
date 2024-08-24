@@ -28,17 +28,30 @@ enum class TextureType {
 	DIFFUSE,
 	SPECULAR,
 	EMISSION,
+
+	COLOR,
+	DEPTH,
+	STENCIL,
+	DEPTH_STENCIL,
+
     NONE,
 };
 
+std::ostream& operator<<(std::ostream& os, const TextureType& a_type);
+
 class Texture {
 public:
+	// Load texture from filesystem
     Texture(std::wstring a_dir, TextureType a_type, int texture_unit);
-    Texture();
+	// Load FBO textures
+    Texture(int a_width, int a_height, TextureType a_type);
     ~Texture();
 
+	auto clear() -> void;
+    auto load_texture(std::wstring a_name, TextureType a_type, int a_texture_unit, bool a_flip_UVs = true) -> void;
+	auto gen_FBO_texture(int a_viewport_w, int a_viewport_h, TextureType a_type) -> void;
 	auto set_texture_unit(int a_unit_id) -> void;
-    auto generate_texture(std::wstring a_name, TextureType a_type, int a_texture_unit, bool a_flip_UVs = true) -> void;
+	auto set_texture_type(TextureType a_type) -> void;
     auto activate() const -> void; 
 
     auto get_dir() const -> std::wstring;
@@ -47,10 +60,10 @@ public:
 	auto get_texture_unit() const -> int;
 
 private:
-    int m_texture_unit;
-    TextureType m_type;
-    std::wstring m_dir;
-    unsigned int m_texture_id;
+    int m_texture_unit = 0;
+    TextureType m_type = TextureType::NONE;
+    std::wstring m_dir = L"";
+    unsigned int m_texture_id = 0;
 };
 
 class MaterialMap {

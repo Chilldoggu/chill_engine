@@ -73,8 +73,7 @@ Uniform& Uniform::operator=(T val) {
 			case 4: glUniform4i(m_uniform_location, val[0], val[1], val[2], val[3]); break;
 		}
 	} else {
-		ERROR("Bad uniform type.");
-		throw Error_code::bad_type;
+		ERROR("[UNIFORM::OPERATOR=] Bad uniform type.", Error_action::throwing);
 	}
 
 	return *this;
