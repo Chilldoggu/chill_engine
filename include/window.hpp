@@ -14,8 +14,7 @@ enum class CursorMode {
 
 class Window {
 public:
-	Window(int a_width, int a_height, const std::string& a_title, CursorMode a_mode = CursorMode::NORMAL);
-	Window();
+	Window(int a_width = 1280, int a_height = 720, const std::string& a_title = "GLFW3 Window", CursorMode a_mode = CursorMode::NORMAL);
 	~Window();
 
 	auto closed() -> bool;
@@ -23,6 +22,8 @@ public:
 	auto set_height(float height) -> void;
 	auto set_mouse_x(float x_pos) -> void;
 	auto set_mouse_y(float y_pos) -> void;
+	auto set_imgui_dracula_style() -> void;
+	auto set_imgui_darkness_style() -> void;
 	auto title_change() -> void;
 	auto title_lshift(int n) -> void;
 	auto title_rshift(int n) -> void;
@@ -35,8 +36,8 @@ public:
 	auto get_obj() const -> GLFWwindow*;
 	auto get_delta() const -> float;
 	auto get_title() const -> std::string;
-	auto get_width() const -> float;
-	auto get_height() const -> float;
+	auto get_width() const -> int;
+	auto get_height() const -> int;
 	auto get_mouse_x() const -> float;
 	auto get_mouse_y() const -> float;
 	auto get_cursor_mode() const -> CursorMode;

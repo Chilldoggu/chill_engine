@@ -8,63 +8,12 @@
 #include <string>
 #include <filesystem>
 
-#define EMPTY_VBO 0
-#define ATTRIB_POS_LOCATION    0
-#define ATTRIB_COLOR_LOCATION  1
-#define ATTRIB_TEX_LOCATION    2
-#define ATTRIB_NORMAL_LOCATION 3
- 
-#define MAX_SAMPLER_SIZ  16
-#define DIFFUSE_UNIT_ID  0
-#define SPECULAR_UNIT_ID 16
-#define EMISSION_UNIT_ID 32
+#include "buffers.hpp"
 
-class ShaderProgram;
-
-std::filesystem::path get_asset_path();
-std::filesystem::path get_proj_path();
-
-enum class TextureType {
-	DIFFUSE,
-	SPECULAR,
-	EMISSION,
-
-	COLOR,
-	DEPTH,
-	STENCIL,
-	DEPTH_STENCIL,
-
-    NONE,
-};
-
-std::ostream& operator<<(std::ostream& os, const TextureType& a_type);
-
-class Texture {
-public:
-	// Load texture from filesystem
-    Texture(std::wstring a_dir, TextureType a_type, int texture_unit);
-	// Load FBO textures
-    Texture(int a_width, int a_height, TextureType a_type);
-    ~Texture();
-
-	auto clear() -> void;
-    auto load_texture(std::wstring a_name, TextureType a_type, int a_texture_unit, bool a_flip_UVs = true) -> void;
-	auto gen_FBO_texture(int a_viewport_w, int a_viewport_h, TextureType a_type) -> void;
-	auto set_texture_unit(int a_unit_id) -> void;
-	auto set_texture_type(TextureType a_type) -> void;
-    auto activate() const -> void; 
-
-    auto get_dir() const -> std::wstring;
-    auto get_type() const -> TextureType;
-    auto get_texture_id() const -> unsigned int;
-	auto get_texture_unit() const -> int;
-
-private:
-    int m_texture_unit = 0;
-    TextureType m_type = TextureType::NONE;
-    std::wstring m_dir = L"";
-    unsigned int m_texture_id = 0;
-};
+constexpr int MAX_SAMPLER_SIZ  = 16;
+constexpr int DIFFUSE_UNIT_ID  = 0 * MAX_SAMPLER_SIZ;
+constexpr int SPECULAR_UNIT_ID = 1 * MAX_SAMPLER_SIZ;
+constexpr int EMISSION_UNIT_ID = 2 * MAX_SAMPLER_SIZ;
 
 class MaterialMap {
 public:
@@ -142,6 +91,7 @@ public:
 	auto draw() -> void;
 	auto gen_VAO() -> void;
 
+	auto clear() -> void;
 	auto set_pos(const std::vector<glm::vec3>& a_pos = {}) -> void;
 	auto set_normals(const std::vector<glm::vec3>& a_normals = {}) -> void;
 	auto set_elements(const std::vector<unsigned int>& a_elem_indicies = {}) -> void;
@@ -150,6 +100,7 @@ public:
 	auto set_wireframe(bool a_option) -> void;
 	auto set_visibility(bool a_option) -> void;
 
+	auto get_VAO() -> unsigned int;
 	auto get_material_map() -> MaterialMap&;
 	auto get_wireframe() -> bool;
 	auto get_visibility() -> bool;

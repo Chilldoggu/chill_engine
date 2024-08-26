@@ -10,8 +10,8 @@ static void glfw_error_callback(int error, const char* description) {
 	std::cerr << std::format("GLFW Error {}: {}", error, description) << std::endl;
 }
 
-App::App(int win_width, int win_height, std::string win_title, CursorMode win_mode, glm::vec3 player_head_pos) 
-	:m_win{ new Window(win_width, win_height, win_title, win_mode) }, m_cam{ new Camera(player_head_pos) }
+App::App(int win_width, int win_height, std::string win_title, CursorMode win_mode, glm::vec3 cam_pos) 
+	:m_win{ new Window(win_width, win_height, win_title, win_mode) }, m_cam{ new Camera(cam_pos) }
 {
 	// Initialise callbacks
 	// Use Set/Get UserPointer for scalabale solution for per window callbacks to member functions

@@ -23,6 +23,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 	"${SRC}/meshes.cpp" 
 	"${SRC}/model.cpp" 
 	"${SRC}/light.cpp" 
+	"${SRC}/buffers.cpp" 
 )
  
 # Create GLAD module

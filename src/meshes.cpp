@@ -2,8 +2,6 @@
 #include <memory>
 #include <string>
 #include <utility>
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 
 #include <filesystem>
 #include <format>
@@ -11,172 +9,12 @@
 #include "meshes.hpp"
 #include "assert.hpp"
 #include "shaders.hpp"
-#include "file_manager.hpp" // wstos
+#include "buffers.hpp"
+#include "assert.hpp"
+#include "file_manager.hpp"
  
-namespace fs = std::filesystem;
-
-fs::path get_proj_path() {
-	fs::path p = fs::current_path();
-	if (p.filename() == "build" || p.filename() == "install") {
-		p = p.parent_path();
-	}
-
-	return p;
-}
-
-std::ostream& operator<<(std::ostream& os, const TextureType& a_type) {
-	std::string str_type;
-	switch (a_type) {
-	case TextureType::COLOR         : str_type = "COLOR";         break;
-	case TextureType::DEPTH         : str_type = "DEPTH";         break;
-	case TextureType::STENCIL       : str_type = "STENCIL";       break;
-	case TextureType::DIFFUSE       : str_type = "DIFFUSE";       break;
-	case TextureType::SPECULAR      : str_type = "SPECULAR";      break;
-	case TextureType::EMISSION      : str_type = "EMISSION";      break;
-	case TextureType::DEPTH_STENCIL : str_type = "DEPTH_STENCIL"; break;
-	case TextureType::NONE          : str_type = "NONE";          break;
-	default: str_type = "UNKNOWN"; break;
-	}
-	os << str_type; 
-	return os; 
-}
-
-Texture::Texture(std::wstring a_dir, TextureType a_type, int a_texture_unit) {
-	load_texture(a_dir, a_type, a_texture_unit);
-}
-
-Texture::Texture(int a_width, int a_height, TextureType a_type) {
-	gen_FBO_texture(a_width, a_height, a_type);
-}
-
-Texture::~Texture() {
-	if (m_type != TextureType::NONE)
-		glDeleteTextures(1, &m_texture_id);
-}
-
-void Texture::clear() {
-	glDeleteTextures(1, &m_texture_id);
-    m_type = TextureType::NONE;
-    m_texture_unit = 0;
-    m_dir = L"";
-}
-
-void Texture::set_texture_unit(int a_unit_id) {
-	m_texture_unit = a_unit_id;
-}
-
-void Texture::set_texture_type(TextureType a_type) {
-	m_type = a_type;
-}
-
-void Texture::gen_FBO_texture(int a_viewport_w, int a_viewport_h, TextureType a_type) {
-	if (a_type != TextureType::COLOR && a_type != TextureType::DEPTH && a_type != TextureType::STENCIL && a_type != TextureType::DEPTH_STENCIL)
-		ERROR("[TEXTURE::GEN_FBO_TEXTURE] Bad texture type", Error_action::throwing); 
-
-	clear(); 
-	m_type = a_type;
-
-	glGenTextures(1, &m_texture_id);
-	glBindTexture(GL_TEXTURE_2D, m_texture_id);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // GL_NEAREST variations available
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // GL_NEAREST available
-
-
-	if (a_type == TextureType::COLOR)
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, a_viewport_w, a_viewport_h, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	if (a_type == TextureType::DEPTH)
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, a_viewport_w, a_viewport_h, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
-	if (a_type == TextureType::STENCIL)
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_STENCIL_INDEX, a_viewport_w, a_viewport_h, 0, GL_STENCIL_INDEX, GL_UNSIGNED_BYTE, NULL);
-	if (a_type == TextureType::DEPTH_STENCIL)
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, a_viewport_w, a_viewport_h, 0, GL_DEPTH24_STENCIL8, GL_UNSIGNED_INT_24_8, NULL);
-
-}
-
-void Texture::load_texture(std::wstring a_dir, TextureType a_type, int a_texture_unit, bool a_flip_UVs) {
-	if (a_type != TextureType::DIFFUSE && a_type != TextureType::SPECULAR && a_type != TextureType::EMISSION)
-		ERROR("[TEXTURE::LOAD_TEXTURE] Bad texture type", Error_action::throwing); 
-
-	clear();
-	m_dir = a_dir;
-	m_type = a_type;
-	m_texture_unit = a_texture_unit;
-
-	fs::path p = get_proj_path();
-	p /= a_dir;
-
-	glGenTextures(1, &m_texture_id);
-	glBindTexture(GL_TEXTURE_2D, m_texture_id);
-
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // GL_NEAREST variations available
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // GL_NEAREST available
-
-	int nrChannels{ };
-	stbi_set_flip_vertically_on_load(a_flip_UVs);
-	int width{ };
-	int height{ };
-	unsigned char* data = stbi_load(p.string().c_str(), &width, &height, &nrChannels, 0);
-
-	unsigned format;
-	if (nrChannels == 3) {
-		format = GL_RGB;
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	} else if (nrChannels == 4) { 
-		format = GL_RGBA;
-
-		// Interpolation of transparent borders with GL_REPEAT colors them
-		// with opposite border color. With GL_CLAMP_TO_EDGE we make sure to 
-		// spread transparency across the edges.
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	} else {
-		ERROR(std::format("[TEXTURE::LOAD_TEXTURE] Unsupported texture format for {} number of channels.", nrChannels), Error_action::throwing);
-	}
-
-	// INFO: Testing
-	if (data) {
-		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	} else {
-		ERROR(std::format("[TEXTURE::LOAD_TEXTURE] Couldn't load texture data {}", wstos(m_dir)), Error_action::throwing);
-	}
-
-	stbi_image_free(data);
-}
-
-void Texture::activate() const {
-	if (m_type != TextureType::NONE) {
-		glActiveTexture(GL_TEXTURE0 + m_texture_unit);
-		glBindTexture(GL_TEXTURE_2D, m_texture_id);
-	}
-}
-
-TextureType Texture::get_type() const {
-	return m_type;
-}
-
-std::wstring Texture::get_dir() const {
-	return m_dir;
-}
-
-unsigned int Texture::get_texture_id() const {
-	return m_texture_id;
-}
-
-int Texture::get_texture_unit() const {
-	return m_texture_unit;
-}
-
 MaterialMap::MaterialMap(std::initializer_list<std::pair<std::wstring, TextureType>> a_texture_maps, float a_shininess) 
-	:m_shininess{ a_shininess }, m_diffuse_maps{ }, m_specular_maps{ }, m_emission_maps{ }
+	:m_shininess{ a_shininess }
 {
 	for (const auto& a_texture_map : a_texture_maps) {
 		switch (a_texture_map.second) {
@@ -209,17 +47,17 @@ void MaterialMap::set_textures(std::vector<std::shared_ptr<Texture>> a_textures)
 		switch (texture_ptr->get_type()) {
 			case TextureType::DIFFUSE:
 				m_diffuse_maps.push_back(texture_ptr);
-				if (int id = texture_ptr->get_texture_unit(); id > max_diffuse_unit_id)
+				if (int id = texture_ptr->get_unit_id(); id > max_diffuse_unit_id)
 					max_diffuse_unit_id = id;
 				break;
 			case TextureType::SPECULAR:
 				m_specular_maps.push_back(texture_ptr);
-				if (int id = texture_ptr->get_texture_unit(); id > max_specular_unit_id)
+				if (int id = texture_ptr->get_unit_id(); id > max_specular_unit_id)
 					max_specular_unit_id = id;
 				break;
 			case TextureType::EMISSION:
 				m_emission_maps.push_back(texture_ptr);
-				if (int id = texture_ptr->get_texture_unit(); id > max_emission_unit_id)
+				if (int id = texture_ptr->get_unit_id(); id > max_emission_unit_id)
 					max_emission_unit_id = id;
 				break;
 			case TextureType::NONE:
@@ -445,6 +283,10 @@ void Mesh::draw() {
 
 		glBindVertexArray(0); 
 	}
+}
+
+unsigned int Mesh::get_VAO() {
+	return m_VBOs->m_VAO;
 }
 
 MaterialMap& Mesh::get_material_map() {

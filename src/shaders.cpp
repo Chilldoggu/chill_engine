@@ -51,11 +51,14 @@ char* ShaderSrc::load_code() {
 	if (!shader_file.is_open()) {
 		switch (m_type) {
 		case ShaderType::VERTEX:
-			ERROR(std::format("[SHADERSRC::LOAD_CODE] Vertex shader source file {} couldn't be loaded.", wstos(m_path)), Error_action::throwing);
+			ERROR(std::format("[SHADERSRC::LOAD_CODE] Vertex shader source file {} couldn't be loaded.", wstos(m_path)), Error_action::throwing); 
+			break;
 		case ShaderType::FRAGMENT:
-			ERROR(std::format("[SHADERSRC::LOAD_CODE] Fragment shader source file {} couldn't be loaded.", wstos(m_path)), Error_action::throwing);
-		default:
-			ERROR(std::format("[SHADERSRC::LOAD_CODE] Unhandled shader type with source file {} couldn't be loaded.", wstos(m_path)), Error_action::throwing);
+			ERROR(std::format("[SHADERSRC::LOAD_CODE] Fragment shader source file {} couldn't be loaded.", wstos(m_path)), Error_action::throwing); 
+			break;
+		default: 
+			ERROR(std::format("[SHADERSRC::LOAD_CODE] Unhandled shader type with source file {} couldn't be loaded.", wstos(m_path)), Error_action::throwing); 
+			break;
 		}
 	}
 
@@ -83,11 +86,14 @@ void ShaderSrc::check_compilation() {
 		glGetShaderInfoLog(m_obj, 1024, nullptr, m_infoLog);
 		switch (m_type) {
 		case ShaderType::VERTEX:
-			ERROR(std::format("[SHADERSRC::CHECK_COMPILATION] {} shader \"VERTEX\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog), Error_action::throwing);
-		case ShaderType::FRAGMENT:
-			ERROR(std::format("[SHADERSRC::CHECK_COMPILATION] {} shader \"FRAGMENT\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog), Error_action::throwing);
+			ERROR(std::format("[SHADERSRC::CHECK_COMPILATION] {} shader \"VERTEX\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog), Error_action::throwing); 
+			break;
+		case ShaderType::FRAGMENT: 
+			ERROR(std::format("[SHADERSRC::CHECK_COMPILATION] {} shader \"FRAGMENT\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog), Error_action::throwing); 
+			break;
 		default:
-			ERROR(std::format("[SHADERSRC::CHECK_COMPILATION] {} shader \"UNKNOWN\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog), Error_action::throwing);
+			ERROR(std::format("[SHADERSRC::CHECK_COMPILATION] {} shader \"UNKNOWN\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog), Error_action::throwing); 
+			break;
 		}
 	}
 }
@@ -219,11 +225,11 @@ void ShaderProgram::set_uniform(const std::string& a_material_name, const Materi
 		push_uniform_struct(a_material_name, maps.begin(), maps.end());
 
 		for (size_t i = 0; i < diffuse_maps.size(); i++)
-			m_uniforms.at(std::format("{}.diffuse_maps[{}]", a_material_name, i)) = diffuse_maps[i]->get_texture_unit();
+			m_uniforms.at(std::format("{}.diffuse_maps[{}]", a_material_name, i)) = diffuse_maps[i]->get_unit_id();
 		for (size_t i = 0; i < specular_maps.size(); i++)
-			m_uniforms.at(std::format("{}.specular_maps[{}]", a_material_name, i)) = specular_maps[i]->get_texture_unit();
+			m_uniforms.at(std::format("{}.specular_maps[{}]", a_material_name, i)) = specular_maps[i]->get_unit_id();
 		for (size_t i = 0; i < emission_maps.size(); i++)
-			m_uniforms.at(std::format("{}.emission_maps[{}]", a_material_name, i)) = emission_maps[i]->get_texture_unit();
+			m_uniforms.at(std::format("{}.emission_maps[{}]", a_material_name, i)) = emission_maps[i]->get_unit_id();
 		m_uniforms.at(a_material_name + ".shininess") = a_material.get_shininess();
 	}
 }
