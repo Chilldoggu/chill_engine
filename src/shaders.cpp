@@ -1,5 +1,3 @@
-#include "shaders.hpp"
-
 #include <initializer_list>
 #include <ios>
 #include <format>
@@ -8,6 +6,7 @@
 #include <algorithm>
 #include <stdexcept>
 
+#include "shaders.hpp"
 #include "assert.hpp"
 #include "meshes.hpp"
 #include "file_manager.hpp" // wstos
@@ -40,7 +39,7 @@ ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path)
 			ERROR("[SHADERSRC::SHADERSRC] Shader type not compatible.", Error_action::throwing);
 	}
  
-	m_code = std::make_shared<char*>(load_code());
+	m_code = std::make_unique<char*>(load_code());
 	compile_shader();
 }
 
@@ -207,11 +206,11 @@ void ShaderProgram::set_uniform(const std::string& a_material_name, const Materi
 		m_uniforms.at(a_material_name + ".shininess") = a_material.get_shininess();
 
 		for (const auto& diffuse_map : diffuse_maps)
-			diffuse_map->activate();
+			diffuse_map.activate();
 		for (const auto& specular_map : specular_maps)
-			specular_map->activate();
+			specular_map.activate();
 		for (const auto& emission_map : emission_maps)
-			emission_map->activate();
+			emission_map.activate();
 	} catch (std::out_of_range) {
 		std::vector<std::string> maps = {};
 		for (size_t i = 0; i < diffuse_maps.size(); i++)
@@ -225,11 +224,11 @@ void ShaderProgram::set_uniform(const std::string& a_material_name, const Materi
 		push_uniform_struct(a_material_name, maps.begin(), maps.end());
 
 		for (size_t i = 0; i < diffuse_maps.size(); i++)
-			m_uniforms.at(std::format("{}.diffuse_maps[{}]", a_material_name, i)) = diffuse_maps[i]->get_unit_id();
+			m_uniforms.at(std::format("{}.diffuse_maps[{}]", a_material_name, i)) = diffuse_maps[i].get_unit_id();
 		for (size_t i = 0; i < specular_maps.size(); i++)
-			m_uniforms.at(std::format("{}.specular_maps[{}]", a_material_name, i)) = specular_maps[i]->get_unit_id();
+			m_uniforms.at(std::format("{}.specular_maps[{}]", a_material_name, i)) = specular_maps[i].get_unit_id();
 		for (size_t i = 0; i < emission_maps.size(); i++)
-			m_uniforms.at(std::format("{}.emission_maps[{}]", a_material_name, i)) = emission_maps[i]->get_unit_id();
+			m_uniforms.at(std::format("{}.emission_maps[{}]", a_material_name, i)) = emission_maps[i].get_unit_id();
 		m_uniforms.at(a_material_name + ".shininess") = a_material.get_shininess();
 	}
 }

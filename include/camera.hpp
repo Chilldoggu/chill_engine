@@ -1,16 +1,9 @@
 #pragma once
 
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-
-const float YAW         = -90.0f;
-const float PITCH       = 0.0f;
-const float NEAR_PLANE  = 0.1f;
-const float FAR_PLANE   = 100.0f;
-const float FOV         = 90.0f;
-const float SPEED       = 4.0f;
-const float SENSITIVITY = 0.1f;
 
 enum class CameraMovement {
     FORWARD,
@@ -22,11 +15,7 @@ enum class CameraMovement {
 class Camera {
 public:
     // constructor vector values
-    Camera(const glm::vec3& position = glm::vec3(0.0f, 0.0f, 0.0f), const glm::vec3& up = glm::vec3(0.0f, 1.0f, 0.0f), 
-           float yaw = YAW, float pitch = PITCH, float near_plane = NEAR_PLANE, float far_plane = FAR_PLANE);
-    // construtor for scalar values
-    Camera(float pos_x, float pos_y, float pos_z, float up_x, float up_y, float up_z,
-           float yaw, float pitch, float near_plane = NEAR_PLANE, float far_plane = FAR_PLANE);
+    Camera(GLFWwindow* a_window, const glm::vec3& position = glm::vec3(0.0f, 0.0f, 0.0f));
 
     auto set_fov(float a_fov) -> void;
     auto set_target(glm::vec3 a_target) -> void;
@@ -35,7 +24,7 @@ public:
     auto set_near_plane(float a_near) -> void;
     auto set_movement_speed(float a_speed) -> void;
     auto process_keyboard(CameraMovement direction, float delta_time) -> void;
-    auto process_mouse_movement(float x_offset, float y_offset, GLboolean constrain_pitch = true) -> void;
+    auto process_mouse_movement(float x_offset, float y_offset, bool constrain_pitch = true) -> void;
     auto process_mouse_scroll(float y_offset) -> void;
 
     auto get_fov() const -> float;
@@ -48,21 +37,22 @@ public:
     auto get_projection_matrix(float width, float height) const -> glm::mat4;
 
 private:
+    // Window attached to
+    GLFWwindow* m_window = nullptr;
     // camera Attributes
-    glm::vec3 m_up;
-    glm::vec3 m_right;
-    glm::vec3 m_front;
-    glm::vec3 m_position;
-    glm::vec3 m_world_up;
+    glm::vec3 m_up = glm::vec3(0.f, 1.f, 0.f);
+    glm::vec3 m_front = glm::vec3(0.f, 0.f, -1.f);
+    glm::vec3 m_right = glm::vec3(1.f, 0.f, 0.f);
+    glm::vec3 m_position = glm::vec3(0.f, 0.f, 0.f);
+    glm::vec3 m_world_up = glm::vec3(0.f, 1.f, 0.f);
     // euler Angles
-    float m_yaw;
-    float m_pitch;
-    // camera options
-    float m_fov;
-    float m_far_plane;
-    float m_near_plane;
-    float m_movement_speed;
-    float m_mouse_sensitivity;
+    float m_yaw = -90.f;
+    float m_pitch = 0.f;
+    float m_fov = 90.f;
+    float m_far_plane = 100.f;
+    float m_near_plane = 0.1f;
+    float m_movement_speed = 4.f;
+    float m_mouse_sensitivity = 0.1f;
 
     // calculates the front vector from the Camera's (updated) Euler Angles
     void update_camera_vectors();

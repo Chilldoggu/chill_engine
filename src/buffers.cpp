@@ -1,16 +1,15 @@
-#include <glad/glad.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
 #include <memory>
 #include <vector>
 #include <variant>
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
 #include <filesystem>
 
 #include "buffers.hpp"
 #include "assert.hpp"
-#include "file_manager.hpp"
-
+#include "file_manager.hpp" 
+#include "application.hpp"
 
 namespace fs = std::filesystem;
 
@@ -40,80 +39,26 @@ std::ostream& operator<<(std::ostream& os, const TextureType& a_type) {
 	return os; 
 }
 
-Texture::Texture(std::wstring a_dir, TextureType a_type, int a_texture_unit) {
-	load_texture(a_dir, a_type, a_texture_unit);
-}
-
-Texture::Texture(int a_width, int a_height, TextureType a_type) {
-	create_texture(a_width, a_height, a_type);
-}
-
-Texture::~Texture() {
-	std::cout << "DELETING: " << wstos(m_dir) << std::endl;
-	if (m_type != TextureType::NONE) {
-		glDeleteTextures(1, &m_texture_id); 
-	}
-}
-
-void Texture::clear() {
-	glDeleteTextures(1, &m_texture_id);
-    m_type = TextureType::NONE;
-    m_texture_unit = 0;
-    m_dir = L"";
-}
-
-void Texture::set_texture_unit(int a_unit_id) {
-	m_texture_unit = a_unit_id;
-}
-
-void Texture::set_texture_type(TextureType a_type) {
-	m_type = a_type;
-}
-
-void Texture::create_texture(int a_width, int a_height, TextureType a_type) {
-	if (a_type != TextureType::COLOR && a_type != TextureType::DEPTH && a_type != TextureType::DEPTH_STENCIL)
-		ERROR("[TEXTURE::GEN_FBO_TEXTURE] Bad texture type", Error_action::throwing); 
-
-	clear(); 
-	m_type = a_type;
-
-	glGenTextures(1, &m_texture_id);
-	glBindTexture(GL_TEXTURE_2D, m_texture_id);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // GL_NEAREST variations available
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // GL_NEAREST available 
-
-	switch (a_type) {
-	case TextureType::COLOR:         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,              a_width, a_height, 0, GL_RGB,              GL_UNSIGNED_BYTE, NULL);     break;
-	case TextureType::DEPTH:         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,  a_width, a_height, 0, GL_DEPTH_COMPONENT,  GL_UNSIGNED_BYTE, NULL);     break;
-	case TextureType::DEPTH_STENCIL: glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, a_width, a_height, 0, GL_DEPTH_STENCIL,    GL_UNSIGNED_INT_24_8, NULL); break;
-	}
-}
-
-void Texture::load_texture(std::wstring a_dir, TextureType a_type, int a_texture_unit, bool a_flip_UVs) {
+Texture::Texture(std::wstring a_dir, TextureType a_type, bool a_flip_image, int a_unit_id)
+	:m_dir{ a_dir }, m_type{ a_type }, m_unit_id{ a_unit_id }
+{
 	if (a_type != TextureType::DIFFUSE && a_type != TextureType::SPECULAR && a_type != TextureType::EMISSION)
 		ERROR("[TEXTURE::LOAD_TEXTURE] Bad texture type", Error_action::throwing); 
 
-	clear();
-	m_dir = a_dir;
-	m_type = a_type;
-	m_texture_unit = a_texture_unit;
-
+	// TODO: REMOVE THIS
 	fs::path p = get_proj_path();
 	p /= a_dir;
 
-	glGenTextures(1, &m_texture_id);
-	glBindTexture(GL_TEXTURE_2D, m_texture_id);
+	glGenTextures(1, &m_id);
+	glBindTexture(GL_TEXTURE_2D, m_id);
 
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // GL_NEAREST variations available
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // GL_NEAREST available
 
 	int nrChannels{ };
-	stbi_set_flip_vertically_on_load(a_flip_UVs);
 	int width{ };
 	int height{ };
+	stbi_set_flip_vertically_on_load(a_flip_image);
 	unsigned char* data = stbi_load(p.string().c_str(), &width, &height, &nrChannels, 0);
 
 	unsigned format;
@@ -125,19 +70,15 @@ void Texture::load_texture(std::wstring a_dir, TextureType a_type, int a_texture
 	} else if (nrChannels == 4) { 
 		format = GL_RGBA;
 
-		// Interpolation of transparent borders with GL_REPEAT colors them
-		// with opposite border color. With GL_CLAMP_TO_EDGE we make sure to 
-		// spread transparency across the edges.
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	} else {
-		ERROR(std::format("[TEXTURE::LOAD_TEXTURE] Unsupported texture format for {} number of channels.", nrChannels), Error_action::throwing);
+		ERROR(std::format("[TEXTURE::LOAD_TEXTURE] Unsupported texture format {} with {} number of channels.", wstos(m_dir), nrChannels), Error_action::throwing);
 	}
 
-	// INFO: Testing
 	if (data) {
 		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
@@ -146,12 +87,117 @@ void Texture::load_texture(std::wstring a_dir, TextureType a_type, int a_texture
 	}
 
 	stbi_image_free(data);
+
+	Application::get_instance().get_rmanager().inc_texture_ref_count(m_id);
 }
+
+Texture::Texture(int a_width, int a_height, TextureType a_type)
+	:m_type{ a_type }
+{ 
+	if (a_type != TextureType::COLOR && a_type != TextureType::DEPTH && a_type != TextureType::DEPTH_STENCIL)
+		ERROR("[TEXTURE::GEN_FBO_TEXTURE] Bad texture type", Error_action::throwing); 
+
+	m_type = a_type;
+
+	glGenTextures(1, &m_id);
+	glBindTexture(GL_TEXTURE_2D, m_id);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // GL_NEAREST variations available
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // GL_NEAREST available 
+
+	switch (a_type) {
+	case TextureType::COLOR:         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,              a_width, a_height, 0, GL_RGB,              GL_UNSIGNED_BYTE, NULL);     break;
+	case TextureType::DEPTH:         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,  a_width, a_height, 0, GL_DEPTH_COMPONENT,  GL_UNSIGNED_BYTE, NULL);     break;
+	case TextureType::DEPTH_STENCIL: glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, a_width, a_height, 0, GL_DEPTH_STENCIL,    GL_UNSIGNED_INT_24_8, NULL); break;
+	}
+
+	Application::get_instance().get_rmanager().inc_texture_ref_count(m_id);
+}
+
+// int m_unit_id = 0;
+// std::wstring m_dir = L"";
+// unsigned int m_id = EMPTY_VBO;
+// TextureType m_type = TextureType::NONE;
+
+Texture::Texture(const Texture& a_texture) {
+	m_dir = a_texture.m_dir;
+	m_type = a_texture.m_type;
+	m_id = a_texture.m_id;
+	m_unit_id = a_texture.m_unit_id;
+
+	Application::get_instance().get_rmanager().inc_texture_ref_count(m_id);
+}
+
+// When moving an object, reference count shouldn't increment.
+Texture::Texture(Texture&& a_texture) {
+	m_dir = a_texture.m_dir;
+	m_type = a_texture.m_type;
+	m_id = a_texture.m_id;
+	m_unit_id = a_texture.m_unit_id; 
+
+    a_texture.m_dir = L"";
+    a_texture.m_unit_id = 0;
+	a_texture.m_id = EMPTY_VBO;
+    a_texture.m_type = TextureType::NONE;
+}
+
+Texture& Texture::operator=(const Texture& a_texture) { 
+	m_dir = a_texture.m_dir;
+	m_type = a_texture.m_type;
+	m_id = a_texture.m_id;
+	m_unit_id = a_texture.m_unit_id;
+
+	Application::get_instance().get_rmanager().inc_texture_ref_count(m_id);
+
+	return *this;
+}
+
+// When moving an object, reference count shouldn't increment.
+Texture& Texture::operator=(Texture&& a_texture) {
+	m_dir = a_texture.m_dir;
+	m_type = a_texture.m_type;
+	m_id = a_texture.m_id;
+	m_unit_id = a_texture.m_unit_id; 
+
+    a_texture.m_dir = L"";
+    a_texture.m_unit_id = 0;
+	a_texture.m_id = EMPTY_VBO;
+    a_texture.m_type = TextureType::NONE;
+
+	return *this;
+}
+
+Texture::~Texture() {
+	clear();
+}
+
+void Texture::clear() {
+	if (m_id != EMPTY_VBO) {
+		Application::get_instance().get_rmanager().dec_texture_ref_count(m_id);
+		if (!Application::get_instance().get_rmanager().chk_texture_ref_count(m_id)) {
+			std::cout << "DELETING: " << wstos(m_dir) << std::endl;
+			glDeleteTextures(1, &m_id); 
+		} 
+	}
+
+    m_dir = L"";
+    m_type = TextureType::NONE;
+	m_id = EMPTY_VBO;
+    m_unit_id = 0;
+}
+
+void Texture::set_unit_id(int a_unit_id) {
+	m_unit_id = a_unit_id;
+}
+
+void Texture::set_type(TextureType a_type) {
+	m_type = a_type;
+} 
 
 void Texture::activate() const {
 	if (m_type != TextureType::NONE) {
-		glActiveTexture(GL_TEXTURE0 + m_texture_unit);
-		glBindTexture(GL_TEXTURE_2D, m_texture_id);
+		glActiveTexture(GL_TEXTURE0 + m_unit_id);
+		glBindTexture(GL_TEXTURE_2D, m_id);
 	}
 }
 
@@ -164,11 +210,11 @@ std::wstring Texture::get_dir() const {
 }
 
 unsigned int Texture::get_id() const {
-	return m_texture_id;
+	return m_id;
 }
 
 int Texture::get_unit_id() const {
-	return m_texture_unit;
+	return m_unit_id;
 }
 
 RenderBuffer::RenderBuffer(int a_width, int a_height, RenderBufferType a_type) :m_type{ a_type } {
@@ -272,11 +318,8 @@ void Framebuffer::attach(AttachmentType a_attach_type, AttachmentBufferType a_bu
 AttachmentBuffer Framebuffer::get_attachment_buffer(AttachmentType a_type) const { 
 	AttachmentBuffer ret_attachment_buffer;
 	for (auto& attachment_buffer : m_attachments) {
-		auto attachment = attachment_buffer.get_attachment(); 
-
 		if (attachment_buffer.get_type() == a_type) { 
-			ret_attachment_buffer = attachment_buffer;
-			break;
+			return attachment_buffer;
 		}
 	} 
 
@@ -284,7 +327,12 @@ AttachmentBuffer Framebuffer::get_attachment_buffer(AttachmentType a_type) const
 }
 
 void Framebuffer::activate_color() const {
-	get_attachment_buffer(AttachmentType::COLOR).activate();
+	for (const AttachmentBuffer& attachment_buffer : m_attachments) {
+		if (attachment_buffer.get_type() == AttachmentType::COLOR) { 
+			attachment_buffer.activate();
+			return;
+		}
+	} 
 }
 
 unsigned int Framebuffer::get_id() const {

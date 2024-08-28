@@ -1,6 +1,7 @@
 #pragma once
 
-#include "glad/glad.h"
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -89,7 +90,7 @@ struct ShaderSrc {
 
 	int m_compilation_success = false;
 	char m_infoLog[INFO_LOG_SIZ];
-	std::shared_ptr<char*> m_code;
+	std::unique_ptr<char*> m_code;
 	ShaderType m_type;
 	std::wstring m_path;
 	unsigned int m_obj;

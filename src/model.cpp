@@ -1,12 +1,12 @@
-#include <algorithm>
 #include <assimp/material.h>
 #include <assimp/postprocess.h>
 
 #include <format>
 #include <memory>
+#include <algorithm>
 
 #include "model.hpp"
-#include "meshes.hpp"
+#include "meshes.hpp" 
 #include "file_manager.hpp"
 
 namespace fs = std::filesystem;
@@ -95,7 +95,7 @@ void Model::process_node(aiNode *a_node, const aiScene *a_scene) {
 Mesh Model::process_mesh(aiMesh *a_mesh, const aiScene *a_scene) { 
 	BufferData data;
 	MaterialMap mat;
-	std::vector<std::shared_ptr<Texture>> textures;
+	std::vector<Texture> textures;
 
 	// Load VBO specific data
 	if (a_mesh->HasPositions()) {
@@ -153,7 +153,7 @@ Mesh Model::process_mesh(aiMesh *a_mesh, const aiScene *a_scene) {
 	return Mesh(data, mat);
 }
 
-void Model::process_texture(std::vector<std::shared_ptr<Texture>>& a_textures, aiMaterial* a_mat, aiTextureType a_ai_texture_type) {
+void Model::process_texture(std::vector<Texture>& a_textures, aiMaterial* a_mat, aiTextureType a_ai_texture_type) {
 	aiString texture_name;
 	TextureType texture_type{ TextureType::NONE };
 	int unit_id{ 0 };
@@ -178,16 +178,16 @@ void Model::process_texture(std::vector<std::shared_ptr<Texture>>& a_textures, a
 		a_mat->GetTexture(a_ai_texture_type, i, &texture_name);
 
 		// Check if texture has been loaded previously and if true use it rather than regenerating.
-		auto it = std::find_if(m_textures_loaded.begin(), m_textures_loaded.end(), [&texture_name, this](const std::shared_ptr<Texture>& texture){
-			return texture->get_dir() == (this->m_dir / texture_name.C_Str()).wstring(); 
+		auto it = std::find_if(m_textures_loaded.begin(), m_textures_loaded.end(), [&texture_name, this](const Texture& texture){
+			return texture.get_dir() == (this->m_dir / texture_name.C_Str()).wstring(); 
 		});
 		if (it != m_textures_loaded.end()) {
-			std::shared_ptr<Texture> preloaded_texture = *it;
-			preloaded_texture->set_texture_unit(unit_id + i);
+			Texture preloaded_texture = *it;
+			preloaded_texture.set_unit_id(unit_id + i);
 			a_textures.push_back(preloaded_texture);
 		} else {
 			std::wstring texture_dir = (this->m_dir / texture_name.C_Str()).wstring();
-			std::shared_ptr<Texture> texture_ptr = std::make_shared<Texture>(texture_dir, texture_type, unit_id + i);
+			Texture texture_ptr(texture_dir, texture_type, false, unit_id + i);
 			a_textures.push_back(texture_ptr);
 			m_textures_loaded.push_back(texture_ptr);
 		}
@@ -327,5 +327,4 @@ glm::mat4 Model::get_model_mat() const {
 glm::mat3 Model::get_normal_mat() const {
 	// Get normal matix from M matrix
 	return glm::transpose(glm::inverse(glm::mat3(get_model_mat())));
-}
-
+} 

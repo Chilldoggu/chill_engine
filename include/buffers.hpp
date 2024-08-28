@@ -1,7 +1,5 @@
 #pragma once
 
-#include <glad/glad.h>
-
 #include <variant>
 #include <vector>
 #include <memory>
@@ -51,18 +49,18 @@ std::ostream& operator<<(std::ostream& os, const TextureType& a_type);
 
 class Texture {
 public:
-	Texture() = default;
-	// Load texture from filesystem
-    Texture(std::wstring a_dir, TextureType a_type, int texture_unit);
-	// Create empty texture buffer. Used for frame buffer attachment.
+    Texture(std::wstring a_dir, TextureType a_type, bool a_flip_image, int texture_unit);
     Texture(int a_width, int a_height, TextureType a_type);
-    ~Texture();
+	Texture(const Texture& a_texture);
+	Texture(Texture&& a_texture); 
+    ~Texture(); 
+
+	auto operator=(const Texture& a_texture) -> Texture&;
+	auto operator=(Texture&& a_texture) -> Texture&;
 
 	auto clear() -> void;
-    auto load_texture(std::wstring a_name, TextureType a_type, int a_texture_unit, bool a_flip_UVs = true) -> void;
-	auto create_texture(int a_width, int a_height, TextureType a_type) -> void;
-	auto set_texture_unit(int a_unit_id) -> void;
-	auto set_texture_type(TextureType a_type) -> void;
+	auto set_unit_id(int a_unit_id) -> void;
+	auto set_type(TextureType a_type) -> void;
     auto activate() const -> void; 
 
     auto get_id() const -> unsigned int;
@@ -71,10 +69,10 @@ public:
 	auto get_unit_id() const -> int;
 
 private:
-    int m_texture_unit = 0;
+    unsigned int m_id = EMPTY_VBO;
     std::wstring m_dir = L"";
-    unsigned int m_texture_id = EMPTY_VBO;
     TextureType m_type = TextureType::NONE;
+    int m_unit_id = 0;
 };
 
 class RenderBuffer {
@@ -99,8 +97,8 @@ public:
 	auto activate() const -> void; 
 	auto get_type() const -> AttachmentType; 
 	auto get_attachment() const -> std::variant<std::shared_ptr<Texture>, std::shared_ptr<RenderBuffer>>;
+
 private:
-	// Shared pointers are used because Texture and RenderBuffer classes have annoying destructors that I don't want to call.
 	std::variant<std::shared_ptr<Texture>, std::shared_ptr<RenderBuffer>> m_attachment;
 	AttachmentType m_type = AttachmentType::NONE;
 };

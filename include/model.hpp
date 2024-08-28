@@ -44,7 +44,7 @@ public:
 private:
 	auto process_node(aiNode *a_node, const aiScene *a_scene) -> void;
 	auto process_mesh(aiMesh *a_mesh, const aiScene *a_scene) -> Mesh;
-	auto process_texture(std::vector<std::shared_ptr<Texture>>& a_textures, aiMaterial* a_mat, aiTextureType a_ai_texture_type) -> void;
+	auto process_texture(std::vector<Texture>& a_textures, aiMaterial* a_mat, aiTextureType a_ai_texture_type) -> void;
 
 	glm::vec3 m_pos      = glm::vec3(0.0f);
 	glm::vec3 m_size     = glm::vec3(1.0f);
@@ -53,7 +53,7 @@ private:
 	glm::mat4 m_transform_scale    = 1.0f;
 	glm::mat4 m_transform_rotation = 1.0f;
 	std::vector<Mesh> m_meshes;
-	std::vector<std::shared_ptr<Texture>> m_textures_loaded;
+	std::vector<Texture> m_textures_loaded;
 	std::filesystem::path m_dir = L"";
 	std::filesystem::path m_name = L"";
 };

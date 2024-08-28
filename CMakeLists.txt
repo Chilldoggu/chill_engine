@@ -15,7 +15,7 @@ option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 # Create chill_engine library
 add_library(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PUBLIC
-	"${SRC}/app.cpp" 
+	"${SRC}/application.cpp" 
 	"${SRC}/assert.cpp" 
 	"${SRC}/camera.cpp" 
 	"${SRC}/window.cpp" 
@@ -23,7 +23,8 @@ target_sources(${PROJECT_NAME} PUBLIC
 	"${SRC}/meshes.cpp" 
 	"${SRC}/model.cpp" 
 	"${SRC}/light.cpp" 
-	"${SRC}/buffers.cpp" 
+	"${SRC}/buffers.cpp"
+	"${SRC}/resource_manager.cpp" 
 )
  
 # Create GLAD module

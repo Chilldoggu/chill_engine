@@ -1,48 +1,35 @@
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
 #include "window.hpp"
 #include "assert.hpp"
+#include "application.hpp"
 
-#include <GLFW/glfw3.h>
 
-Window::Window(int a_width, int a_height, const std::string& a_title, CursorMode a_mode) 
-	:m_width{ a_width }, m_height{ a_height }, m_title{ a_title }, m_mouse_pos_x{ a_width / 2.f }, m_mouse_pos_y{ a_height / 2.f }, m_cur_mode{ a_mode }
-{
-	if (!glfwInit()) {
-		ERROR("[WINDOW::WINDOW] Couldn't initialise glfw.", Error_action::throwing);
-	}
+static void glfw_error_callback(int error, const char* description) {
+	ERROR(std::format("[GLFW_ERROR_CALLBACK] GLFW Error {}: {}", error, description), Error_action::throwing);
+}
 
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	m_window = glfwCreateWindow(m_width, m_height, m_title.c_str(), nullptr, nullptr);
+InputHandler::InputHandler(GLFWwindow* a_window) : m_window{ a_window }{
+	// Ensure that glfwSetWindowUserPointer has been called before creating InputHandler.  
+	auto size_callback = [](GLFWwindow* w, int width, int height) {
+		Window* p_win = static_cast<Window*>((Window*)glfwGetWindowUserPointer(w));
+		p_win->framebuffer_size_callback(width, height);
+	};
 
-	if (m_window == nullptr) {
-		ERROR("[WINDOW::WINDOW] Couldn't create a window.", Error_action::throwing);
-	}
+	glfwSetFramebufferSizeCallback(a_window, size_callback);
+	glfwSetErrorCallback(glfw_error_callback); 
+}
 
-	glfwMakeContextCurrent(m_window);
+void InputHandler::process_input() const {
+	if (glfwGetKey(m_window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		glfwSetWindowShouldClose(m_window, GLFW_TRUE);
+}
 
-	switch (a_mode) {
-		case CursorMode::NORMAL:
-			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-			break;
-		case CursorMode::IDLE:
-			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-			break;
-		case CursorMode::FIRST_PERSON:
-			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-			break;
-	}
-
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-		ERROR("[WINDOW:WINDOW] Couldn't load glad function pointers.", Error_action::throwing);
-	}
-
-	glViewport(0, 0, m_width, m_height);
-
+ImGuiHandler::ImGuiHandler(GLFWwindow* a_window) :m_window{ a_window }{
 	// Init Imgui
 	IMGUI_CHECKVERSION();
 
@@ -54,13 +41,41 @@ Window::Window(int a_width, int a_height, const std::string& a_title, CursorMode
 	
 	ImGui::StyleColorsDark();
 	set_imgui_dracula_style();
-	// ImGui::StyleColorsLight();
-	// ImGui::StyleColorsClassic();
 	
 	ImGui_ImplOpenGL3_Init("#version 330 core");
-	// OpenGL backend will be initialised only after setting up appropriate callbacks in App class.
-	// That's because I'm using UserPointer that modifies GLFWwindow*.
-	// ImGui_ImplGlfw_InitForOpenGL(m_window, true);
+
+	ImGui_ImplGlfw_InitForOpenGL(a_window, true);
+}
+
+Window::Window(int a_width, int a_height, const std::string& a_title, CursorMode a_mode) 
+	:m_width{ a_width }, m_height{ a_height }, m_title{ a_title }, m_mouse_pos_x{ a_width / 2.f }, m_mouse_pos_y{ a_height / 2.f }, m_cur_mode{ a_mode }
+{
+	// Init Window
+	if (!glfwInit())
+		ERROR("[WINDOW::WINDOW] Couldn't initialise glfw.", Error_action::throwing);
+
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	m_window = glfwCreateWindow(m_width, m_height, m_title.c_str(), nullptr, nullptr); 
+	if (m_window == nullptr) {
+		ERROR("[WINDOW::WINDOW] Couldn't create a window.", Error_action::throwing);
+	} 
+
+	glfwSetWindowUserPointer(m_window, this); 
+	glfwMakeContextCurrent(m_window);
+
+	set_cursor_mode(a_mode);
+
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+		ERROR("[WINDOW:WINDOW] Couldn't load glad function pointers.", Error_action::throwing);
+	} 
+	glViewport(0, 0, m_width, m_height); 
+
+	// After having window correctly initialised, setup callbacks and imgui
+	m_camera = std::make_unique<Camera>(m_window);
+	m_input_handle = std::make_unique<InputHandler>(m_window);
+	m_imgui_handle = std::make_unique<ImGuiHandler>(m_window);
 }
 
 Window::~Window() {
@@ -70,11 +85,29 @@ Window::~Window() {
 
 	glfwDestroyWindow(m_window);
 	glfwTerminate();
+} 
+
+void Window::mouse_callback(double x_pos, double y_pos) {
+	// if () {
+	// 	set_mouse_x(x_pos);
+	// 	set_mouse_y(y_pos);
+	// 	m_mouse_focus = true;
+	// }
+
+	float x_offset = x_pos - get_mouse_x();
+	float y_offset = get_mouse_y() - y_pos;
+
+	set_mouse_x(x_pos);
+	set_mouse_y(y_pos);
+
+	if (m_cur_mode == CursorMode::FOCUSED)
+		m_camera->process_mouse_movement(x_offset, y_offset); 
 }
 
-void Window::process_input() {
-	if (glfwGetKey(m_window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(m_window, GLFW_TRUE);
+void Window::framebuffer_size_callback(int width, int height) {
+	glViewport(0, 0,  width, height);
+	set_width(width);
+	set_height(height); 
 }
 
 bool Window::closed() {
@@ -121,24 +154,11 @@ void Window::set_height(float height) {
 	m_height = height;
 }
 
-void Window::toggle_mouse_focus() {
-	m_mouse_focus = !m_mouse_focus;
-}
-
-auto Window::change_cursor_mode(CursorMode a_mode) -> void {
+auto Window::set_cursor_mode(CursorMode a_mode) -> void {
+	m_cur_mode = a_mode;
 	switch (a_mode) {
-		case CursorMode::NORMAL:
-			m_cur_mode = CursorMode::NORMAL;
-			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-			break;
-		case CursorMode::FIRST_PERSON:
-			m_cur_mode = CursorMode::FIRST_PERSON;
-			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-			break;
-		case CursorMode::IDLE:
-			m_cur_mode = CursorMode::IDLE;
-			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-			break;
+		case CursorMode::NORMAL:  glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); break;
+		case CursorMode::FOCUSED: glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); break;
 	}
 }
 
@@ -155,10 +175,6 @@ int Window::get_width() const {
 
 int Window::get_height() const {
 	return m_height;
-}
-
-bool Window::get_mouse_focus_status() const {
-	return m_mouse_focus;
 }
 
 float Window::get_mouse_x() const {
@@ -181,16 +197,28 @@ std::string Window::get_title() const {
 	return m_title;
 }
 
-ImGuiIO* Window::get_io() const {
-	return m_io;
-}
-
 GLFWwindow* Window::get_obj() const {
 	return m_window;
 }
 
+Camera& Window::get_camera() const {
+	return *m_camera;
+}
+
+InputHandler& Window::get_input_handle() const {
+	return *m_input_handle;
+}
+
+ImGuiHandler& Window::get_imgui_handle() const {
+	return *m_imgui_handle;
+}
+
+ImGuiIO* ImGuiHandler::get_io() const {
+	return m_io;
+}
+
 // Thank you: https://github.com/ocornut/imgui/issues/707#issuecomment-1372640066
-void Window::set_imgui_dracula_style() {
+void ImGuiHandler::set_imgui_dracula_style() {
 	auto& colors = ImGui::GetStyle().Colors;
 	colors[ImGuiCol_WindowBg] = ImVec4{ 0.1f, 0.1f, 0.13f, 1.0f };
 	colors[ImGuiCol_MenuBarBg] = ImVec4{ 0.16f, 0.16f, 0.21f, 1.0f };
@@ -268,7 +296,7 @@ void Window::set_imgui_dracula_style() {
 }
 
 // Thank you: https://github.com/ocornut/imgui/issues/707#issuecomment-917151020
-void Window::set_imgui_darkness_style() {
+void ImGuiHandler::set_imgui_darkness_style() {
   ImVec4* colors = ImGui::GetStyle().Colors;
   colors[ImGuiCol_Text]                   = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
   colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);

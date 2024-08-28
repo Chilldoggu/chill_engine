@@ -1,5 +1,6 @@
-#include "light.hpp"
 #include <cmath>
+
+#include "light.hpp"
 
 Light::Light(glm::vec4 a_pos, glm::vec3 a_color, glm::vec3 a_ambient, glm::vec3 a_diffuse, glm::vec3 a_specular)
 	:m_pos_dir{ a_pos }, m_color{ a_color }, m_ambient_intens{ a_ambient }, m_diffuse_intens { a_diffuse }, m_specular_intens{ a_specular } { }

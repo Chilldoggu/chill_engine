@@ -1,12 +1,11 @@
 #pragma once
-
 #include "glm/glm.hpp"
-#include "glad/glad.h"
 
 #include <memory>
 #include <vector>
 #include <string>
 #include <filesystem>
+#include <tuple>
 
 #include "buffers.hpp"
 
@@ -17,17 +16,17 @@ constexpr int EMISSION_UNIT_ID = 2 * MAX_SAMPLER_SIZ;
 
 class MaterialMap {
 public:
-    MaterialMap(std::initializer_list<std::pair<std::wstring, TextureType>> a_texture_maps = {}, float a_shininess = 32.f);
+    MaterialMap(std::initializer_list<std::tuple<std::wstring, TextureType, bool>> a_texture_maps = {}, float a_shininess = 32.f);
 
-	auto set_textures(std::vector<std::shared_ptr<Texture>> a_textures) -> void;
-	auto set_diffuse_maps(std::vector<std::wstring> a_diffuse_map) -> void;
-	auto set_specular_maps(std::vector<std::wstring> a_specular_map) -> void;
-	auto set_emission_maps(std::vector<std::wstring> a_emission_map) -> void;
+	auto set_textures(std::vector<Texture> a_textures) -> void;
+	auto set_diffuse_maps(std::vector<std::tuple<std::wstring, bool>> a_diffuse_map) -> void;
+	auto set_specular_maps(std::vector<std::tuple<std::wstring, bool>> a_specular_map) -> void;
+	auto set_emission_maps(std::vector<std::tuple<std::wstring, bool>> a_emission_map) -> void;
 	auto set_shininess(float a_shininess) -> void;
 
-	auto get_diffuse_maps() const -> std::vector<std::shared_ptr<Texture>>;
-	auto get_specular_maps() const -> std::vector<std::shared_ptr<Texture>>;
-	auto get_emission_maps() const -> std::vector<std::shared_ptr<Texture>>;
+	auto get_diffuse_maps() const -> std::vector<Texture>;
+	auto get_specular_maps() const -> std::vector<Texture>;
+	auto get_emission_maps() const -> std::vector<Texture>;
 	auto get_shininess() const -> float;
 
 private:
@@ -37,21 +36,10 @@ private:
 	int m_cur_diffuse_unit_id{ DIFFUSE_UNIT_ID };
 	int m_cur_specular_unit_id{ SPECULAR_UNIT_ID };
 	int m_cur_emission_unit_id{ EMISSION_UNIT_ID };
-	std::vector<std::shared_ptr<Texture>> m_diffuse_maps;
-	std::vector<std::shared_ptr<Texture>> m_specular_maps;
-	std::vector<std::shared_ptr<Texture>> m_emission_maps;
+	std::vector<Texture> m_diffuse_maps;
+	std::vector<Texture> m_specular_maps;
+	std::vector<Texture> m_emission_maps;
 };
-
-template<typename T>
-unsigned int constexpr VBO_generate(std::vector<T> data) {
-	if (data.empty())
-		return EMPTY_VBO;
-    unsigned int VBO;
-    glGenBuffers(1, &VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(T), data.data(), GL_STATIC_DRAW);
-    return VBO;
-}
 
 struct BufferData {
 	enum class Type {
@@ -102,8 +90,8 @@ public:
 
 	auto get_VAO() -> unsigned int;
 	auto get_material_map() -> MaterialMap&;
-	auto get_wireframe() -> bool;
-	auto get_visibility() -> bool;
+	auto get_wireframe() const -> bool;
+	auto get_visibility() const -> bool;
 
 private:
 	auto set_type(BufferData::Type a_type) -> void;
