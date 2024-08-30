@@ -7,18 +7,18 @@
 #include <memory>
 #include <string>
 
-#include "window.hpp"
-#include "shaders.hpp"
-#include "resource_manager.hpp"
+#include "chill_engine/window.hpp"
+#include "chill_engine/shaders.hpp"
+#include "chill_engine/resource_manager.hpp"
 
 class Application {
 public:
 	Application(const Application&) = delete;
-	Application& operator=(const Application&) = delete; 
+	Application& operator=(const Application&) = delete;
 
 	static auto init(int win_width = 1280, int win_height = 720, std::string win_title = "OpenGL_App", CursorMode win_mode = CursorMode::NORMAL) -> Application&;
 	static auto get_instance() -> Application&;
-	static auto shutdown() -> void; 
+	static auto shutdown() -> void;
 
 	auto get_win() -> Window&;
 	auto get_rmanager() -> ResourceManager&;

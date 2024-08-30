@@ -1,6 +1,6 @@
 #include <string>
 
-#include "assert.hpp" 
+#include "chill_engine/assert.hpp" 
 
 void my_error_handler(std::string file, int line, std::string message, Error_action action) {
 	std::string err_msg = "[ERROR] [" + file + ":" + std::to_string(line) + "] " + message + "\n";

@@ -5,8 +5,8 @@
 #include <vector>	 // vector
 #include <cstdlib> // wsctombs_s
 
-#include "file_manager.hpp"
-#include "assert.hpp" // GenericException
+#include "chill_engine/file_manager.hpp"
+#include "chill_engine/assert.hpp" // GenericException
 
 #define CHECK_HRESULT(expr)												       \
 do {																	       \

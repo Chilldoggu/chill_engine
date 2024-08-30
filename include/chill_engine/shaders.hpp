@@ -11,21 +11,22 @@
 #include <vector>
 #include <type_traits>
 
-#include "assert.hpp"
-#include "light.hpp"
-#include "meshes.hpp"
+#include "chill_engine/assert.hpp"
+#include "chill_engine/light.hpp"
+#include "chill_engine/meshes.hpp"
 
 #define INFO_LOG_SIZ 1024
 
 enum class ShaderType {
 	VERTEX,
-	FRAGMENT
+	FRAGMENT,
+	NONE,
 };
 
 class Uniform {
 public:
-	Uniform(std::string a_name, int a_location, unsigned int a_program);
 	Uniform() = default;
+	Uniform(std::string a_name, int a_location, unsigned int a_program);
 
 	auto get_name() const -> std::string;
 
@@ -34,7 +35,7 @@ public:
 
 private:
 	int m_uniform_location = -1;
-	unsigned int m_shader_program = 0;
+	unsigned int m_shader_program = EMPTY_VBO;
 	std::string m_name = "";
 };
 
@@ -82,24 +83,27 @@ Uniform& Uniform::operator=(T val) {
 
 struct ShaderSrc {
 	ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path);
+	ShaderSrc(const ShaderSrc& a_shader_src);
+	ShaderSrc(ShaderSrc&& a_shader_src);
 	~ShaderSrc();
 
-	auto load_code() -> char*;
-	auto compile_shader() -> void;
-	auto check_compilation() -> void;
+	auto operator=(const ShaderSrc& a_shader_src) -> ShaderSrc&;
+	auto operator=(ShaderSrc&& a_shader_src) -> ShaderSrc&;
 
-	int m_compilation_success = false;
-	char m_infoLog[INFO_LOG_SIZ];
-	std::unique_ptr<char*> m_code;
-	ShaderType m_type;
-	std::wstring m_path;
-	unsigned int m_obj;
+	ShaderType m_type = ShaderType::NONE;
+	std::wstring m_path = L"";
+	unsigned m_id = EMPTY_VBO;
 };
 
 class ShaderProgram {
 public:
-	ShaderProgram(std::initializer_list<ShaderSrc> a_shaders);
+	ShaderProgram(std::string& a_name, ShaderSrc a_vertex_shader, ShaderSrc a_fragment_shader);
+	ShaderProgram(const ShaderProgram& a_shader_program);
+	ShaderProgram(ShaderProgram&& a_shader_program); 
 	~ShaderProgram();
+
+	auto operator=(const ShaderProgram& a_shader_program) -> ShaderProgram&;
+	auto operator=(ShaderProgram&& a_shader_program) -> ShaderProgram&;
 
 	auto operator[](const std::string& a_uniform_var) -> Uniform&;
 	auto set_name(const std::string& a_name) -> void;
@@ -112,10 +116,11 @@ public:
 	auto set_stencil_testing(bool option) -> void;
 	auto use() -> void;
 
+	auto get_id() const -> unsigned;
+	auto get_name() const -> std::string;
+	auto get_state(std::string a_state) const -> bool;
 	auto get_depth_testing() const -> bool;
 	auto get_stencil_testing() const -> bool;
-	auto get_state(std::string a_state) const -> bool;
-	auto get_shader_program() const -> unsigned int;
 
 	auto debug() const -> void;
 
@@ -126,9 +131,7 @@ private:
 	auto push_uniform_struct(const std::string& a_uniform_var, It a_member_name_first, It a_member_name_last) -> void;
 	auto check_linking() -> void;
 
-	int m_success;
-	char m_infoLog[INFO_LOG_SIZ];
-	unsigned int m_shader_program = glCreateProgram();
+	unsigned m_id = EMPTY_VBO;
 	std::string m_name = "";
 	std::map<std::string, Uniform> m_uniforms;
 	std::map<std::string, bool> m_states{

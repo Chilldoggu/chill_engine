@@ -9,6 +9,8 @@
 
 #include "camera.hpp"
 
+void ToggleButton(const char* str_id, bool* v);
+
 enum class CursorMode {
 	NORMAL,
 	FOCUSED,

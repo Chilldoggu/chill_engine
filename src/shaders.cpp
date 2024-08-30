@@ -6,12 +6,15 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "shaders.hpp"
-#include "assert.hpp"
-#include "meshes.hpp"
-#include "file_manager.hpp" // wstos
+#include "chill_engine/shaders.hpp"
+#include "chill_engine/assert.hpp"
+#include "chill_engine/meshes.hpp"
+#include "chill_engine/file_manager.hpp" // wstos
+#include "chill_engine/application.hpp"
 
-extern std::filesystem::path get_proj_path();
+namespace fs = std::filesystem;
+
+extern fs::path guess_path(std::wstring a_path);
 
 Uniform::Uniform(std::string a_name, int a_location, unsigned int a_program)
 	:m_name{ a_name }, m_uniform_location{ a_location }, m_shader_program{ a_program }
@@ -26,40 +29,29 @@ std::string Uniform::get_name() const {
 }
 
 ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path) 
-	:m_type{ a_shader_type }, m_path{ (get_proj_path() / a_path).wstring() }
+	:m_type{ a_shader_type }
 {
+	fs::path p = guess_path(a_path);
+	if (p == fs::path())
+		ERROR(std::format("[SHADERSRC::SHADERSRC] Bad shader path: {}", wstos(a_path)), Error_action::throwing);
+
+	m_path = p.wstring();
+
 	switch(m_type) {
-		case ShaderType::VERTEX:
-			m_obj = glCreateShader(GL_VERTEX_SHADER);
-			break;
-		case ShaderType::FRAGMENT:
-			m_obj = glCreateShader(GL_FRAGMENT_SHADER);
-			break;
+		case ShaderType::VERTEX:   m_id = glCreateShader(GL_VERTEX_SHADER); break;
+		case ShaderType::FRAGMENT: m_id = glCreateShader(GL_FRAGMENT_SHADER); break;
 		default:
 			ERROR("[SHADERSRC::SHADERSRC] Shader type not compatible.", Error_action::throwing);
 	}
  
-	m_code = std::make_unique<char*>(load_code());
-	compile_shader();
-}
-
-char* ShaderSrc::load_code() {
+	// =========
+	// LOAD CODE
+	// =========
 	using std::ios;
 	std::ifstream shader_file{ m_path, ios::in | ios::binary };
 
-	if (!shader_file.is_open()) {
-		switch (m_type) {
-		case ShaderType::VERTEX:
-			ERROR(std::format("[SHADERSRC::LOAD_CODE] Vertex shader source file {} couldn't be loaded.", wstos(m_path)), Error_action::throwing); 
-			break;
-		case ShaderType::FRAGMENT:
-			ERROR(std::format("[SHADERSRC::LOAD_CODE] Fragment shader source file {} couldn't be loaded.", wstos(m_path)), Error_action::throwing); 
-			break;
-		default: 
-			ERROR(std::format("[SHADERSRC::LOAD_CODE] Unhandled shader type with source file {} couldn't be loaded.", wstos(m_path)), Error_action::throwing); 
-			break;
-		}
-	}
+	if (!shader_file.is_open())
+		ERROR(std::format("[SHADERSRC::SHADERSRC] Shader source file {} couldn't be loaded.", wstos(m_path)), Error_action::throwing);
 
 	shader_file.seekg(0, shader_file.end);
 	int len = shader_file.tellg();
@@ -68,53 +60,158 @@ char* ShaderSrc::load_code() {
 	char* code = new char[len];
 	shader_file.read(code, len);
 	code[len-1] = '\0';
-	return code;
-}
 
-void ShaderSrc::compile_shader() {
-	auto tmp = m_code.get();
-	glShaderSource(m_obj, 1, tmp, nullptr);
-	glCompileShader(m_obj);
-	check_compilation();
-}
+	// ============
+	// COMPILE CODE
+	// ============
+	glShaderSource(m_id, 1, &code, nullptr);
+	glCompileShader(m_id);
+	delete[] code;
 
-void ShaderSrc::check_compilation() {
-	glGetShaderiv(m_obj, GL_COMPILE_STATUS, &m_compilation_success);
+	// =================
+	// CHECK COMPILATION
+	// =================
+	int success;
+	glGetShaderiv(m_id, GL_COMPILE_STATUS, &success);
 
-	if (!m_compilation_success) {
-		glGetShaderInfoLog(m_obj, 1024, nullptr, m_infoLog);
-		switch (m_type) {
-		case ShaderType::VERTEX:
-			ERROR(std::format("[SHADERSRC::CHECK_COMPILATION] {} shader \"VERTEX\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog), Error_action::throwing); 
-			break;
-		case ShaderType::FRAGMENT: 
-			ERROR(std::format("[SHADERSRC::CHECK_COMPILATION] {} shader \"FRAGMENT\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog), Error_action::throwing); 
-			break;
-		default:
-			ERROR(std::format("[SHADERSRC::CHECK_COMPILATION] {} shader \"UNKNOWN\" can't compile.\nGLSL error message:\n{}", wstos(m_path), m_infoLog), Error_action::throwing); 
-			break;
-		}
+	if (!success) {
+		char infoLog[INFO_LOG_SIZ] = {};
+		glGetShaderInfoLog(m_id, 1024, nullptr, infoLog);
+		ERROR(std::format("[SHADERSRC::SHADERSRC] shader {} can't compile. GLSL error message:\n{}", wstos(m_path), infoLog), Error_action::throwing); 
 	}
+}
+
+ShaderSrc::ShaderSrc(const ShaderSrc& a_shader_src) {
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::SHADER_SRCS, a_shader_src.m_id);
+
+	m_type = a_shader_src.m_type;
+	m_path = a_shader_src.m_path;
+	m_id   = a_shader_src.m_id; 
+}
+
+ShaderSrc::ShaderSrc(ShaderSrc&& a_shader_src) {
+	m_type = a_shader_src.m_type;
+	m_path = a_shader_src.m_path;
+	m_id   = a_shader_src.m_id;
+
+	m_type = ShaderType::NONE;
+	m_path = L"";
+	m_id   = EMPTY_VBO; 
+}
+
+ShaderSrc& ShaderSrc::operator=(const ShaderSrc& a_shader_src) {
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::SHADER_SRCS, a_shader_src.m_id);
+
+	m_type = a_shader_src.m_type;
+	m_path = a_shader_src.m_path;
+	m_id   = a_shader_src.m_id;
+
+	return *this;
+}
+
+ShaderSrc& ShaderSrc::operator=(ShaderSrc&& a_shader_src) {
+	m_type = a_shader_src.m_type;
+	m_path = a_shader_src.m_path;
+	m_id   = a_shader_src.m_id;
+
+	m_type = ShaderType::NONE;
+	m_path = L"";
+	m_id   = EMPTY_VBO;
+ 
+	return *this;
 }
 
 ShaderSrc::~ShaderSrc() {
-	glDeleteShader(m_obj);
-	m_obj = 0;
+	if (m_id != EMPTY_VBO) {
+		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::SHADER_SRCS, m_id);
+		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::SHADER_SRCS, m_id)) {
+			glDeleteShader(m_id);
+		} 
+	}
 }
 
-ShaderProgram::ShaderProgram(std::initializer_list<ShaderSrc> a_shaders) {
-	if (!std::find_if(a_shaders.begin(), a_shaders.end(), [](const ShaderSrc& sh){ return sh.m_type == ShaderType::VERTEX; })) {
-		ERROR("[SHADERPROGRAM::SHADERPROGRAM] Shader initializer list lacks vertex shader.", Error_action::throwing);
-	}
-	if (!std::find_if(a_shaders.begin(), a_shaders.end(), [](const ShaderSrc& sh){ return sh.m_type == ShaderType::FRAGMENT; })) {
-		ERROR("[SHADERPROGRAM::SHADERPROGRAM] Shader initializer list lacks fragment shader.", Error_action::throwing);
-	}
+ShaderProgram::ShaderProgram(std::string& a_name, ShaderSrc a_vertex_shader, ShaderSrc a_fragment_shader) :m_name{ a_name } {
+	m_id = glCreateProgram();
 
-	for (auto& shader : a_shaders) {
-		glAttachShader(m_shader_program, shader.m_obj);
+	glAttachShader(m_id, a_vertex_shader.m_id);
+	glAttachShader(m_id, a_fragment_shader.m_id);
+
+	glLinkProgram(m_id);
+
+	// =============
+	// CHECK LINKING
+	// =============
+	int success;
+	glGetProgramiv(m_id, GL_LINK_STATUS, &success);
+	if (!success) {
+		char infoLog[INFO_LOG_SIZ] = {};
+		glGetProgramInfoLog(m_id, 1024, nullptr, infoLog);
+		ERROR(std::format("[SHADERPROGRAM::CHECK_LINKING] Shader linking error. GLSL error message:\n{}", infoLog), Error_action::throwing);
 	}
-	glLinkProgram(m_shader_program);
-	check_linking();
+}
+
+//unsigned m_id = EMPTY_VBO;
+//std::string m_name = "";
+//std::map<std::string, Uniform> m_uniforms;
+//std::map<std::string, bool> m_states{
+//	{"DEPTH_TEST",   true},
+//	{"FACE_CULLING", true},
+//	{"STENCIL_TEST", false},
+//};
+
+ShaderProgram::ShaderProgram(const ShaderProgram& a_shader_program) {
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::SHADER_PROGRAMS, a_shader_program.m_id);
+
+	m_id = a_shader_program.m_id;
+	m_name = a_shader_program.m_name;
+	m_uniforms = a_shader_program.m_uniforms;
+	m_states = a_shader_program.m_states;
+}
+
+ShaderProgram::ShaderProgram(ShaderProgram&& a_shader_program) {
+	m_id = a_shader_program.m_id;
+	m_name = a_shader_program.m_name;
+	m_uniforms = a_shader_program.m_uniforms;
+	m_states = a_shader_program.m_states;
+	
+	a_shader_program.m_id = EMPTY_VBO;
+	a_shader_program.m_name = "";
+	a_shader_program.m_uniforms.clear();
+	a_shader_program.m_states.clear();
+}
+
+ShaderProgram& ShaderProgram::operator=(const ShaderProgram& a_shader_program) {
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::SHADER_PROGRAMS, a_shader_program.m_id);
+
+	m_id = a_shader_program.m_id;
+	m_name = a_shader_program.m_name;
+	m_uniforms = a_shader_program.m_uniforms;
+	m_states = a_shader_program.m_states;
+
+	return *this;
+}
+
+ShaderProgram& ShaderProgram::operator=(ShaderProgram&& a_shader_program) {
+	m_id = a_shader_program.m_id;
+	m_name = a_shader_program.m_name;
+	m_uniforms = a_shader_program.m_uniforms;
+	m_states = a_shader_program.m_states;
+	
+	a_shader_program.m_id = EMPTY_VBO;
+	a_shader_program.m_name = "";
+	a_shader_program.m_uniforms.clear();
+	a_shader_program.m_states.clear();
+
+	return *this;
+}
+
+ShaderProgram::~ShaderProgram() {
+	if (this->get_id() != EMPTY_VBO) {
+		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::SHADER_PROGRAMS, m_id);
+		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::SHADER_PROGRAMS, m_id)) {
+			glDeleteProgram(m_id);
+		} 
+	}
 }
 
 Uniform& ShaderProgram::operator[](const std::string& uniform_var) {
@@ -126,10 +223,48 @@ Uniform& ShaderProgram::operator[](const std::string& uniform_var) {
 	}
 }
 
+void ShaderProgram::use() {
+	glUseProgram(m_id);
+
+	if (m_states.at("FACE_CULLING")) {
+		glEnable(GL_CULL_FACE);
+	} else {
+		glDisable(GL_CULL_FACE);
+	}
+
+	if (m_states.at("DEPTH_TEST")) {
+		glEnable(GL_DEPTH_TEST);
+	} else {
+		glDisable(GL_DEPTH_TEST);
+	}
+
+	if (m_states.at("STENCIL_TEST")) {
+		glEnable(GL_STENCIL_TEST);
+	} else {
+		glDisable(GL_STENCIL_TEST);
+	}
+}
+
+void ShaderProgram::set_name(const std::string& a_name) {
+	m_name = a_name;
+}
+
+void ShaderProgram::set_face_culling(bool a_option) {
+	m_states.at("FACE_CULLING") = a_option;
+}
+
+void ShaderProgram::set_depth_testing(bool a_option) {
+	m_states.at("DEPTH_TEST") = a_option;
+}
+
+void ShaderProgram::set_stencil_testing(bool a_option) {
+	m_states.at("STENCIL_TEST") = a_option;
+}
+
 void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, std::initializer_list<std::string> a_member_names) {
 	for (const auto& member_name : a_member_names) {
 		std::string full_name = a_uniform_var + "." + member_name;
-		m_uniforms[full_name] = Uniform(full_name, glGetUniformLocation(m_shader_program, full_name.c_str()), m_shader_program);
+		m_uniforms[full_name] = Uniform(full_name, glGetUniformLocation(m_id, full_name.c_str()), m_id);
 	}
 }
 
@@ -137,16 +272,12 @@ template<typename It>
 void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, It a_member_name_first, It a_member_name_last) {
 	for (auto member_name = a_member_name_first; member_name != a_member_name_last; member_name++) {
 		std::string full_name = a_uniform_var + "." + *member_name;
-		m_uniforms[full_name] = Uniform(full_name, glGetUniformLocation(m_shader_program, full_name.c_str()), m_shader_program);
+		m_uniforms[full_name] = Uniform(full_name, glGetUniformLocation(m_id, full_name.c_str()), m_id);
 	}
 }
 
 void ShaderProgram::push_uniform(const std::string& uniform_var) {
-	m_uniforms[uniform_var] = Uniform(uniform_var, glGetUniformLocation(m_shader_program, uniform_var.c_str()), m_shader_program);
-}
-
-void ShaderProgram::set_name(const std::string& a_name) {
-	m_name = a_name;
+	m_uniforms[uniform_var] = Uniform(uniform_var, glGetUniformLocation(m_id, uniform_var.c_str()), m_id);
 }
 
 // WARNING: Exception abuse
@@ -233,58 +364,16 @@ void ShaderProgram::set_uniform(const std::string& a_material_name, const Materi
 	}
 }
 
-void ShaderProgram::set_face_culling(bool a_option) {
-	m_states.at("FACE_CULLING") = a_option;
-}
-
-void ShaderProgram::set_depth_testing(bool a_option) {
-	m_states.at("DEPTH_TEST") = a_option;
-}
-
-void ShaderProgram::set_stencil_testing(bool a_option) {
-	m_states.at("STENCIL_TEST") = a_option;
-}
-
-void ShaderProgram::check_linking() {
-	glGetProgramiv(m_shader_program, GL_LINK_STATUS, &m_success);
-	if (!m_success) {
-		glGetProgramInfoLog(m_shader_program, 1024, nullptr, m_infoLog);
-		ERROR(std::format("[SHADERPROGRAM::CHECK_LINKING] Shader linking error.\nGLSL error message:\n{}", m_infoLog), Error_action::throwing);
-	}
-}
-
-void ShaderProgram::use() {
-	glUseProgram(m_shader_program);
-
-	if (m_states.at("FACE_CULLING")) {
-		glEnable(GL_CULL_FACE);
-	} else {
-		glDisable(GL_CULL_FACE);
-	}
-
-	if (m_states.at("DEPTH_TEST")) {
-		glEnable(GL_DEPTH_TEST);
-	} else {
-		glDisable(GL_DEPTH_TEST);
-	}
-
-	if (m_states.at("STENCIL_TEST")) {
-		glEnable(GL_STENCIL_TEST);
-	} else {
-		glDisable(GL_STENCIL_TEST);
-	}
-}
-
-ShaderProgram::~ShaderProgram() {
-	glDeleteProgram(m_shader_program);
-}
-
 bool ShaderProgram::get_state(std::string a_state) const {
 	return m_states.at(a_state);
 }
 
-unsigned int ShaderProgram::get_shader_program() const { 
-	return m_shader_program;
+unsigned ShaderProgram::get_id() const { 
+	return m_id;
+}
+
+std::string ShaderProgram::get_name() const { 
+	return m_name;
 }
 
 void ShaderProgram::debug() const {
@@ -292,3 +381,4 @@ void ShaderProgram::debug() const {
 		std::cout << std::format("key: {}\n", key);
 	}
 }
+

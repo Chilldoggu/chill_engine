@@ -5,7 +5,7 @@
 #include <iostream>
 #include <imgui.h>
 
-#include "application.hpp"
+#include "chill_engine/application.hpp"
 
 static Application* s_instance = nullptr;
 

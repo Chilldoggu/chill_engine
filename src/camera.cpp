@@ -1,5 +1,5 @@
-#include "camera.hpp"
-#include "application.hpp"
+#include "chill_engine/camera.hpp"
+#include "chill_engine/application.hpp"
 
 Camera::Camera(GLFWwindow* a_window, const glm::vec3& a_position)
 	:m_position{ a_position }, m_window{ a_window }

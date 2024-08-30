@@ -4,9 +4,9 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-#include "window.hpp"
-#include "assert.hpp"
-#include "application.hpp"
+#include "chill_engine/window.hpp"
+#include "chill_engine/assert.hpp"
+#include "chill_engine/application.hpp"
 
 
 static void glfw_error_callback(int error, const char* description) {
@@ -217,6 +217,33 @@ ImGuiIO* ImGuiHandler::get_io() const {
 	return m_io;
 }
 
+// Thank you: https://github.com/ocornut/imgui/issues/1537#issuecomment-355562097
+void ToggleButton(const char* str_id, bool* v) {
+	enum Colors: ImU32 {
+		on_norm = IM_COL32(0xBD, 0x94, 0xFA, 0xFF),
+		on_hover = IM_COL32(0xBD + 20, 0x94 + 20, 0xFA, 0xFF),
+		off_norm = IM_COL32(0x4F, 0x4F, 0x4F, 0xFF),
+		off_hover = IM_COL32(0x4F + 20, 0x4F + 20, 0x4F + 20, 0xFF),
+	};
+    ImVec2 p = ImGui::GetCursorScreenPos();
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+    float height = ImGui::GetFrameHeight();
+    float width = height * 1.55f;
+    float radius = height * 0.50f;
+
+    if (ImGui::InvisibleButton(str_id, ImVec2(width, height)))
+        *v = !*v;
+    ImU32 col_bg;
+	if (ImGui::IsItemHovered())
+		col_bg = *v ? Colors::on_hover : Colors::off_hover;
+	else
+		col_bg = *v ? Colors::on_norm : Colors::off_norm;
+
+    draw_list->AddRectFilled(p, ImVec2(p.x + width, p.y + height), col_bg, height * 0.5f);
+    draw_list->AddCircleFilled(ImVec2(*v ? (p.x + width - radius) : (p.x + radius), p.y + radius), radius - 1.5f, IM_COL32(255, 255, 255, 255));
+}
+
 // Thank you: https://github.com/ocornut/imgui/issues/707#issuecomment-1372640066
 void ImGuiHandler::set_imgui_dracula_style() {
 	auto& colors = ImGui::GetStyle().Colors;
@@ -378,4 +405,3 @@ void ImGuiHandler::set_imgui_darkness_style() {
   style.LogSliderDeadzone                 = 4;
   style.TabRounding                       = 4;
 }
-

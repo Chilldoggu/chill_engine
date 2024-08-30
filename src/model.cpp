@@ -5,66 +5,41 @@
 #include <memory>
 #include <algorithm>
 
-#include "model.hpp"
-#include "meshes.hpp" 
-#include "file_manager.hpp"
+#include "chill_engine/model.hpp"
+#include "chill_engine/meshes.hpp" 
+#include "chill_engine/file_manager.hpp"
+#include "chill_engine/application.hpp"
 
 namespace fs = std::filesystem;
 
-extern fs::path get_proj_path();
+extern fs::path guess_path(std::wstring a_path);
 
-Model::Model() {
-	clear_model();
+Model::Model(std::wstring a_path, bool a_flip_UVs) :m_flipped_UVs{ a_flip_UVs } {
+	load_model(a_path, a_flip_UVs);
 }
 
-Model::Model(std::wstring a_dir, bool a_flip_UVs) {
-	load_model(a_dir, a_flip_UVs);
-}
+void Model::load_model(std::wstring& a_path, bool a_flip_UVs) {
+	clear();
 
-Model::Model(std::vector<Mesh> a_meshes) {
-	m_meshes = a_meshes;
-}
+	fs::path p = guess_path(a_path);
+	if (p == fs::path())
+		ERROR(std::format("[MODEL::MODEL] Bad model path: {}", wstos(a_path)), Error_action::throwing);
 
-void Model::clear_model() {
-	m_pos  = glm::vec3(0.0f);
-	m_size = glm::vec3(1.0f);
-	m_transform_scale    = 1.0f;
-	m_transform_rotation = 1.0f;
-	m_transform_pos      = 1.0f;
-	m_meshes.clear();
-	m_textures_loaded.clear();
-	m_dir = L"";
-	m_name = L"";	
-}
-
-bool Model::load_model(fs::path a_model_path, bool a_flip_UVs) {
-	clear_model();
-
-	if (a_model_path == L"") {
-		std::vector<std::pair<std::wstring, std::wstring>> filters{
-			{L"Wavefront (*.obj)", L"*.obj"},
-			{L"All Files (*.*)",   L"*.*"},
-		};
-		a_model_path = basic_file_open(L"Import model", filters);
-		if (a_model_path.wstring() == L"" || fs::is_empty(a_model_path)) {
-			return false;
-		}
-	}
-
-	m_dir = fs::path(a_model_path).parent_path();
-	m_name = fs::path(a_model_path).filename();
+	m_flipped_UVs = a_flip_UVs;
+	m_path = fs::canonical(p).wstring();
+	m_dir = fs::canonical(p.parent_path()).wstring();
+	m_filename = p.filename().wstring();
 
 	Assimp::Importer importer;
-	fs::path p = get_proj_path() / a_model_path;
 	int flags = aiProcess_Triangulate | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_GenSmoothNormals;
 	if (a_flip_UVs) {
 		flags |= aiProcess_FlipUVs;
 	}
-	const aiScene *scene = importer.ReadFile(p.string(), flags);
+	const aiScene *scene = importer.ReadFile(wstos(m_path), flags);
 
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
 		ERROR(std::format("[MODEL::LOAD_MODEL] ASSIMP::{}", importer.GetErrorString()), Error_action::logging);
-		return false;
+		return;
     }
 
 	// Recursive method
@@ -74,9 +49,24 @@ bool Model::load_model(fs::path a_model_path, bool a_flip_UVs) {
 	for (unsigned int meshIndex = 0; meshIndex < scene->mNumMeshes; meshIndex++) {
 		aiMesh* currentMesh = scene->mMeshes[meshIndex];
 		m_meshes.push_back(process_mesh(currentMesh, scene));
-	}
+	} 
+}
 
-	return true;
+Model::Model(std::vector<Mesh> a_meshes) {
+	set_meshes(a_meshes);
+}
+
+void Model::clear() {
+	m_pos  = glm::vec3(0.0f);
+	m_size = glm::vec3(1.0f);
+	m_transform_scale    = 1.0f;
+	m_transform_rotation = 1.0f;
+	m_transform_pos      = 1.0f;
+	m_meshes.clear();
+	m_path = L"";
+	m_dir = L"";
+	m_filename = L"";	
+	m_flipped_UVs = false;
 }
 
 // Nodes are laid out in tree like fashion. Each aiNode::mMeshes is an array of indicies into
@@ -104,7 +94,6 @@ Mesh Model::process_mesh(aiMesh *a_mesh, const aiScene *a_scene) {
 		for (int i = 0; i < a_mesh->mNumVertices; i++) { 
 			// Load vertex positions.
 			data.positions.push_back(glm::vec3(a_mesh->mVertices[i].x, a_mesh->mVertices[i].y, a_mesh->mVertices[i].z));
-			data.vert_sum += 1;
 
 			// Load normals.
 			if (has_normals) {
@@ -116,15 +105,14 @@ Mesh Model::process_mesh(aiMesh *a_mesh, const aiScene *a_scene) {
 			// Load UVs from first UV channel.
 			// TODO: Manage situation when a_mesh->mNumUVComponents[n] is different than 2.
 			if (has_UV_channels && a_mesh->mNumUVComponents[0] == 2) {
-				data.texture_coords.push_back(glm::vec2(a_mesh->mTextureCoords[0][i].x, a_mesh->mTextureCoords[0][i].y)); 
+				data.UVs.push_back(glm::vec2(a_mesh->mTextureCoords[0][i].x, a_mesh->mTextureCoords[0][i].y)); 
 			} else {
-				data.texture_coords.push_back(glm::vec2(0));
+				data.UVs.push_back(glm::vec2(0));
 			} 
 		} 
 	}
 
 	if (a_mesh->HasFaces()) { 
-		data.buffer_type = BufferData::Type::ELEMENT;
 		// Iterate over mesh faces and save indicies if any.
 		for (int i = 0; i < a_mesh->mNumFaces; i++) {
 			aiFace face = a_mesh->mFaces[i];
@@ -132,11 +120,8 @@ Mesh Model::process_mesh(aiMesh *a_mesh, const aiScene *a_scene) {
 			assert(face.mNumIndices == 3);
 			for (int j = 0; j < 3; j++) {
 				data.indicies.push_back(a_mesh->mFaces[i].mIndices[j]); 
-				data.indicies_sum += 1;
 			}
 		}
-	} else {
-		data.buffer_type = BufferData::Type::VERTEX; 
 	}
 	
 	// Load mesh textures. I'm assuming that result of ambient calculations is the same as for diffuse (usual behaviour), 
@@ -177,20 +162,11 @@ void Model::process_texture(std::vector<Texture>& a_textures, aiMaterial* a_mat,
 		// Get texture path
 		a_mat->GetTexture(a_ai_texture_type, i, &texture_name);
 
-		// Check if texture has been loaded previously and if true use it rather than regenerating.
-		auto it = std::find_if(m_textures_loaded.begin(), m_textures_loaded.end(), [&texture_name, this](const Texture& texture){
-			return texture.get_dir() == (this->m_dir / texture_name.C_Str()).wstring(); 
-		});
-		if (it != m_textures_loaded.end()) {
-			Texture preloaded_texture = *it;
-			preloaded_texture.set_unit_id(unit_id + i);
-			a_textures.push_back(preloaded_texture);
-		} else {
-			std::wstring texture_dir = (this->m_dir / texture_name.C_Str()).wstring();
-			Texture texture_ptr(texture_dir, texture_type, false, unit_id + i);
-			a_textures.push_back(texture_ptr);
-			m_textures_loaded.push_back(texture_ptr);
-		}
+		// Use rmanager to load texture (see Application class).
+		ResourceManager& rman = Application::get_instance().get_rmanager();
+		std::wstring texture_path = (fs::path(m_dir) / fs::path(texture_name.C_Str())).wstring();
+		Texture texture_ptr = rman.load_texture(texture_path, texture_type, false, unit_id + i);
+		a_textures.push_back(texture_ptr);
 	}
 }
 
@@ -206,6 +182,10 @@ void Model::set_rotation(glm::vec3 a_rotation) {
 	m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_rotation[0]), glm::vec3(1.0, 0.0, 0.0));
 	m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_rotation[1]), glm::vec3(0.0, 1.0, 0.0));
 	m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_rotation[2]), glm::vec3(0.0, 0.0, 1.0));
+}
+
+void Model::set_meshes(std::vector<Mesh>& a_meshes) {
+	m_meshes = a_meshes;
 }
 
 void Model::set_size(float a_size) {
@@ -255,6 +235,7 @@ void Model::draw_outlined(float a_thickness, ShaderProgram &a_object_shader, Sha
 	glStencilFunc(GL_ALWAYS, 1, 0xFF); // Stencil test always passes
 	glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
 
+	a_object_shader.use();
 	draw(a_object_shader, a_material_map_uniform_name);
 	
 	// Render object's outline by rendering bigger object and checking wheter 
@@ -269,9 +250,9 @@ void Model::draw_outlined(float a_thickness, ShaderProgram &a_object_shader, Sha
 	auto tmp_scale_mat = m_transform_scale;
 	auto tmp_size = m_size;
 	set_size(get_size() * a_thickness);
-	a_outline_shader[a_model_uniform_name] = get_model_mat();
-
-	draw(a_outline_shader);
+	a_outline_shader[a_model_uniform_name] = get_model_mat(); 
+	a_outline_shader.use(); 
+	draw();
 
 	// Restore
 	m_transform_scale = tmp_scale_mat;
@@ -286,12 +267,18 @@ void Model::draw_outlined(float a_thickness, ShaderProgram &a_object_shader, Sha
 	a_outline_shader.set_stencil_testing(out_stencil);
 }
 
+// Draw with material maps.
 void Model::draw(ShaderProgram &a_shader, std::string a_material_map_uniform_name) {
-	a_shader.use();
-
 	for (auto& mesh : m_meshes) {
 		if (a_material_map_uniform_name != "")
 			a_shader.set_uniform(a_material_map_uniform_name, mesh.get_material_map());
+		mesh.draw();
+	}
+}
+
+// Draw without material maps.
+void Model::draw() {
+	for (auto& mesh : m_meshes) {
 		mesh.draw();
 	}
 }
@@ -308,12 +295,16 @@ glm::vec3 Model::get_rotation() const {
 	return m_rotation;
 }
 
-std::wstring Model::get_dir() const {
-	return m_dir.wstring();
+std::wstring Model::get_path() const {
+	return m_path;
 }
 
-std::wstring Model::get_name() const {
-	return m_name.wstring();
+std::wstring Model::get_dir() const {
+	return m_dir;
+}
+
+std::wstring Model::get_filename() const {
+	return m_filename;
 }
 
 std::vector<Mesh>& Model::get_meshes() {
@@ -328,3 +319,7 @@ glm::mat3 Model::get_normal_mat() const {
 	// Get normal matix from M matrix
 	return glm::transpose(glm::inverse(glm::mat3(get_model_mat())));
 } 
+
+bool Model::is_flipped() const {
+	return m_flipped_UVs;
+}
