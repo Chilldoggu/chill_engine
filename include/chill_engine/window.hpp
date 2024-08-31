@@ -9,6 +9,7 @@
 
 #include "camera.hpp"
 
+namespace chill_engine {
 void ToggleButton(const char* str_id, bool* v);
 
 enum class CursorMode {
@@ -17,7 +18,7 @@ enum class CursorMode {
 };
 
 class InputHandler {
-public: 
+public:
 	InputHandler() = default;
 	InputHandler(GLFWwindow* a_window);
 	auto process_input() const -> void;
@@ -34,7 +35,7 @@ public:
 	auto set_imgui_darkness_style() -> void;
 
 	auto get_io() const -> ImGuiIO*;
-private: 
+private:
 	GLFWwindow* m_window = nullptr;
 	ImGuiIO* m_io = nullptr;
 };
@@ -52,7 +53,7 @@ public:
 	auto set_height(float height) -> void;
 	auto set_mouse_x(float x_pos) -> void;
 	auto set_mouse_y(float y_pos) -> void;
-	auto set_cursor_mode(CursorMode a_mode) -> void; 
+	auto set_cursor_mode(CursorMode a_mode) -> void;
 	auto title_change() -> void;
 	auto title_lshift(int n) -> void;
 	auto title_rshift(int n) -> void;
@@ -72,8 +73,8 @@ public:
 	auto get_imgui_handle() const -> ImGuiHandler&;
 
 private:
-	float m_delta_time    = 0.0f;
-	float m_last_frame    = 0.0f;
+	float m_delta_time = 0.0f;
+	float m_last_frame = 0.0f;
 	float m_current_frame = 0.0f;
 
 	GLFWwindow* m_window;
@@ -86,4 +87,5 @@ private:
 	std::unique_ptr<Camera> m_camera;
 	std::unique_ptr<InputHandler> m_input_handle;
 	std::unique_ptr<ImGuiHandler> m_imgui_handle;
-};
+}; 
+}

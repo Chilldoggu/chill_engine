@@ -9,14 +9,15 @@
 
 #include "chill_engine/buffers.hpp"
 
-constexpr int MAX_SAMPLER_SIZ  = 16;
-constexpr int DIFFUSE_UNIT_ID  = 0 * MAX_SAMPLER_SIZ;
-constexpr int SPECULAR_UNIT_ID = 1 * MAX_SAMPLER_SIZ;
-constexpr int EMISSION_UNIT_ID = 2 * MAX_SAMPLER_SIZ;
+namespace chill_engine {
+constexpr int g_max_sampler_siz  = 16;
+constexpr int g_diffuse_unit_id  = 0 * g_max_sampler_siz;
+constexpr int g_specular_unit_id = 1 * g_max_sampler_siz;
+constexpr int g_emission_unit_id = 2 * g_max_sampler_siz;
 
 class MaterialMap {
 public:
-    MaterialMap(std::initializer_list<std::tuple<std::wstring, TextureType, bool>> a_texture_maps = {}, float a_shininess = 32.f);
+	MaterialMap(std::initializer_list<std::tuple<std::wstring, TextureType, bool>> a_texture_maps = {}, float a_shininess = 32.f);
 
 	auto set_textures(std::vector<Texture>& a_textures) -> void;
 	auto set_diffuse_maps(std::vector<std::tuple<std::wstring, bool>> a_diffuse_map) -> void;
@@ -32,10 +33,10 @@ public:
 private:
 	auto check_unit_id_limits() const -> void;
 
-    float m_shininess = 32.f;
-	int m_cur_diffuse_unit_id{ DIFFUSE_UNIT_ID };
-	int m_cur_specular_unit_id{ SPECULAR_UNIT_ID };
-	int m_cur_emission_unit_id{ EMISSION_UNIT_ID };
+	float m_shininess = 32.f;
+	int m_cur_diffuse_unit_id{ g_diffuse_unit_id };
+	int m_cur_specular_unit_id{ g_specular_unit_id };
+	int m_cur_emission_unit_id{ g_emission_unit_id };
 	std::vector<Texture> m_diffuse_maps;
 	std::vector<Texture> m_specular_maps;
 	std::vector<Texture> m_emission_maps;
@@ -47,7 +48,7 @@ enum class BufferDataType {
 	NONE
 };
 
-struct BufferData { 
+struct BufferData {
 	std::vector<glm::vec3> normals = {};
 	std::vector<glm::vec3> positions = {};
 	std::vector<glm::vec2> UVs = {};
@@ -64,13 +65,13 @@ public:
 	auto set_positions(const std::vector<glm::vec3>& a_pos) -> void;
 	auto set_UVs(const std::vector<glm::vec2>& a_UVs) -> void;
 	auto set_normals(const std::vector<glm::vec3>& a_normals) -> void;
-	auto set_indicies(const std::vector<unsigned int>& a_elem_indicies) -> void; 
+	auto set_indicies(const std::vector<unsigned int>& a_elem_indicies) -> void;
 	auto set_material_map(const MaterialMap& a_material_map) -> void;
 
 	auto set_wireframe(bool a_option) -> void;
 	auto set_visibility(bool a_option) -> void;
 
-	auto get_VAO() const -> unsigned;
+	auto get_VAO() const -> GLuint;
 	auto get_wireframe() const -> bool;
 	auto get_visibility() const -> bool;
 	auto get_material_map() -> MaterialMap&;
@@ -80,7 +81,8 @@ private:
 	bool m_visibility = true;
 	int m_verticies_sum = 0;
 	int m_indicies_sum = 0;
-	BufferObjects m_VBOs;
 	MaterialMap m_material_map;
+	BufferObjects m_VBOs;
 	BufferDataType m_type = BufferDataType::NONE;
-};
+}; 
+}

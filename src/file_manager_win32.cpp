@@ -14,14 +14,15 @@ do {																	       \
 		throw GenericException("[ERROR] Couldn't create WIN32 FileDialog.\n"); \
 } while (false);
 
+namespace chill_engine { 
 std::string wstos(std::wstring a_ws_src) {
-    static constexpr int BUF_SIZ{ 1024 };
+	static constexpr int BUF_SIZ{ 1024 };
 	size_t len;
-    char* buffer = new char[BUF_SIZ]; 
-    wcstombs_s(&len, buffer, (size_t)BUF_SIZ, a_ws_src.c_str(), (size_t)BUF_SIZ - 1);
-    std::string ret{ buffer };
-    delete[] buffer;
-    return ret;
+	char* buffer = new char[BUF_SIZ];
+	wcstombs_s(&len, buffer, (size_t)BUF_SIZ, a_ws_src.c_str(), (size_t)BUF_SIZ - 1);
+	std::string ret{ buffer };
+	delete[] buffer;
+	return ret;
 }
 
 // Referenced from: https://learn.microsoft.com/en-us/windows/win32/shell/common-file-dialog?redirectedfrom=MSDN#basic-usage
@@ -34,7 +35,6 @@ std::wstring basic_file_open(std::wstring a_title, std::vector<std::pair<std::ws
 		ptr_save_types[i].pszName = a_save_types[i].first.c_str();
 		ptr_save_types[i].pszSpec = a_save_types[i].second.c_str();
 	}
-
 
 	// CoCreate the File Open Dialog object.
 	IFileDialog* pfd = NULL;
@@ -54,7 +54,7 @@ std::wstring basic_file_open(std::wstring a_title, std::vector<std::pair<std::ws
 
 	CHECK_HRESULT(pfd->SetTitle(L"Import model"));
 
-	// Show the dialog. Check for possible errors.  
+	// Show the dialog. Check for possible errors.
 	if (SUCCEEDED(pfd->Show(NULL))) {
 		// Obtain the result, once the user clicks the 'Open' button.
 		// The result is an IShellItem object.
@@ -74,4 +74,5 @@ std::wstring basic_file_open(std::wstring a_title, std::vector<std::pair<std::ws
 	delete[] ptr_save_types;
 
 	return ret_filepath;
+} 
 }

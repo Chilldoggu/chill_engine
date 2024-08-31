@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include "glm/fwd.hpp"
 
+namespace chill_engine {
 enum class LightType {
 	DIRECTIONAL,
 	POINT,
@@ -15,8 +16,8 @@ public:
 
 	auto set_color(glm::vec3 a_color) -> void;
 	auto set_pos_dir(glm::vec4 pos_dir) -> void; // 4th element decides whether light is positional or directional
-	auto set_ambient_intens(glm::vec3 a_intens)  -> void;
-	auto set_diffuse_intens(glm::vec3 a_intens)  -> void;
+	auto set_ambient_intens(glm::vec3 a_intens) -> void;
+	auto set_diffuse_intens(glm::vec3 a_intens) -> void;
 	auto set_specular_intens(glm::vec3 a_intens) -> void;
 
 	auto get_color() const -> glm::vec3;
@@ -90,4 +91,5 @@ private:
 	float m_inner_cutoff; // cos(theta)
 	float m_outer_cutoff; // cos(theta)
 	glm::vec3 m_spot_dir;
-};
+}; 
+}

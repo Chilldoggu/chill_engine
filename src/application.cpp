@@ -7,6 +7,7 @@
 
 #include "chill_engine/application.hpp"
 
+namespace chill_engine {
 static Application* s_instance = nullptr;
 
 Application& Application::init(int win_width, int win_height, std::string win_title, CursorMode win_mode) {
@@ -23,14 +24,14 @@ Application& Application::get_instance() {
 }
 
 void Application::shutdown() {
-	delete &get_instance();
-} 
+	delete& get_instance();
+}
 
-Application::Application(int win_width, int win_height, std::string win_title, CursorMode win_mode) 
+Application::Application(int win_width, int win_height, std::string win_title, CursorMode win_mode)
 	:m_win{ new Window(win_width, win_height, win_title, win_mode) }, m_rmanager{ new ResourceManager() } { }
 
 Application::~Application() {
-	delete &get_instance();
+	delete& get_instance();
 }
 
 Window& Application::get_win() {
@@ -39,4 +40,5 @@ Window& Application::get_win() {
 
 ResourceManager& Application::get_rmanager() {
 	return *m_rmanager;
+} 
 }

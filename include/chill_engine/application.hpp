@@ -11,6 +11,7 @@
 #include "chill_engine/shaders.hpp"
 #include "chill_engine/resource_manager.hpp"
 
+namespace chill_engine {
 class Application {
 public:
 	Application(const Application&) = delete;
@@ -30,4 +31,5 @@ private:
 private:
 	std::unique_ptr<Window> m_win = nullptr;
 	std::unique_ptr<ResourceManager> m_rmanager = nullptr;
-};
+}; 
+}

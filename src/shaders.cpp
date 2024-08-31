@@ -12,6 +12,7 @@
 #include "chill_engine/file_manager.hpp" // wstos
 #include "chill_engine/application.hpp"
 
+namespace chill_engine {
 namespace fs = std::filesystem;
 
 extern fs::path guess_path(std::wstring a_path);
@@ -28,7 +29,7 @@ std::string Uniform::get_name() const {
 	return m_name;
 }
 
-ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path) 
+ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path)
 	:m_type{ a_shader_type }
 {
 	fs::path p = guess_path(a_path);
@@ -37,13 +38,13 @@ ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path)
 
 	m_path = p.wstring();
 
-	switch(m_type) {
-		case ShaderType::VERTEX:   m_id = glCreateShader(GL_VERTEX_SHADER); break;
-		case ShaderType::FRAGMENT: m_id = glCreateShader(GL_FRAGMENT_SHADER); break;
-		default:
-			ERROR("[SHADERSRC::SHADERSRC] Shader type not compatible.", Error_action::throwing);
+	switch (m_type) {
+	case ShaderType::VERTEX:   m_id = glCreateShader(GL_VERTEX_SHADER); break;
+	case ShaderType::FRAGMENT: m_id = glCreateShader(GL_FRAGMENT_SHADER); break;
+	default:
+		ERROR("[SHADERSRC::SHADERSRC] Shader type not compatible.", Error_action::throwing);
 	}
- 
+
 	// =========
 	// LOAD CODE
 	// =========
@@ -59,7 +60,7 @@ ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path)
 
 	char* code = new char[len];
 	shader_file.read(code, len);
-	code[len-1] = '\0';
+	code[len - 1] = '\0';
 
 	// ============
 	// COMPILE CODE
@@ -77,7 +78,7 @@ ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path)
 	if (!success) {
 		char infoLog[INFO_LOG_SIZ] = {};
 		glGetShaderInfoLog(m_id, 1024, nullptr, infoLog);
-		ERROR(std::format("[SHADERSRC::SHADERSRC] shader {} can't compile. GLSL error message:\n{}", wstos(m_path), infoLog), Error_action::throwing); 
+		ERROR(std::format("[SHADERSRC::SHADERSRC] shader {} can't compile. GLSL error message:\n{}", wstos(m_path), infoLog), Error_action::throwing);
 	}
 }
 
@@ -86,17 +87,17 @@ ShaderSrc::ShaderSrc(const ShaderSrc& a_shader_src) {
 
 	m_type = a_shader_src.m_type;
 	m_path = a_shader_src.m_path;
-	m_id   = a_shader_src.m_id; 
+	m_id = a_shader_src.m_id;
 }
 
 ShaderSrc::ShaderSrc(ShaderSrc&& a_shader_src) {
 	m_type = a_shader_src.m_type;
 	m_path = a_shader_src.m_path;
-	m_id   = a_shader_src.m_id;
+	m_id = a_shader_src.m_id;
 
 	m_type = ShaderType::NONE;
 	m_path = L"";
-	m_id   = EMPTY_VBO; 
+	m_id = EMPTY_VBO;
 }
 
 ShaderSrc& ShaderSrc::operator=(const ShaderSrc& a_shader_src) {
@@ -104,7 +105,7 @@ ShaderSrc& ShaderSrc::operator=(const ShaderSrc& a_shader_src) {
 
 	m_type = a_shader_src.m_type;
 	m_path = a_shader_src.m_path;
-	m_id   = a_shader_src.m_id;
+	m_id = a_shader_src.m_id;
 
 	return *this;
 }
@@ -112,12 +113,12 @@ ShaderSrc& ShaderSrc::operator=(const ShaderSrc& a_shader_src) {
 ShaderSrc& ShaderSrc::operator=(ShaderSrc&& a_shader_src) {
 	m_type = a_shader_src.m_type;
 	m_path = a_shader_src.m_path;
-	m_id   = a_shader_src.m_id;
+	m_id = a_shader_src.m_id;
 
 	m_type = ShaderType::NONE;
 	m_path = L"";
-	m_id   = EMPTY_VBO;
- 
+	m_id = EMPTY_VBO;
+
 	return *this;
 }
 
@@ -126,7 +127,7 @@ ShaderSrc::~ShaderSrc() {
 		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::SHADER_SRCS, m_id);
 		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::SHADER_SRCS, m_id)) {
 			glDeleteShader(m_id);
-		} 
+		}
 	}
 }
 
@@ -173,7 +174,7 @@ ShaderProgram::ShaderProgram(ShaderProgram&& a_shader_program) {
 	m_name = a_shader_program.m_name;
 	m_uniforms = a_shader_program.m_uniforms;
 	m_states = a_shader_program.m_states;
-	
+
 	a_shader_program.m_id = EMPTY_VBO;
 	a_shader_program.m_name = "";
 	a_shader_program.m_uniforms.clear();
@@ -196,7 +197,7 @@ ShaderProgram& ShaderProgram::operator=(ShaderProgram&& a_shader_program) {
 	m_name = a_shader_program.m_name;
 	m_uniforms = a_shader_program.m_uniforms;
 	m_states = a_shader_program.m_states;
-	
+
 	a_shader_program.m_id = EMPTY_VBO;
 	a_shader_program.m_name = "";
 	a_shader_program.m_uniforms.clear();
@@ -210,14 +211,15 @@ ShaderProgram::~ShaderProgram() {
 		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::SHADER_PROGRAMS, m_id);
 		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::SHADER_PROGRAMS, m_id)) {
 			glDeleteProgram(m_id);
-		} 
+		}
 	}
 }
 
 Uniform& ShaderProgram::operator[](const std::string& uniform_var) {
 	try {
 		return m_uniforms.at(uniform_var);
-	} catch (std::out_of_range) {
+	}
+	catch (std::out_of_range) {
 		push_uniform(uniform_var);
 		return m_uniforms[uniform_var];
 	}
@@ -228,19 +230,22 @@ void ShaderProgram::use() {
 
 	if (m_states.at("FACE_CULLING")) {
 		glEnable(GL_CULL_FACE);
-	} else {
+	}
+	else {
 		glDisable(GL_CULL_FACE);
 	}
 
 	if (m_states.at("DEPTH_TEST")) {
 		glEnable(GL_DEPTH_TEST);
-	} else {
+	}
+	else {
 		glDisable(GL_DEPTH_TEST);
 	}
 
 	if (m_states.at("STENCIL_TEST")) {
 		glEnable(GL_STENCIL_TEST);
-	} else {
+	}
+	else {
 		glDisable(GL_STENCIL_TEST);
 	}
 }
@@ -268,6 +273,7 @@ void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, std::i
 	}
 }
 
+// TODO: Maybe variadic template?
 template<typename It>
 void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, It a_member_name_first, It a_member_name_last) {
 	for (auto member_name = a_member_name_first; member_name != a_member_name_last; member_name++) {
@@ -288,7 +294,8 @@ void ShaderProgram::set_uniform(const std::string& a_dirlight_name, const DirLig
 		m_uniforms.at(a_dirlight_name + ".ambient_intens") = a_light.get_ambient();
 		m_uniforms.at(a_dirlight_name + ".diffuse_intens") = a_light.get_diffuse();
 		m_uniforms.at(a_dirlight_name + ".specular_intens") = a_light.get_specular();
-	} catch (std::out_of_range) {
+	}
+	catch (std::out_of_range) {
 		push_uniform_struct(a_dirlight_name, { "dir", "color", "ambient_intens", "diffuse_intens", "specular_intens" });
 	}
 }
@@ -304,7 +311,8 @@ void ShaderProgram::set_uniform(const std::string& a_pointlight_name, const Poin
 		m_uniforms.at(a_pointlight_name + ".linear") = a_light.get_linear();
 		m_uniforms.at(a_pointlight_name + ".constant") = a_light.get_constant();
 		m_uniforms.at(a_pointlight_name + ".quadratic") = a_light.get_quadratic();
-	} catch (std::out_of_range) {
+	}
+	catch (std::out_of_range) {
 		push_uniform_struct(a_pointlight_name, { "pos", "color", "ambient_intens", "diffuse_intens", "specular_intens", "linear", "constant", "quadratic" });
 	}
 }
@@ -323,7 +331,8 @@ void ShaderProgram::set_uniform(const std::string& a_spotlight_name, const SpotL
 		m_uniforms.at(a_spotlight_name + ".inner_cutoff") = a_light.get_inner_cutoff();
 		m_uniforms.at(a_spotlight_name + ".outer_cutoff") = a_light.get_outer_cutoff();
 		m_uniforms.at(a_spotlight_name + ".spot_dir") = a_light.get_spot_dir();
-	} catch (std::out_of_range) {
+	}
+	catch (std::out_of_range) {
 		push_uniform_struct(a_spotlight_name, { "pos", "color", "ambient_intens", "diffuse_intens", "specular_intens", "linear", "constant", "quadratic", "spot_dir", "inner_cutoff", "outer_cutoff" });
 	}
 }
@@ -342,7 +351,8 @@ void ShaderProgram::set_uniform(const std::string& a_material_name, const Materi
 			specular_map.activate();
 		for (const auto& emission_map : emission_maps)
 			emission_map.activate();
-	} catch (std::out_of_range) {
+	}
+	catch (std::out_of_range) {
 		std::vector<std::string> maps = {};
 		for (size_t i = 0; i < diffuse_maps.size(); i++)
 			maps.push_back(std::format("diffuse_maps[{}]", i));
@@ -368,11 +378,11 @@ bool ShaderProgram::get_state(std::string a_state) const {
 	return m_states.at(a_state);
 }
 
-unsigned ShaderProgram::get_id() const { 
+GLuint ShaderProgram::get_id() const {
 	return m_id;
 }
 
-std::string ShaderProgram::get_name() const { 
+std::string ShaderProgram::get_name() const {
 	return m_name;
 }
 
@@ -380,5 +390,5 @@ void ShaderProgram::debug() const {
 	for (const auto& [key, val] : m_uniforms) {
 		std::cout << std::format("key: {}\n", key);
 	}
+} 
 }
-

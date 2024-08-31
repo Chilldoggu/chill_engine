@@ -1,5 +1,6 @@
 #pragma once
 
+#include <glad/glad.h>
 #include <map>
 #include <string>
 
@@ -7,13 +8,7 @@
 #include "chill_engine/buffers.hpp"
 #include "chill_engine/shaders.hpp"
 
-
-/*
-Consists of:
-	- TextureManager
-	- ShaderManager
-	- MeshManager (to avoid reloading vertex vectors)
-*/
+namespace chill_engine {
 enum class ResourceType {
 	TEXTURES,
 	SHADER_SRCS,
@@ -24,12 +19,12 @@ enum class ResourceType {
 };
 
 class ResourceManager {
-public: 
+public:
 	static auto dialog_import_model() -> std::wstring;
 
 	auto inc_ref_count(ResourceType a_res_type, unsigned a_id) -> void;
 	auto dec_ref_count(ResourceType a_res_type, unsigned a_id) -> void;
-	auto chk_ref_count(ResourceType a_res_type, unsigned a_id) -> bool; 
+	auto chk_ref_count(ResourceType a_res_type, unsigned a_id) -> bool;
 
 	auto new_shader(std::string a_name, ShaderSrc a_vertex_shader, ShaderSrc a_fragment_shader) -> ShaderProgram;
 
@@ -38,13 +33,16 @@ public:
 
 	auto load_texture(std::wstring a_path, TextureType a_type, bool a_flip_image, int a_unit_id) -> Texture;
 	auto create_texture(int a_width, int a_height, TextureType a_type) -> Texture;
-	
+
+	auto create_render_buffer(int a_width, int a_height, RenderBufferType a_type) -> RenderBuffer;
+
 	auto debug() -> void;
 
-private: 
-	std::map<unsigned,     std::unique_ptr<ShaderProgram>> m_shaders_cached; 
-	std::map<unsigned,     std::unique_ptr<Texture>> m_textures_cached;
+private:
+	std::map<GLuint, std::unique_ptr<ShaderProgram>> m_shaders_cached;
+	std::map<GLuint, std::unique_ptr<Texture>> m_textures_cached;
 	std::map<std::wstring, std::unique_ptr<Model>> m_models_cached;
 
-	std::map<ResourceType, std::map<unsigned, int>> m_ref_counter;
-};
+	std::map<ResourceType, std::map<GLuint, int>> m_ref_counter;
+}; 
+}
