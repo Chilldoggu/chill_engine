@@ -15,11 +15,11 @@ namespace fs = std::filesystem;
 
 extern fs::path guess_path(std::wstring a_path);
 
-Model::Model(std::wstring a_path, bool a_flip_UVs) :m_flipped_UVs{ a_flip_UVs } {
+Model::Model(const std::wstring& a_path, bool a_flip_UVs) :m_flipped_UVs{ a_flip_UVs } {
 	load_model(a_path, a_flip_UVs);
 }
 
-void Model::load_model(std::wstring& a_path, bool a_flip_UVs) {
+void Model::load_model(const std::wstring & a_path, bool a_flip_UVs) {
 	clear();
 
 	fs::path p = guess_path(a_path);
@@ -53,7 +53,7 @@ void Model::load_model(std::wstring& a_path, bool a_flip_UVs) {
 	}
 }
 
-Model::Model(std::vector<Mesh> a_meshes) {
+Model::Model(const std::vector<Mesh>& a_meshes) {
 	set_meshes(a_meshes);
 }
 
@@ -173,13 +173,13 @@ void Model::process_texture(std::vector<Texture>& a_textures, aiMaterial* a_mat,
 	}
 }
 
-void Model::set_pos(glm::vec3 a_pos) {
+void Model::set_pos(const glm::vec3& a_pos) {
 	m_pos = a_pos;
 	m_transform_pos = glm::mat4(1.0f);
 	m_transform_pos = glm::translate(m_transform_pos, a_pos);
 }
 
-void Model::set_rotation(glm::vec3 a_rotation) {
+void Model::set_rotation(const glm::vec3& a_rotation) {
 	m_rotation = a_rotation;
 	m_transform_rotation = glm::mat4(1.0f);
 	m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_rotation[0]), glm::vec3(1.0, 0.0, 0.0));
@@ -187,7 +187,7 @@ void Model::set_rotation(glm::vec3 a_rotation) {
 	m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_rotation[2]), glm::vec3(0.0, 0.0, 1.0));
 }
 
-void Model::set_meshes(std::vector<Mesh>& a_meshes) {
+void Model::set_meshes(const std::vector<Mesh>& a_meshes) {
 	m_meshes = a_meshes;
 }
 
@@ -197,13 +197,13 @@ void Model::set_size(float a_size) {
 	m_transform_scale = glm::scale(m_transform_scale, glm::vec3(a_size));
 }
 
-void Model::set_size(glm::vec3 a_size) {
+void Model::set_size(const glm::vec3& a_size) {
 	m_size = a_size;
 	m_transform_scale = glm::mat4(1.0f);
 	m_transform_scale = glm::scale(m_transform_scale, a_size);
 }
 
-void Model::move(glm::vec3 a_vec) {
+void Model::move(const glm::vec3& a_vec) {
 	m_pos += a_vec;
 	m_transform_pos = glm::translate(m_transform_pos, a_vec);
 }
@@ -225,7 +225,7 @@ void Model::rotate(float a_angle, Axis a_axis) {
 	}
 }
 
-void Model::draw_outlined(float a_thickness, ShaderProgram& a_object_shader, ShaderProgram& a_outline_shader, std::string a_model_uniform_name, std::string a_material_map_uniform_name) {
+void Model::draw_outlined(float a_thickness, ShaderProgram& a_object_shader, ShaderProgram& a_outline_shader, const std::string& a_model_uniform_name, const std::string& a_material_map_uniform_name) {
 	// Save shader options
 	bool obj_depth = a_object_shader.get_state("DEPTH_TEST");
 	bool obj_stencil = a_object_shader.get_state("STENCIL_TEST");
@@ -271,7 +271,7 @@ void Model::draw_outlined(float a_thickness, ShaderProgram& a_object_shader, Sha
 }
 
 // Draw with material maps.
-void Model::draw(ShaderProgram& a_shader, std::string a_material_map_uniform_name) {
+void Model::draw(ShaderProgram& a_shader, const std::string& a_material_map_uniform_name) {
 	for (auto& mesh : m_meshes) {
 		if (a_material_map_uniform_name != "")
 			a_shader.set_uniform(a_material_map_uniform_name, mesh.get_material_map());

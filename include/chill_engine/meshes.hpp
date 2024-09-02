@@ -17,12 +17,12 @@ constexpr int g_emission_unit_id = 2 * g_max_sampler_siz;
 
 class MaterialMap {
 public:
-	MaterialMap(std::initializer_list<std::tuple<std::wstring, TextureType, bool>> a_texture_maps = {}, float a_shininess = 32.f);
+	MaterialMap(const std::initializer_list<std::tuple<std::wstring, TextureType, bool>>& a_texture_maps = {}, float a_shininess = 32.f);
 
-	auto set_textures(std::vector<Texture>& a_textures) -> void;
-	auto set_diffuse_maps(std::vector<std::tuple<std::wstring, bool>> a_diffuse_map) -> void;
-	auto set_specular_maps(std::vector<std::tuple<std::wstring, bool>> a_specular_map) -> void;
-	auto set_emission_maps(std::vector<std::tuple<std::wstring, bool>> a_emission_map) -> void;
+	auto set_textures(const std::vector<Texture>& a_textures) -> void;
+	auto set_diffuse_maps(const std::vector<std::tuple<std::wstring,bool>>& a_diffuse_maps_names) -> void;
+	auto set_specular_maps(const std::vector<std::tuple<std::wstring,bool>>& a_specular_maps_names) -> void;
+	auto set_emission_maps(const std::vector<std::tuple<std::wstring,bool>>& a_emission_maps_names) -> void;
 	auto set_shininess(float a_shininess) -> void;
 
 	auto get_diffuse_maps() const -> std::vector<Texture>;

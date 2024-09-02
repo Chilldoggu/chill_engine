@@ -17,7 +17,7 @@ public:
 	Application(const Application&) = delete;
 	Application& operator=(const Application&) = delete;
 
-	static auto init(int win_width = 1280, int win_height = 720, std::string win_title = "OpenGL_App", CursorMode win_mode = CursorMode::NORMAL) -> Application&;
+	static auto init(int win_width = 1280, int win_height = 720, const std::string& win_title = "OpenGL_App", CursorMode win_mode = CursorMode::NORMAL) -> Application&;
 	static auto get_instance() -> Application&;
 	static auto shutdown() -> void;
 
@@ -25,7 +25,7 @@ public:
 	auto get_rmanager() -> ResourceManager&;
 
 private:
-	Application(int win_width, int win_height, std::string win_title, CursorMode win_mode);
+	Application(int win_width, int win_height, const std::string& win_title, CursorMode win_mode);
 	~Application();
 
 private:

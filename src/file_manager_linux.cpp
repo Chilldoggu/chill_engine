@@ -9,7 +9,7 @@
 #include "assert.hpp" // GenericException
 
 namespace chill_engine {
-std::string wstos(std::wstring a_ws_src) {
+std::string wstos(const std::wstring& a_ws_src) {
 	static constexpr int BUF_SIZ{ 1024 };
 	size_t len;
 	char* buffer = new char[BUF_SIZ];
@@ -19,7 +19,7 @@ std::string wstos(std::wstring a_ws_src) {
 	return ret;
 }
 
-std::wstring basic_file_open(std::wstring a_title, std::vector<std::pair<std::wstring, std::wstring>> a_save_types) {
+std::wstring basic_file_open(const std::wstring& a_title, const std::vector<std::pair<std::wstring, std::wstring>>& a_save_types) {
 	throw GenericException("LINUX FILE DIALOG IMPLEMENTATION IS NOT READY.\n");
 	return L"";
 } 

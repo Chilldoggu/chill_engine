@@ -15,7 +15,7 @@ do {																	       \
 } while (false);
 
 namespace chill_engine { 
-std::string wstos(std::wstring a_ws_src) {
+std::string wstos(const std::wstring& a_ws_src) {
 	static constexpr int BUF_SIZ{ 1024 };
 	size_t len;
 	char* buffer = new char[BUF_SIZ];
@@ -26,7 +26,7 @@ std::string wstos(std::wstring a_ws_src) {
 }
 
 // Referenced from: https://learn.microsoft.com/en-us/windows/win32/shell/common-file-dialog?redirectedfrom=MSDN#basic-usage
-std::wstring basic_file_open(std::wstring a_title, std::vector<std::pair<std::wstring, std::wstring>> a_save_types) {
+std::wstring basic_file_open(const std::wstring& a_title, const std::vector<std::pair<std::wstring,std::wstring>>& a_save_types) {
 	std::wstring ret_filepath{ L"" };
 
 	COMDLG_FILTERSPEC* ptr_save_types = new COMDLG_FILTERSPEC[a_save_types.size()];

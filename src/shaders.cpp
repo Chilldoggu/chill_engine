@@ -17,7 +17,7 @@ namespace fs = std::filesystem;
 
 extern fs::path guess_path(std::wstring a_path);
 
-Uniform::Uniform(std::string a_name, int a_location, unsigned int a_program)
+Uniform::Uniform(const std::string& a_name, int a_location, GLuint a_program)
 	:m_name{ a_name }, m_uniform_location{ a_location }, m_shader_program{ a_program }
 {
 	if (m_uniform_location == -1) {
@@ -131,7 +131,8 @@ ShaderSrc::~ShaderSrc() {
 	}
 }
 
-ShaderProgram::ShaderProgram(std::string& a_name, ShaderSrc a_vertex_shader, ShaderSrc a_fragment_shader) :m_name{ a_name } {
+ShaderProgram::ShaderProgram(std::string& a_name, const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader) 
+	:m_name{ a_name }, m_vertex_sh{ a_vertex_shader }, m_fragment_sh{ a_fragment_shader } {
 	m_id = glCreateProgram();
 
 	glAttachShader(m_id, a_vertex_shader.m_id);
@@ -151,32 +152,29 @@ ShaderProgram::ShaderProgram(std::string& a_name, ShaderSrc a_vertex_shader, Sha
 	}
 }
 
-//unsigned m_id = EMPTY_VBO;
-//std::string m_name = "";
-//std::map<std::string, Uniform> m_uniforms;
-//std::map<std::string, bool> m_states{
-//	{"DEPTH_TEST",   true},
-//	{"FACE_CULLING", true},
-//	{"STENCIL_TEST", false},
-//};
-
 ShaderProgram::ShaderProgram(const ShaderProgram& a_shader_program) {
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::SHADER_PROGRAMS, a_shader_program.m_id);
 
 	m_id = a_shader_program.m_id;
 	m_name = a_shader_program.m_name;
+	m_vertex_sh = a_shader_program.m_vertex_sh;
+	m_fragment_sh = a_shader_program.m_fragment_sh;
 	m_uniforms = a_shader_program.m_uniforms;
 	m_states = a_shader_program.m_states;
 }
 
-ShaderProgram::ShaderProgram(ShaderProgram&& a_shader_program) {
+ShaderProgram::ShaderProgram(ShaderProgram&& a_shader_program) noexcept {
 	m_id = a_shader_program.m_id;
 	m_name = a_shader_program.m_name;
+	m_vertex_sh = a_shader_program.m_vertex_sh;
+	m_fragment_sh = a_shader_program.m_fragment_sh;
 	m_uniforms = a_shader_program.m_uniforms;
 	m_states = a_shader_program.m_states;
 
 	a_shader_program.m_id = EMPTY_VBO;
 	a_shader_program.m_name = "";
+	a_shader_program.m_vertex_sh = ShaderSrc();
+	a_shader_program.m_fragment_sh = ShaderSrc();
 	a_shader_program.m_uniforms.clear();
 	a_shader_program.m_states.clear();
 }
@@ -186,20 +184,26 @@ ShaderProgram& ShaderProgram::operator=(const ShaderProgram& a_shader_program) {
 
 	m_id = a_shader_program.m_id;
 	m_name = a_shader_program.m_name;
+	m_vertex_sh = a_shader_program.m_vertex_sh;
+	m_fragment_sh = a_shader_program.m_fragment_sh;
 	m_uniforms = a_shader_program.m_uniforms;
 	m_states = a_shader_program.m_states;
 
 	return *this;
 }
 
-ShaderProgram& ShaderProgram::operator=(ShaderProgram&& a_shader_program) {
+ShaderProgram& ShaderProgram::operator=(ShaderProgram&& a_shader_program) noexcept {
 	m_id = a_shader_program.m_id;
 	m_name = a_shader_program.m_name;
+	m_vertex_sh = a_shader_program.m_vertex_sh;
+	m_fragment_sh = a_shader_program.m_fragment_sh;
 	m_uniforms = a_shader_program.m_uniforms;
 	m_states = a_shader_program.m_states;
 
 	a_shader_program.m_id = EMPTY_VBO;
 	a_shader_program.m_name = "";
+	a_shader_program.m_vertex_sh = ShaderSrc();
+	a_shader_program.m_fragment_sh = ShaderSrc();
 	a_shader_program.m_uniforms.clear();
 	a_shader_program.m_states.clear();
 
@@ -266,7 +270,7 @@ void ShaderProgram::set_stencil_testing(bool a_option) {
 	m_states.at("STENCIL_TEST") = a_option;
 }
 
-void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, std::initializer_list<std::string> a_member_names) {
+void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, const std::initializer_list<std::string>& a_member_names) {
 	for (const auto& member_name : a_member_names) {
 		std::string full_name = a_uniform_var + "." + member_name;
 		m_uniforms[full_name] = Uniform(full_name, glGetUniformLocation(m_id, full_name.c_str()), m_id);
@@ -275,7 +279,7 @@ void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, std::i
 
 // TODO: Maybe variadic template?
 template<typename It>
-void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, It a_member_name_first, It a_member_name_last) {
+void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, const It& a_member_name_first, const It& a_member_name_last) {
 	for (auto member_name = a_member_name_first; member_name != a_member_name_last; member_name++) {
 		std::string full_name = a_uniform_var + "." + *member_name;
 		m_uniforms[full_name] = Uniform(full_name, glGetUniformLocation(m_id, full_name.c_str()), m_id);

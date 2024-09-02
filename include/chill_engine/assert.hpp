@@ -14,5 +14,5 @@ public:
 	GenericException(const std::string& msg) : std::runtime_error(msg) {}
 };
 
-void my_error_handler(std::string file, int line, std::string message, Error_action action); 
+void my_error_handler(const std::string& file, int line, const std::string& message, Error_action action); 
 }

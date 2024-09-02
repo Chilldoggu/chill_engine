@@ -22,16 +22,16 @@ class ResourceManager {
 public:
 	static auto dialog_import_model() -> std::wstring;
 
-	auto inc_ref_count(ResourceType a_res_type, unsigned a_id) -> void;
-	auto dec_ref_count(ResourceType a_res_type, unsigned a_id) -> void;
-	auto chk_ref_count(ResourceType a_res_type, unsigned a_id) -> bool;
+	auto inc_ref_count(ResourceType a_res_type, GLuint a_id) -> void;
+	auto dec_ref_count(ResourceType a_res_type, GLuint a_id) -> void;
+	auto chk_ref_count(ResourceType a_res_type, GLuint a_id) -> bool;
 
-	auto new_shader(std::string a_name, ShaderSrc a_vertex_shader, ShaderSrc a_fragment_shader) -> ShaderProgram;
+	auto new_shader(std::string a_name, const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader) -> ShaderProgram;
 
-	auto load_model(std::wstring a_dir, bool a_flip_UVs = false) -> Model;
-	auto create_model(std::vector<Mesh> a_meshes) -> Model;
+	auto load_model(const std::wstring& a_dir, bool a_flip_UVs = false) -> Model;
+	auto create_model(const std::vector<Mesh>& a_meshes) -> Model;
 
-	auto load_texture(std::wstring a_path, TextureType a_type, bool a_flip_image, int a_unit_id) -> Texture;
+	auto load_texture(const std::wstring& a_path, TextureType a_type, bool a_flip_image, int a_unit_id) -> Texture;
 	auto create_texture(int a_width, int a_height, TextureType a_type) -> Texture;
 
 	auto create_render_buffer(int a_width, int a_height, RenderBufferType a_type) -> RenderBuffer;

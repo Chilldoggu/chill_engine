@@ -18,21 +18,21 @@ enum class Axis {
 class Model {
 public:
 	Model() = default;
-	Model(std::wstring a_path, bool a_flip_UVs = false);
-	Model(std::vector<Mesh> a_meshes);
+	Model(const std::wstring& a_path, bool a_flip_UVs = false);
+	Model(const std::vector<Mesh>& a_meshes);
 
-	void load_model(std::wstring& a_path, bool a_flip_UVs);
-	auto set_pos(glm::vec3 a_pos) -> void;
+	void load_model(const std::wstring& a_path, bool a_flip_UVs);
+	auto set_pos(const glm::vec3& a_pos) -> void;
 	auto set_size(float a_size) -> void;
-	auto set_size(glm::vec3 a_size) -> void;
-	auto set_rotation(glm::vec3 a_rotation) -> void;
-	auto set_meshes(std::vector<Mesh>& a_meshes) -> void;
-	auto move(glm::vec3 a_vec) -> void;
+	auto set_size(const glm::vec3& a_size) -> void;
+	auto set_rotation(const glm::vec3& a_rotation) -> void;
+	auto set_meshes(const std::vector<Mesh>& a_meshes) -> void;
+	auto move(const glm::vec3& a_vec) -> void;
 	auto rotate(float a_angle, Axis a_axis = Axis::X) -> void;
 
 	auto draw() -> void;
-	auto draw(ShaderProgram& a_shader, std::string a_material_map_uniform_name) -> void;
-	auto draw_outlined(float a_thickness, ShaderProgram& a_object_shader, ShaderProgram& a_outline_shader, std::string a_model_uniform_name, std::string a_material_map_uniform_name) -> void;
+	auto draw(ShaderProgram& a_shader, const std::string& a_material_map_uniform_name) -> void;
+	auto draw_outlined(float a_thickness, ShaderProgram& a_object_shader, ShaderProgram& a_outline_shader, const std::string& a_model_uniform_name, const std::string& a_material_map_uniform_name) -> void;
 	auto clear() -> void;
 
 	auto get_pos() const -> glm::vec3;

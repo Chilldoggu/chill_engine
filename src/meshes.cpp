@@ -16,7 +16,7 @@
 #include "chill_engine/application.hpp"
 
 namespace chill_engine { 
-MaterialMap::MaterialMap(std::initializer_list<std::tuple<std::wstring, TextureType, bool>> a_texture_maps, float a_shininess)
+MaterialMap::MaterialMap(const std::initializer_list<std::tuple<std::wstring,TextureType,bool>>& a_texture_maps, float a_shininess)
 	:m_shininess{ a_shininess }
 {
 	ResourceManager& rman = Application::get_instance().get_rmanager();
@@ -43,7 +43,7 @@ MaterialMap::MaterialMap(std::initializer_list<std::tuple<std::wstring, TextureT
 	check_unit_id_limits();
 }
 
-void MaterialMap::set_textures(std::vector<Texture>& a_textures) {
+void MaterialMap::set_textures(const std::vector<Texture>& a_textures) {
 	m_diffuse_maps.clear();
 	m_specular_maps.clear();
 	m_emission_maps.clear();
@@ -83,7 +83,7 @@ void MaterialMap::set_textures(std::vector<Texture>& a_textures) {
 	check_unit_id_limits();
 }
 
-void MaterialMap::set_diffuse_maps(std::vector<std::tuple<std::wstring, bool>> a_diffuse_maps_names) {
+void MaterialMap::set_diffuse_maps(const std::vector<std::tuple<std::wstring,bool>>& a_diffuse_maps_names) {
 	ResourceManager& rman = Application::get_instance().get_rmanager();
 
 	m_diffuse_maps.clear();
@@ -95,7 +95,7 @@ void MaterialMap::set_diffuse_maps(std::vector<std::tuple<std::wstring, bool>> a
 	check_unit_id_limits();
 }
 
-void MaterialMap::set_specular_maps(std::vector<std::tuple<std::wstring, bool>> a_specular_maps_names) {
+void MaterialMap::set_specular_maps(const std::vector<std::tuple<std::wstring,bool>>& a_specular_maps_names) {
 	ResourceManager& rman = Application::get_instance().get_rmanager();
 
 	m_specular_maps.clear();
@@ -107,7 +107,7 @@ void MaterialMap::set_specular_maps(std::vector<std::tuple<std::wstring, bool>> 
 	check_unit_id_limits();
 }
 
-void MaterialMap::set_emission_maps(std::vector<std::tuple<std::wstring, bool>> a_emission_maps_names) {
+void MaterialMap::set_emission_maps(const std::vector<std::tuple<std::wstring,bool>>& a_emission_maps_names) {
 	ResourceManager& rman = Application::get_instance().get_rmanager();
 
 	m_emission_maps.clear();

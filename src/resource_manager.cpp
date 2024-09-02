@@ -16,10 +16,10 @@ std::wstring ResourceManager::dialog_import_model() {
 	return basic_file_open(L"Import model", filters);
 }
 
-ShaderProgram ResourceManager::new_shader(std::string a_name, ShaderSrc a_vertex_shader, ShaderSrc a_fragment_shader) {
+ShaderProgram ResourceManager::new_shader(std::string a_name, const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader) {
 	// Check if shader is cached.
 	auto it = std::find_if(m_shaders_cached.begin(), m_shaders_cached.end(),
-		[&a_name](std::pair<const unsigned, std::unique_ptr<ShaderProgram>>& elem) {
+		[&a_name](auto& elem) {
 			ShaderProgram* cached_shader = elem.second.get();
 			return (cached_shader != nullptr && cached_shader->get_name() == a_name);
 		});
@@ -35,11 +35,11 @@ ShaderProgram ResourceManager::new_shader(std::string a_name, ShaderSrc a_vertex
 	return *(*it).second;
 }
 
-Model ResourceManager::load_model(std::wstring a_path, bool a_flip_UVs) {
+Model ResourceManager::load_model(const std::wstring& a_path, bool a_flip_UVs) {
 	// Check if model is cached.
 	std::wstring filename = fs::path(a_path).filename().wstring();
 	auto it = std::find_if(m_models_cached.begin(), m_models_cached.end(),
-		[&filename, a_flip_UVs](std::pair<const std::wstring, std::unique_ptr<Model>>& elem) {
+		[&filename, a_flip_UVs](auto& elem) {
 			Model* cached_model = elem.second.get();
 			return (cached_model != nullptr && elem.first == filename && cached_model->is_flipped() == a_flip_UVs);
 		});
@@ -54,15 +54,15 @@ Model ResourceManager::load_model(std::wstring a_path, bool a_flip_UVs) {
 	return *m_models_cached[filename];
 }
 
-Model ResourceManager::create_model(std::vector<Mesh> a_meshes) {
+Model ResourceManager::create_model(const std::vector<Mesh>& a_meshes) {
 	return Model(a_meshes);
 }
 
-Texture ResourceManager::load_texture(std::wstring a_path, TextureType a_type, bool a_flip_image, int a_unit_id) {
+Texture ResourceManager::load_texture(const std::wstring& a_path, TextureType a_type, bool a_flip_image, int a_unit_id) {
 	// Check if texture is cached.
 	std::wstring filename = fs::path(a_path).filename().wstring();
 	auto it = std::find_if(m_textures_cached.begin(), m_textures_cached.end(),
-		[&filename, a_flip_image](std::pair<const unsigned, std::unique_ptr<Texture>>& elem) {
+		[&filename, a_flip_image](auto& elem) {
 			Texture* cached_texture = elem.second.get();
 			return (cached_texture != nullptr && cached_texture->get_filename() == filename && cached_texture->is_flipped() == a_flip_image);
 		});
@@ -95,7 +95,7 @@ RenderBuffer ResourceManager::create_render_buffer(int a_width, int a_height, Re
 	return RenderBuffer(a_width, a_height, a_type);
 }
 
-void ResourceManager::inc_ref_count(ResourceType a_res_type, unsigned a_id) {
+void ResourceManager::inc_ref_count(ResourceType a_res_type, GLuint a_id) {
 	std::map<unsigned, int>& res_ref_counter = m_ref_counter[a_res_type];
 
 	auto it = res_ref_counter.find(a_id);
@@ -104,7 +104,7 @@ void ResourceManager::inc_ref_count(ResourceType a_res_type, unsigned a_id) {
 	res_ref_counter[a_id]++;
 }
 
-void ResourceManager::dec_ref_count(ResourceType a_res_type, unsigned a_id) {
+void ResourceManager::dec_ref_count(ResourceType a_res_type, GLuint a_id) {
 	std::map<unsigned, int>& res_ref_counter = m_ref_counter[a_res_type];
 
 	auto it = res_ref_counter.find(a_id);
@@ -115,7 +115,7 @@ void ResourceManager::dec_ref_count(ResourceType a_res_type, unsigned a_id) {
 
 // 'True' - there are references to this texture elsewhere.
 // 'False' - there are no references to this texture.
-bool ResourceManager::chk_ref_count(ResourceType a_res_type, unsigned a_id) {
+bool ResourceManager::chk_ref_count(ResourceType a_res_type, GLuint a_id) {
 	std::map<unsigned, int>& res_ref_counter = m_ref_counter[a_res_type];
 
 	auto it = res_ref_counter.find(a_id);
@@ -155,7 +155,7 @@ bool ResourceManager::chk_ref_count(ResourceType a_res_type, unsigned a_id) {
 		else if (a_res_type == ResourceType::MESHES) {
 			unsigned mesh_id = a_id;
 			auto it = std::find_if(m_models_cached.begin(), m_models_cached.end(),
-				[mesh_id](std::pair<const std::wstring, std::unique_ptr<Model>>& elem) {
+				[mesh_id](auto& elem) {
 					if (elem.second != nullptr) {
 						std::vector<Mesh>& cached_meshes = elem.second.get()->get_meshes();
 						auto it = std::find_if(cached_meshes.begin(), cached_meshes.end(), [mesh_id](const Mesh& a_mesh) {

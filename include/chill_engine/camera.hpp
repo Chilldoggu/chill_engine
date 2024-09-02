@@ -19,8 +19,8 @@ public:
 	Camera(GLFWwindow* a_window, const glm::vec3& position = glm::vec3(0.0f, 0.0f, 0.0f));
 
 	auto set_fov(float a_fov) -> void;
-	auto set_target(glm::vec3 a_target) -> void;
-	auto set_position(glm::vec3 a_position) -> void;
+	auto set_target(const glm::vec3& a_target) -> void;
+	auto set_position(const glm::vec3& a_position) -> void;
 	auto set_far_plane(float a_far) -> void;
 	auto set_near_plane(float a_near) -> void;
 	auto set_movement_speed(float a_speed) -> void;

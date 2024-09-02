@@ -53,11 +53,11 @@ void Camera::set_fov(float a_fov) {
 	m_fov = a_fov;
 }
 
-void Camera::set_target(glm::vec3 a_target) {
+void Camera::set_target(const glm::vec3& a_target) {
 	m_front = a_target;
 }
 
-void Camera::set_position(glm::vec3 a_position) {
+void Camera::set_position(const glm::vec3& a_position) {
 	m_position = a_position;
 }
 

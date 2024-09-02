@@ -5,10 +5,9 @@
 #include <utility> // pair
 
 namespace chill_engine {
-std::string wstos(std::wstring a_ws_src);
+std::string wstos(const std::wstring& a_ws_src);
 
 std::wstring basic_file_open(
-	std::wstring a_title,
-	std::vector<std::pair<std::wstring, std::wstring>> a_save_types
+	const std::wstring& a_title, const std::vector<std::pair<std::wstring,std::wstring>>& a_save_types
 ); 
 }

@@ -27,12 +27,12 @@ enum class ShaderType {
 class Uniform {
 public:
 	Uniform() = default;
-	Uniform(std::string a_name, int a_location, unsigned int a_program);
+	Uniform(const std::string& a_name, int a_location, GLuint a_program);
 
 	auto get_name() const -> std::string;
 
 	template<typename T>
-	auto operator=(T val) -> Uniform&;
+	auto operator=(const T& val) -> Uniform&;
 
 private:
 	int m_uniform_location = -1;
@@ -41,7 +41,7 @@ private:
 };
 
 template<typename T>
-Uniform& Uniform::operator=(T val) {
+Uniform& Uniform::operator=(const T& val) {
 	glUseProgram(m_shader_program);
 	if constexpr (std::is_same_v<T, float>) {
 		glUniform1f(m_uniform_location, val);
@@ -94,6 +94,7 @@ Uniform& Uniform::operator=(T val) {
 }
 
 struct ShaderSrc {
+	ShaderSrc() = default;
 	ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path);
 	ShaderSrc(const ShaderSrc& a_shader_src);
 	ShaderSrc(ShaderSrc&& a_shader_src);
@@ -104,18 +105,18 @@ struct ShaderSrc {
 
 	ShaderType m_type = ShaderType::NONE;
 	std::wstring m_path = L"";
-	unsigned m_id = EMPTY_VBO;
+	GLuint m_id = EMPTY_VBO;
 };
 
 class ShaderProgram {
 public:
-	ShaderProgram(std::string& a_name, ShaderSrc a_vertex_shader, ShaderSrc a_fragment_shader);
+	ShaderProgram(std::string& a_name, const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader);
 	ShaderProgram(const ShaderProgram& a_shader_program);
-	ShaderProgram(ShaderProgram&& a_shader_program);
+	ShaderProgram(ShaderProgram&& a_shader_program) noexcept;
 	~ShaderProgram();
 
 	auto operator=(const ShaderProgram& a_shader_program) -> ShaderProgram&;
-	auto operator=(ShaderProgram&& a_shader_program) -> ShaderProgram&;
+	auto operator=(ShaderProgram&& a_shader_program) noexcept -> ShaderProgram&;
 
 	auto operator[](const std::string& a_uniform_var) -> Uniform&;
 	auto set_name(const std::string& a_name) -> void;
@@ -138,12 +139,14 @@ public:
 
 private:
 	auto push_uniform(const std::string& a_uniform_var) -> void;
-	auto push_uniform_struct(const std::string& uniform_var, std::initializer_list<std::string> a_members) -> void;
+	auto push_uniform_struct(const std::string& uniform_var, const std::initializer_list<std::string>& a_member_names) -> void;
 	template<typename It>
-	auto push_uniform_struct(const std::string& a_uniform_var, It a_member_name_first, It a_member_name_last) -> void;
+	auto push_uniform_struct(const std::string& a_uniform_var, const It& a_member_name_first, const It& a_member_name_last) -> void;
 
 	GLuint m_id = EMPTY_VBO;
 	std::string m_name = "";
+	ShaderSrc m_vertex_sh = {};
+	ShaderSrc m_fragment_sh = {};
 	std::map<std::string, Uniform> m_uniforms;
 	std::map<std::string, bool> m_states{
 		{"DEPTH_TEST",   true},
