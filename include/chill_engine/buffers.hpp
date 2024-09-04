@@ -17,7 +17,7 @@ constexpr int ATTRIB_COLOR_LOCATION = 3;
 namespace chill_engine { 
 namespace fs = std::filesystem;
 
-fs::path guess_path(std::wstring a_path);
+fs::path guess_path(const std::wstring& a_path);
 
 enum class RenderBufferType {
 	COLOR,
@@ -39,13 +39,18 @@ enum class AttachmentBufferType {
 };
 
 enum class TextureType {
+	// Textures for MaterialMap
 	DIFFUSE,
 	SPECULAR,
 	EMISSION,
 
+	// Textures for AttachmentBuffer
 	COLOR,
 	DEPTH,
 	DEPTH_STENCIL,
+
+	// Skybox
+	CUBEMAP,
 
 	NONE,
 };
@@ -71,6 +76,7 @@ class Texture {
 public:
 	Texture() = default;
 	Texture(std::wstring a_path, TextureType a_type, bool a_flip_image, int texture_unit);
+	Texture(std::vector<std::wstring> a_paths, bool a_flip_images, int texture_unit);
 	Texture(int a_width, int a_height, TextureType a_type);
 	Texture(const Texture& a_texture);
 	Texture(Texture&& a_texture) noexcept;
@@ -86,6 +92,7 @@ public:
 	auto get_id() const -> GLuint;
 	auto get_path() const -> std::wstring;
 	auto get_filename() const -> std::wstring;
+	auto get_filenames() const -> std::vector<std::wstring>;
 	auto get_type() const -> TextureType;
 	auto get_unit_id() const -> int;
 
@@ -95,9 +102,17 @@ private:
 	GLuint m_id = EMPTY_VBO;
 	std::wstring m_path = L"";
 	std::wstring m_filename = L"";
+	std::vector<std::wstring> m_filenames = {};
 	TextureType m_type = TextureType::NONE;
 	int m_unit_id = 0;
 	bool m_flipped = false;
+};
+
+class Cubemap : public Texture {
+public:
+
+private:
+	std::vector<std::wstring> m_filenames = {};
 };
 
 class RenderBuffer {

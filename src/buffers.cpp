@@ -15,14 +15,14 @@
 namespace chill_engine { 
 namespace fs = std::filesystem;
 
-fs::path guess_path(std::wstring a_path) {
+fs::path guess_path(const std::wstring& a_path) {
 	// Guess project directory
 	fs::path guessed_proj_dir = fs::current_path();
 	if (guessed_proj_dir.filename() == "build" || guessed_proj_dir.filename() == "install") {
 		guessed_proj_dir = guessed_proj_dir.parent_path();
 	}
 
-	// Check if path is good
+	// Check if path leads to a non-empty file.
 	fs::path ret_path(a_path);
 	if (!(fs::exists(ret_path) && fs::is_regular_file(ret_path) && !fs::is_empty(ret_path))) {
 		ret_path = guessed_proj_dir / ret_path;
@@ -118,7 +118,7 @@ Texture::Texture(std::wstring a_path, TextureType a_type, bool a_flip_image, int
 	:m_type{ a_type }, m_unit_id{ a_unit_id }, m_flipped{ a_flip_image }
 {
 	if (a_type != TextureType::DIFFUSE && a_type != TextureType::SPECULAR && a_type != TextureType::EMISSION)
-		ERROR("[TEXTURE::LOAD_TEXTURE] Bad texture type", Error_action::throwing);
+		ERROR("[TEXTURE::TEXTURE] Bad texture type", Error_action::throwing);
 
 	fs::path p = guess_path(a_path);
 	if (p == fs::path())
@@ -131,16 +131,13 @@ Texture::Texture(std::wstring a_path, TextureType a_type, bool a_flip_image, int
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id);
 	glBindTexture(GL_TEXTURE_2D, m_id);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // GL_NEAREST variations available
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // GL_NEAREST available
-
 	int nrChannels{ };
 	int width{ };
 	int height{ };
 	stbi_set_flip_vertically_on_load(a_flip_image);
 	unsigned char* data = stbi_load(wstos(m_path).c_str(), &width, &height, &nrChannels, 0);
 
-	unsigned format;
+	unsigned format = GL_NONE;
 	if (nrChannels == 3) {
 		format = GL_RGB;
 
@@ -157,23 +154,101 @@ Texture::Texture(std::wstring a_path, TextureType a_type, bool a_flip_image, int
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
 	else {
-		ERROR(std::format("[TEXTURE::LOAD_TEXTURE] Unsupported texture format {} with {} number of channels.", wstos(m_path), nrChannels), Error_action::throwing);
+		ERROR(std::format("[TEXTURE::TEXTURE] Unsupported texture format {} with {} number of channels.", wstos(m_path), nrChannels), Error_action::throwing);
 	}
 
 	if (data) {
 		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
+		stbi_image_free(data);
 	}
 	else {
-		ERROR(std::format("[TEXTURE::LOAD_TEXTURE] Couldn't load texture data {}", wstos(m_path)), Error_action::throwing);
+		ERROR(std::format("[TEXTURE::TEXTURE] Couldn't load texture data at path {}", wstos(m_path)), Error_action::throwing);
+	} 
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // GL_NEAREST variations available
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // GL_NEAREST available
+	glGenerateMipmap(GL_TEXTURE_2D);
+}
+
+Texture::Texture(std::vector<std::wstring> a_paths, bool a_flip_images, int texture_unit)
+	:m_type{ TextureType::CUBEMAP }, m_flipped{ a_flip_images }, m_unit_id{ texture_unit }
+{
+	// Each cubemap face has to be single texture
+	if (a_paths.size() != 6)
+		ERROR("[TEXTURE::TEXTURE] Wrong amount of textures to create a cubemap.", Error_action::throwing); 
+
+	for (const auto& path : a_paths) {
+		fs::path p = guess_path(path);
+
+		// Couldn't find texture path
+		if (p == fs::path()) {
+			m_path = L"";
+			m_filename = L"";
+			m_filenames.clear();
+			ERROR(std::format("[TEXTURE::TEXTURE] Bad texture path: {}", wstos(path)), Error_action::throwing);
+		}
+
+		if (m_path == L"")
+			m_path = fs::canonical(p.parent_path()).wstring();
+
+		// Put your cubemap textures into same directory.  
+		if (m_path != fs::canonical(p.parent_path()).wstring()) {
+			m_path = L"";
+			m_filename = L"";
+			m_filenames.clear();
+			ERROR("[TEXTURE::TEXTURE] Cubemap textures are not in the same directory. Move them to a single directory in order to create a cubemap.", Error_action::throwing);
+		}
+
+		m_filenames.push_back(p.filename().wstring());
 	}
 
-	stbi_image_free(data);
+	glGenTextures(1, &m_id);
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id);
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	stbi_set_flip_vertically_on_load(a_flip_images);
+	for (size_t i = 0; i < m_filenames.size(); ++i) {
+		int nrChannels{};
+		int width{};
+		int height{};
+		std::string full_path = (fs::path(m_path) / fs::path(m_filenames[i])).string();
+		unsigned char* data = stbi_load(full_path.c_str(), &width, &height, &nrChannels, 0);
+
+		unsigned format = GL_NONE;
+		if (nrChannels == 3) {
+			format = GL_RGB;
+		}
+		else if (nrChannels == 4) {
+			format = GL_RGBA;
+
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
+		else {
+			ERROR(std::format("[TEXTURE::TEXTURE] Unsupported texture format {} with {} number of channels.", full_path, nrChannels), Error_action::throwing);
+		}
+
+		if (data) {
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+			stbi_image_free(data); 
+		}
+		else {
+			ERROR(std::format("[TEXTURE::TEXTURE] Couldn't load texture data at path {}", full_path), Error_action::throwing);
+		}
+	}
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glGenerateMipmap(GL_TEXTURE_CUBE_MAP); 
 }
 
 Texture::Texture(int a_width, int a_height, TextureType a_type) :m_type{ a_type } {
 	if (a_type != TextureType::COLOR && a_type != TextureType::DEPTH && a_type != TextureType::DEPTH_STENCIL)
-		ERROR("[TEXTURE::GEN_FBO_TEXTURE] Bad texture type", Error_action::throwing);
+		ERROR("[TEXTURE::TEXTURE] Bad texture type", Error_action::throwing);
 
 	glGenTextures(1, &m_id);
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id);
@@ -278,6 +353,10 @@ std::wstring Texture::get_path() const {
 
 std::wstring Texture::get_filename() const {
 	return m_filename;
+}
+
+std::vector<std::wstring> Texture::get_filenames() const {
+	return m_filenames;
 }
 
 GLuint Texture::get_id() const {

@@ -32,6 +32,7 @@ public:
 	auto create_model(const std::vector<Mesh>& a_meshes) -> Model;
 
 	auto load_texture(const std::wstring& a_path, TextureType a_type, bool a_flip_image, int a_unit_id) -> Texture;
+	auto load_cubemap(const std::vector<std::wstring>& a_paths, bool a_flip_images, int a_unit_id) -> Texture;
 	auto create_texture(int a_width, int a_height, TextureType a_type) -> Texture;
 
 	auto create_render_buffer(int a_width, int a_height, RenderBufferType a_type) -> RenderBuffer;

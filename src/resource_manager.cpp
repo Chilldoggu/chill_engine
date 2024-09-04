@@ -64,7 +64,10 @@ Texture ResourceManager::load_texture(const std::wstring& a_path, TextureType a_
 	auto it = std::find_if(m_textures_cached.begin(), m_textures_cached.end(),
 		[&filename, a_flip_image](auto& elem) {
 			Texture* cached_texture = elem.second.get();
-			return (cached_texture != nullptr && cached_texture->get_filename() == filename && cached_texture->is_flipped() == a_flip_image);
+
+			return cached_texture != nullptr &&
+				   cached_texture->get_filename() == filename &&
+				   cached_texture->is_flipped() == a_flip_image;
 		});
 
 	// If texture is not cached then cache it.
@@ -85,6 +88,52 @@ Texture ResourceManager::load_texture(const std::wstring& a_path, TextureType a_
 		cached_texture.set_unit_id(a_unit_id);
 
 	return cached_texture;
+}
+
+Texture ResourceManager::load_cubemap(const std::vector<std::wstring>& a_paths, bool a_flip_images, int a_unit_id) {
+	// Check if texture is cached.
+	std::vector<std::wstring> filenames{};
+	for (const auto& path : a_paths) {
+		filenames.push_back(fs::path(path).filename().wstring());
+	}
+
+	auto it = std::find_if(m_textures_cached.begin(), m_textures_cached.end(),
+		[&filenames, a_flip_images](auto& elem) {
+			Texture* cached_texture = elem.second.get();
+
+			if (cached_texture != nullptr) {
+				auto cached_filenames = cached_texture->get_filenames(); 
+				if (cached_filenames.size() != 6)
+					return false;
+
+				// The right sequence of texture paths matters.
+				for (size_t i = 0; i < 6; ++i) {
+					if (filenames[i] != cached_filenames[i])
+						return false;
+				}
+
+				// All checks positive
+				return true;
+			}
+
+			return false;
+		});
+
+	// If texture is not cached then cache it.
+	if (it == m_textures_cached.end()) {
+		Texture new_texture(a_paths, a_flip_images, a_unit_id);
+		m_textures_cached[new_texture.get_id()] = std::make_unique<Texture>(new_texture);
+		return *m_textures_cached[new_texture.get_id()];
+	}
+
+	// Texture is cached. Modify possibly wrong attributes to match user parameters.
+	auto id = (*it).second->get_id();
+	Texture cached_texture = *m_textures_cached[id];
+
+	if (cached_texture.get_unit_id() != a_unit_id)
+		cached_texture.set_unit_id(a_unit_id);
+
+	return cached_texture; 
 }
 
 Texture ResourceManager::create_texture(int a_width, int a_height, TextureType a_type) {

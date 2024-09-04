@@ -1,5 +1,3 @@
-#pragma once
-
 #include <cstdlib> // wsctombs_s
 #include <string>  // wstring
 #include <vector>  // vector

@@ -15,7 +15,7 @@
 namespace chill_engine {
 namespace fs = std::filesystem;
 
-extern fs::path guess_path(std::wstring a_path);
+extern fs::path guess_path(const std::wstring& a_path);
 
 Uniform::Uniform(const std::string& a_name, int a_location, GLuint a_program)
 	:m_name{ a_name }, m_uniform_location{ a_location }, m_shader_program{ a_program }

@@ -25,6 +25,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 	"${SRC}/light.cpp" 
 	"${SRC}/buffers.cpp"
 	"${SRC}/resource_manager.cpp" 
+	"${SRC}/presets.cpp" 
 )
  
 # Create GLAD module

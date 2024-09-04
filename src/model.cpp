@@ -13,7 +13,7 @@
 namespace chill_engine {
 namespace fs = std::filesystem;
 
-extern fs::path guess_path(std::wstring a_path);
+extern fs::path guess_path(const std::wstring& a_path);
 
 Model::Model(const std::wstring& a_path, bool a_flip_UVs) :m_flipped_UVs{ a_flip_UVs } {
 	load_model(a_path, a_flip_UVs);
