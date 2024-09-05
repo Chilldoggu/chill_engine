@@ -24,6 +24,12 @@ enum class ShaderType {
 	NONE,
 };
 
+enum class ShaderState {
+	DEPTH_TEST,
+	STENCIL_TEST,
+	FACE_CULLING,
+};
+
 class Uniform {
 public:
 	Uniform() = default;
@@ -93,16 +99,22 @@ Uniform& Uniform::operator=(const T& val) {
 	return *this;
 }
 
-struct ShaderSrc {
+class ShaderSrc {
+public:
 	ShaderSrc() = default;
 	ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path);
 	ShaderSrc(const ShaderSrc& a_shader_src);
-	ShaderSrc(ShaderSrc&& a_shader_src);
+	ShaderSrc(ShaderSrc&& a_shader_src) noexcept;
 	~ShaderSrc();
 
 	auto operator=(const ShaderSrc& a_shader_src) -> ShaderSrc&;
-	auto operator=(ShaderSrc&& a_shader_src) -> ShaderSrc&;
+	auto operator=(ShaderSrc&& a_shader_src) noexcept -> ShaderSrc&;
 
+	auto get_type() const -> ShaderType;
+	auto get_path() const -> std::wstring;
+	auto get_id() const -> GLuint;
+
+private:
 	ShaderType m_type = ShaderType::NONE;
 	std::wstring m_path = L"";
 	GLuint m_id = EMPTY_VBO;
@@ -110,7 +122,7 @@ struct ShaderSrc {
 
 class ShaderProgram {
 public:
-	ShaderProgram(std::string& a_name, const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader);
+	ShaderProgram(const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader);
 	ShaderProgram(const ShaderProgram& a_shader_program);
 	ShaderProgram(ShaderProgram&& a_shader_program) noexcept;
 	~ShaderProgram();
@@ -119,39 +131,35 @@ public:
 	auto operator=(ShaderProgram&& a_shader_program) noexcept -> ShaderProgram&;
 
 	auto operator[](const std::string& a_uniform_var) -> Uniform&;
-	auto set_name(const std::string& a_name) -> void;
+	void set_state(ShaderState a_state, bool a_option);
 	auto set_uniform(const std::string& a_dirlight_name, const DirLight& a_light) -> void;
 	auto set_uniform(const std::string& a_pointlight_name, const PointLight& a_light) -> void;
 	auto set_uniform(const std::string& a_spotlight_name, const SpotLight& a_light) -> void;
 	auto set_uniform(const std::string& a_material_name, const MaterialMap& a_material) -> void;
-	auto set_face_culling(bool option) -> void;
-	auto set_depth_testing(bool option) -> void;
-	auto set_stencil_testing(bool option) -> void;
 	auto use() -> void;
 
 	auto get_id() const -> GLuint;
-	auto get_name() const -> std::string;
-	auto get_state(std::string a_state) const -> bool;
-	auto get_depth_testing() const -> bool;
-	auto get_stencil_testing() const -> bool;
+	auto get_vert_shader() const -> ShaderSrc;
+	auto get_frag_shader() const -> ShaderSrc;
+	auto is_state(ShaderState a_state) const -> bool;
 
 	auto debug() const -> void;
 
 private:
 	auto push_uniform(const std::string& a_uniform_var) -> void;
-	auto push_uniform_struct(const std::string& uniform_var, const std::initializer_list<std::string>& a_member_names) -> void;
-	template<typename It>
-	auto push_uniform_struct(const std::string& a_uniform_var, const It& a_member_name_first, const It& a_member_name_last) -> void;
+	template<typename T>
+	auto push_uniform_struct(const std::string& uniform_var, std::initializer_list<T> a_member_names) -> void;
+	template<typename Container>
+	auto push_uniform_struct(const std::string& a_uniform_var, const Container& a_mamber_list) -> void;
 
 	GLuint m_id = EMPTY_VBO;
-	std::string m_name = "";
 	ShaderSrc m_vertex_sh = {};
 	ShaderSrc m_fragment_sh = {};
 	std::map<std::string, Uniform> m_uniforms;
-	std::map<std::string, bool> m_states{
-		{"DEPTH_TEST",   true},
-		{"FACE_CULLING", true},
-		{"STENCIL_TEST", false},
+	std::map<ShaderState, bool> m_states{
+		{ShaderState::DEPTH_TEST,   true},
+		{ShaderState::STENCIL_TEST, false},
+		{ShaderState::FACE_CULLING, true},
 	};
 }; 
 }

@@ -30,7 +30,7 @@ fs::path guess_path(const std::wstring& a_path) {
 			return fs::path("");
 	}
 
-	return ret_path;
+	return fs::canonical(ret_path);
 }
 
 BufferObjects::BufferObjects(const BufferObjects& a_obj) {
@@ -124,7 +124,7 @@ Texture::Texture(std::wstring a_path, TextureType a_type, bool a_flip_image, int
 	if (p == fs::path())
 		ERROR(std::format("[TEXTURE::TEXTURE] Bad texture path: {}", wstos(a_path)), Error_action::throwing);
 
-	m_path = fs::canonical(p).wstring();
+	m_path = p.wstring();
 	m_filename = p.filename().wstring();
 
 	glGenTextures(1, &m_id);
@@ -189,10 +189,10 @@ Texture::Texture(std::vector<std::wstring> a_paths, bool a_flip_images, int text
 		}
 
 		if (m_path == L"")
-			m_path = fs::canonical(p.parent_path()).wstring();
+			m_path = p.parent_path().wstring();
 
 		// Put your cubemap textures into same directory.  
-		if (m_path != fs::canonical(p.parent_path()).wstring()) {
+		if (m_path != p.parent_path().wstring()) {
 			m_path = L"";
 			m_filename = L"";
 			m_filenames.clear();

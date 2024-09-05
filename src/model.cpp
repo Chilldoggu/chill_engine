@@ -27,8 +27,8 @@ void Model::load_model(const std::wstring & a_path, bool a_flip_UVs) {
 		ERROR(std::format("[MODEL::MODEL] Bad model path: {}", wstos(a_path)), Error_action::throwing);
 
 	m_flipped_UVs = a_flip_UVs;
-	m_path = fs::canonical(p).wstring();
-	m_dir = fs::canonical(p.parent_path()).wstring();
+	m_path = p.wstring();
+	m_dir = p.parent_path().wstring();
 	m_filename = p.filename().wstring();
 
 	Assimp::Importer importer;
@@ -227,13 +227,13 @@ void Model::rotate(float a_angle, Axis a_axis) {
 
 void Model::draw_outlined(float a_thickness, ShaderProgram& a_object_shader, ShaderProgram& a_outline_shader, const std::string& a_model_uniform_name, const std::string& a_material_map_uniform_name) {
 	// Save shader options
-	bool obj_depth = a_object_shader.get_state("DEPTH_TEST");
-	bool obj_stencil = a_object_shader.get_state("STENCIL_TEST");
-	bool out_depth = a_outline_shader.get_state("DEPTH_TEST");
-	bool out_stencil = a_outline_shader.get_state("STENCIL_TEST");
+	bool obj_depth = a_object_shader.is_state(ShaderState::DEPTH_TEST);
+	bool obj_stencil = a_object_shader.is_state(ShaderState::STENCIL_TEST);
+	bool out_depth = a_outline_shader.is_state(ShaderState::DEPTH_TEST);
+	bool out_stencil = a_outline_shader.is_state(ShaderState::STENCIL_TEST);
 
 	// Render object and write 1's to stencil buffer.
-	a_object_shader.set_stencil_testing(true);
+	a_object_shader.set_state(ShaderState::STENCIL_TEST, true);
 	glStencilMask(0xFF);
 	glStencilFunc(GL_ALWAYS, 1, 0xFF); // Stencil test always passes
 	glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
@@ -245,8 +245,8 @@ void Model::draw_outlined(float a_thickness, ShaderProgram& a_object_shader, Sha
 	// it's fragments stencil values are equal to 0, if yes then they are part
 	// of outline.
 
-	a_outline_shader.set_stencil_testing(true);
-	a_outline_shader.set_depth_testing(false);
+	a_outline_shader.set_state(ShaderState::STENCIL_TEST, true);
+	a_outline_shader.set_state(ShaderState::DEPTH_TEST, false);
 	glStencilMask(0x00);
 	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
 
@@ -264,10 +264,10 @@ void Model::draw_outlined(float a_thickness, ShaderProgram& a_object_shader, Sha
 	glStencilMask(0xFF);
 	glClear(GL_STENCIL_BUFFER_BIT);
 
-	a_object_shader.set_depth_testing(obj_depth);
-	a_object_shader.set_stencil_testing(obj_stencil);
-	a_outline_shader.set_depth_testing(out_depth);
-	a_outline_shader.set_stencil_testing(out_stencil);
+	a_object_shader.set_state(ShaderState::DEPTH_TEST, obj_depth);
+	a_object_shader.set_state(ShaderState::STENCIL_TEST, obj_stencil);
+	a_outline_shader.set_state(ShaderState::DEPTH_TEST, out_depth);
+	a_outline_shader.set_state(ShaderState::STENCIL_TEST, out_stencil);
 }
 
 // Draw with material maps.

@@ -16,17 +16,25 @@ std::wstring ResourceManager::dialog_import_model() {
 	return basic_file_open(L"Import model", filters);
 }
 
-ShaderProgram ResourceManager::new_shader(std::string a_name, const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader) {
+ShaderProgram ResourceManager::new_shader(const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader) {
+	const std::wstring& vert_path = a_vertex_shader.get_path();
+	const std::wstring& frag_path = a_fragment_shader.get_path();
 	// Check if shader is cached.
 	auto it = std::find_if(m_shaders_cached.begin(), m_shaders_cached.end(),
-		[&a_name](auto& elem) {
+		[&vert_path, &frag_path](const auto& elem) {
 			ShaderProgram* cached_shader = elem.second.get();
-			return (cached_shader != nullptr && cached_shader->get_name() == a_name);
+			if (cached_shader != nullptr) {
+				const std::wstring& cached_vert_path = cached_shader->get_vert_shader().get_path();
+				const std::wstring& cached_frag_path = cached_shader->get_frag_shader().get_path();
+				if (cached_vert_path == vert_path && cached_frag_path == frag_path)
+					return true;
+			}
+			return false;
 		});
 
 	// If shader is not cached then cache it.
 	if (it == m_shaders_cached.end()) {
-		ShaderProgram a_shader_program(a_name, a_vertex_shader, a_fragment_shader);
+		ShaderProgram a_shader_program(a_vertex_shader, a_fragment_shader);
 		m_shaders_cached[a_shader_program.get_id()] = std::make_unique<ShaderProgram>(a_shader_program);
 		return *m_shaders_cached[a_shader_program.get_id()];
 	}
@@ -39,7 +47,7 @@ Model ResourceManager::load_model(const std::wstring& a_path, bool a_flip_UVs) {
 	// Check if model is cached.
 	std::wstring filename = fs::path(a_path).filename().wstring();
 	auto it = std::find_if(m_models_cached.begin(), m_models_cached.end(),
-		[&filename, a_flip_UVs](auto& elem) {
+		[&filename, a_flip_UVs](const auto& elem) {
 			Model* cached_model = elem.second.get();
 			return (cached_model != nullptr && elem.first == filename && cached_model->is_flipped() == a_flip_UVs);
 		});
@@ -62,7 +70,7 @@ Texture ResourceManager::load_texture(const std::wstring& a_path, TextureType a_
 	// Check if texture is cached.
 	std::wstring filename = fs::path(a_path).filename().wstring();
 	auto it = std::find_if(m_textures_cached.begin(), m_textures_cached.end(),
-		[&filename, a_flip_image](auto& elem) {
+		[&filename, a_flip_image](const auto& elem) {
 			Texture* cached_texture = elem.second.get();
 
 			return cached_texture != nullptr &&
@@ -98,7 +106,7 @@ Texture ResourceManager::load_cubemap(const std::vector<std::wstring>& a_paths, 
 	}
 
 	auto it = std::find_if(m_textures_cached.begin(), m_textures_cached.end(),
-		[&filenames, a_flip_images](auto& elem) {
+		[&filenames, a_flip_images](const auto& elem) {
 			Texture* cached_texture = elem.second.get();
 
 			if (cached_texture != nullptr) {
@@ -204,7 +212,7 @@ bool ResourceManager::chk_ref_count(ResourceType a_res_type, GLuint a_id) {
 		else if (a_res_type == ResourceType::MESHES) {
 			unsigned mesh_id = a_id;
 			auto it = std::find_if(m_models_cached.begin(), m_models_cached.end(),
-				[mesh_id](auto& elem) {
+				[mesh_id](const auto& elem) {
 					if (elem.second != nullptr) {
 						std::vector<Mesh>& cached_meshes = elem.second.get()->get_meshes();
 						auto it = std::find_if(cached_meshes.begin(), cached_meshes.end(), [mesh_id](const Mesh& a_mesh) {

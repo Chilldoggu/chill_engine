@@ -34,7 +34,7 @@ ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path)
 {
 	fs::path p = guess_path(a_path);
 	if (p == fs::path())
-		ERROR(std::format("[SHADERSRC::SHADERSRC] Bad shader path: {}", wstos(a_path)), Error_action::throwing);
+		ERROR(std::format("[SHADERSRC::SHADERSRC] Bad shader path: {}", p.string()), Error_action::throwing);
 
 	m_path = p.wstring();
 
@@ -90,7 +90,7 @@ ShaderSrc::ShaderSrc(const ShaderSrc& a_shader_src) {
 	m_id = a_shader_src.m_id;
 }
 
-ShaderSrc::ShaderSrc(ShaderSrc&& a_shader_src) {
+ShaderSrc::ShaderSrc(ShaderSrc&& a_shader_src) noexcept {
 	m_type = a_shader_src.m_type;
 	m_path = a_shader_src.m_path;
 	m_id = a_shader_src.m_id;
@@ -110,7 +110,7 @@ ShaderSrc& ShaderSrc::operator=(const ShaderSrc& a_shader_src) {
 	return *this;
 }
 
-ShaderSrc& ShaderSrc::operator=(ShaderSrc&& a_shader_src) {
+ShaderSrc& ShaderSrc::operator=(ShaderSrc&& a_shader_src) noexcept {
 	m_type = a_shader_src.m_type;
 	m_path = a_shader_src.m_path;
 	m_id = a_shader_src.m_id;
@@ -131,12 +131,24 @@ ShaderSrc::~ShaderSrc() {
 	}
 }
 
-ShaderProgram::ShaderProgram(std::string& a_name, const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader) 
-	:m_name{ a_name }, m_vertex_sh{ a_vertex_shader }, m_fragment_sh{ a_fragment_shader } {
+ShaderType ShaderSrc::get_type() const {
+	return m_type;
+}
+
+std::wstring ShaderSrc::get_path() const {
+	return m_path;
+}
+
+GLuint ShaderSrc::get_id() const {
+	return m_id;
+}
+
+ShaderProgram::ShaderProgram(const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader) 
+	:m_vertex_sh{ a_vertex_shader }, m_fragment_sh{ a_fragment_shader } {
 	m_id = glCreateProgram();
 
-	glAttachShader(m_id, a_vertex_shader.m_id);
-	glAttachShader(m_id, a_fragment_shader.m_id);
+	glAttachShader(m_id, a_vertex_shader.get_id());
+	glAttachShader(m_id, a_fragment_shader.get_id());
 
 	glLinkProgram(m_id);
 
@@ -156,7 +168,6 @@ ShaderProgram::ShaderProgram(const ShaderProgram& a_shader_program) {
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::SHADER_PROGRAMS, a_shader_program.m_id);
 
 	m_id = a_shader_program.m_id;
-	m_name = a_shader_program.m_name;
 	m_vertex_sh = a_shader_program.m_vertex_sh;
 	m_fragment_sh = a_shader_program.m_fragment_sh;
 	m_uniforms = a_shader_program.m_uniforms;
@@ -165,14 +176,12 @@ ShaderProgram::ShaderProgram(const ShaderProgram& a_shader_program) {
 
 ShaderProgram::ShaderProgram(ShaderProgram&& a_shader_program) noexcept {
 	m_id = a_shader_program.m_id;
-	m_name = a_shader_program.m_name;
 	m_vertex_sh = a_shader_program.m_vertex_sh;
 	m_fragment_sh = a_shader_program.m_fragment_sh;
 	m_uniforms = a_shader_program.m_uniforms;
 	m_states = a_shader_program.m_states;
 
 	a_shader_program.m_id = EMPTY_VBO;
-	a_shader_program.m_name = "";
 	a_shader_program.m_vertex_sh = ShaderSrc();
 	a_shader_program.m_fragment_sh = ShaderSrc();
 	a_shader_program.m_uniforms.clear();
@@ -183,7 +192,6 @@ ShaderProgram& ShaderProgram::operator=(const ShaderProgram& a_shader_program) {
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::SHADER_PROGRAMS, a_shader_program.m_id);
 
 	m_id = a_shader_program.m_id;
-	m_name = a_shader_program.m_name;
 	m_vertex_sh = a_shader_program.m_vertex_sh;
 	m_fragment_sh = a_shader_program.m_fragment_sh;
 	m_uniforms = a_shader_program.m_uniforms;
@@ -194,14 +202,12 @@ ShaderProgram& ShaderProgram::operator=(const ShaderProgram& a_shader_program) {
 
 ShaderProgram& ShaderProgram::operator=(ShaderProgram&& a_shader_program) noexcept {
 	m_id = a_shader_program.m_id;
-	m_name = a_shader_program.m_name;
 	m_vertex_sh = a_shader_program.m_vertex_sh;
 	m_fragment_sh = a_shader_program.m_fragment_sh;
 	m_uniforms = a_shader_program.m_uniforms;
 	m_states = a_shader_program.m_states;
 
 	a_shader_program.m_id = EMPTY_VBO;
-	a_shader_program.m_name = "";
 	a_shader_program.m_vertex_sh = ShaderSrc();
 	a_shader_program.m_fragment_sh = ShaderSrc();
 	a_shader_program.m_uniforms.clear();
@@ -232,21 +238,21 @@ Uniform& ShaderProgram::operator[](const std::string& uniform_var) {
 void ShaderProgram::use() {
 	glUseProgram(m_id);
 
-	if (m_states.at("FACE_CULLING")) {
+	if (m_states.at(ShaderState::FACE_CULLING)) {
 		glEnable(GL_CULL_FACE);
 	}
 	else {
 		glDisable(GL_CULL_FACE);
 	}
 
-	if (m_states.at("DEPTH_TEST")) {
+	if (m_states.at(ShaderState::DEPTH_TEST)) {
 		glEnable(GL_DEPTH_TEST);
 	}
 	else {
 		glDisable(GL_DEPTH_TEST);
 	}
 
-	if (m_states.at("STENCIL_TEST")) {
+	if (m_states.at(ShaderState::STENCIL_TEST)) {
 		glEnable(GL_STENCIL_TEST);
 	}
 	else {
@@ -254,36 +260,21 @@ void ShaderProgram::use() {
 	}
 }
 
-void ShaderProgram::set_name(const std::string& a_name) {
-	m_name = a_name;
+void ShaderProgram::set_state(ShaderState a_state, bool a_option) {
+	m_states.at(a_state) = a_option;
 }
 
-void ShaderProgram::set_face_culling(bool a_option) {
-	m_states.at("FACE_CULLING") = a_option;
-}
-
-void ShaderProgram::set_depth_testing(bool a_option) {
-	m_states.at("DEPTH_TEST") = a_option;
-}
-
-void ShaderProgram::set_stencil_testing(bool a_option) {
-	m_states.at("STENCIL_TEST") = a_option;
-}
-
-void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, const std::initializer_list<std::string>& a_member_names) {
-	for (const auto& member_name : a_member_names) {
+template<typename Container>
+void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, const Container& a_member_list) {
+	for (const auto& member_name : a_member_list) {
 		std::string full_name = a_uniform_var + "." + member_name;
 		m_uniforms[full_name] = Uniform(full_name, glGetUniformLocation(m_id, full_name.c_str()), m_id);
 	}
 }
 
-// TODO: Maybe variadic template?
-template<typename It>
-void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, const It& a_member_name_first, const It& a_member_name_last) {
-	for (auto member_name = a_member_name_first; member_name != a_member_name_last; member_name++) {
-		std::string full_name = a_uniform_var + "." + *member_name;
-		m_uniforms[full_name] = Uniform(full_name, glGetUniformLocation(m_id, full_name.c_str()), m_id);
-	}
+template<typename T>
+void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, std::initializer_list<T> a_member_list) {
+	push_uniform_struct(a_uniform_var, std::vector( a_member_list ));
 }
 
 void ShaderProgram::push_uniform(const std::string& uniform_var) {
@@ -366,7 +357,7 @@ void ShaderProgram::set_uniform(const std::string& a_material_name, const Materi
 			maps.push_back(std::format("emission_maps[{}]", i));
 		maps.push_back("shininess");
 
-		push_uniform_struct(a_material_name, maps.begin(), maps.end());
+		push_uniform_struct(a_material_name, maps);
 
 		for (size_t i = 0; i < diffuse_maps.size(); i++)
 			m_uniforms.at(std::format("{}.diffuse_maps[{}]", a_material_name, i)) = diffuse_maps[i].get_unit_id();
@@ -378,7 +369,7 @@ void ShaderProgram::set_uniform(const std::string& a_material_name, const Materi
 	}
 }
 
-bool ShaderProgram::get_state(std::string a_state) const {
+bool ShaderProgram::is_state(ShaderState a_state) const {
 	return m_states.at(a_state);
 }
 
@@ -386,8 +377,12 @@ GLuint ShaderProgram::get_id() const {
 	return m_id;
 }
 
-std::string ShaderProgram::get_name() const {
-	return m_name;
+ShaderSrc ShaderProgram::get_vert_shader() const {
+	return m_vertex_sh;
+}
+
+ShaderSrc ShaderProgram::get_frag_shader() const {
+	return m_fragment_sh; 
 }
 
 void ShaderProgram::debug() const {

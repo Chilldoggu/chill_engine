@@ -108,13 +108,6 @@ private:
 	bool m_flipped = false;
 };
 
-class Cubemap : public Texture {
-public:
-
-private:
-	std::vector<std::wstring> m_filenames = {};
-};
-
 class RenderBuffer {
 public:
 	RenderBuffer() = default;
