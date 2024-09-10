@@ -27,7 +27,8 @@ enum class RenderBufferType {
 };
 
 enum class AttachmentType {
-	COLOR,
+	COLOR_2D,
+	COLOR_3D,
 	DEPTH,
 	DEPTH_STENCIL,
 	NONE,
@@ -45,11 +46,11 @@ enum class TextureType {
 	EMISSION,
 
 	// Textures for AttachmentBuffer
-	COLOR,
+	COLOR_2D,
+	COLOR_3D,
 	DEPTH,
 	DEPTH_STENCIL,
 
-	// Skybox
 	CUBEMAP,
 
 	NONE,
@@ -143,6 +144,7 @@ private:
 
 class Framebuffer {
 public:
+	Framebuffer() = default;
 	Framebuffer(int a_width, int a_height);
 	Framebuffer(const Framebuffer& a_frame_buf);
 	Framebuffer(Framebuffer&& a_frame_buf) noexcept;
@@ -152,11 +154,12 @@ public:
 	auto operator=(Framebuffer&& a_frame_buf) noexcept -> Framebuffer&;
 
 	auto attach(AttachmentType a_attach_type, AttachmentBufferType a_buf_type) -> void;
+	auto attach_cubemap_face(GLenum a_cubemap_face) -> void;
 	auto get_attachment_buffer(AttachmentType a_type) const -> AttachmentBuffer;
 	auto activate_color() const -> void;
 	auto get_id() const -> GLuint;
-	auto bind() -> void;
-	auto unbind() -> void;
+	auto bind() const -> void;
+	auto unbind() const -> void;
 	auto check_status() -> bool;
 	auto set_width(int a_width) -> void;
 	auto set_height(int a_height) -> void;
@@ -167,6 +170,8 @@ private:
 	GLuint m_fbo = EMPTY_VBO;
 	int m_width = 0;
 	int m_height = 0;
-	std::vector<AttachmentBuffer> m_attachments;
-}; 
+	AttachmentBuffer m_color_attachment{};
+	AttachmentBuffer m_depth_attachment{};
+	AttachmentBuffer m_depth_stencil_attachment{};
+};
 }

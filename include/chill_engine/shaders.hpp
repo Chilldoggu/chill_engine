@@ -122,6 +122,7 @@ private:
 
 class ShaderProgram {
 public:
+	ShaderProgram() = default;
 	ShaderProgram(const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader);
 	ShaderProgram(const ShaderProgram& a_shader_program);
 	ShaderProgram(ShaderProgram&& a_shader_program) noexcept;
@@ -157,9 +158,9 @@ private:
 	ShaderSrc m_fragment_sh = {};
 	std::map<std::string, Uniform> m_uniforms;
 	std::map<ShaderState, bool> m_states{
-		{ShaderState::DEPTH_TEST,   true},
-		{ShaderState::STENCIL_TEST, false},
-		{ShaderState::FACE_CULLING, true},
+		{ ShaderState::DEPTH_TEST,   true },
+		{ ShaderState::STENCIL_TEST, false },
+		{ ShaderState::FACE_CULLING, true },
 	};
 }; 
 }

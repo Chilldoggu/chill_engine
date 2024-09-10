@@ -95,8 +95,6 @@ ShaderSrc::ShaderSrc(ShaderSrc&& a_shader_src) noexcept {
 	m_path = a_shader_src.m_path;
 	m_id = a_shader_src.m_id;
 
-	m_type = ShaderType::NONE;
-	m_path = L"";
 	m_id = EMPTY_VBO;
 }
 
@@ -115,8 +113,6 @@ ShaderSrc& ShaderSrc::operator=(ShaderSrc&& a_shader_src) noexcept {
 	m_path = a_shader_src.m_path;
 	m_id = a_shader_src.m_id;
 
-	m_type = ShaderType::NONE;
-	m_path = L"";
 	m_id = EMPTY_VBO;
 
 	return *this;
@@ -178,14 +174,10 @@ ShaderProgram::ShaderProgram(ShaderProgram&& a_shader_program) noexcept {
 	m_id = a_shader_program.m_id;
 	m_vertex_sh = a_shader_program.m_vertex_sh;
 	m_fragment_sh = a_shader_program.m_fragment_sh;
-	m_uniforms = a_shader_program.m_uniforms;
-	m_states = a_shader_program.m_states;
+	m_uniforms = std::move(a_shader_program.m_uniforms);
+	m_states = std::move(a_shader_program.m_states);
 
 	a_shader_program.m_id = EMPTY_VBO;
-	a_shader_program.m_vertex_sh = ShaderSrc();
-	a_shader_program.m_fragment_sh = ShaderSrc();
-	a_shader_program.m_uniforms.clear();
-	a_shader_program.m_states.clear();
 }
 
 ShaderProgram& ShaderProgram::operator=(const ShaderProgram& a_shader_program) {
@@ -204,14 +196,10 @@ ShaderProgram& ShaderProgram::operator=(ShaderProgram&& a_shader_program) noexce
 	m_id = a_shader_program.m_id;
 	m_vertex_sh = a_shader_program.m_vertex_sh;
 	m_fragment_sh = a_shader_program.m_fragment_sh;
-	m_uniforms = a_shader_program.m_uniforms;
-	m_states = a_shader_program.m_states;
+	m_uniforms = std::move(a_shader_program.m_uniforms);
+	m_states = std::move(a_shader_program.m_states);
 
 	a_shader_program.m_id = EMPTY_VBO;
-	a_shader_program.m_vertex_sh = ShaderSrc();
-	a_shader_program.m_fragment_sh = ShaderSrc();
-	a_shader_program.m_uniforms.clear();
-	a_shader_program.m_states.clear();
 
 	return *this;
 }
@@ -278,7 +266,8 @@ void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, std::i
 }
 
 void ShaderProgram::push_uniform(const std::string& uniform_var) {
-	m_uniforms[uniform_var] = Uniform(uniform_var, glGetUniformLocation(m_id, uniform_var.c_str()), m_id);
+	auto loc = glGetUniformLocation(m_id, uniform_var.c_str());
+	m_uniforms[uniform_var] = Uniform(uniform_var, loc, m_id);
 }
 
 // WARNING: Exception abuse

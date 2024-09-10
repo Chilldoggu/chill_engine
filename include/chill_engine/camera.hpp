@@ -19,7 +19,10 @@ public:
 	Camera(GLFWwindow* a_window, const glm::vec3& position = glm::vec3(0.0f, 0.0f, 0.0f));
 
 	auto set_fov(float a_fov) -> void;
+	auto set_up(const glm::vec3& a_up) -> void;
+	auto set_right(const glm::vec3& a_right) -> void;
 	auto set_target(const glm::vec3& a_target) -> void;
+	auto set_world_up(const glm::vec3& a_world_up) -> void;
 	auto set_position(const glm::vec3& a_position) -> void;
 	auto set_far_plane(float a_far) -> void;
 	auto set_near_plane(float a_near) -> void;
@@ -29,9 +32,12 @@ public:
 	auto process_mouse_scroll(float y_offset) -> void;
 
 	auto get_fov() const -> float;
+	auto get_up() const -> glm::vec3;
+	auto get_right() const -> glm::vec3;
 	auto get_target() const -> glm::vec3;
 	auto get_look_at() const -> glm::mat4;
 	auto get_position() const -> glm::vec3;
+	auto get_world_up() const -> glm::vec3;
 	auto get_far_plane() const -> float;
 	auto get_near_plane() const -> float;
 	auto get_movement_speed() const -> float;

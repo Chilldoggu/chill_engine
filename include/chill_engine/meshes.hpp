@@ -17,7 +17,7 @@ constexpr int g_emission_unit_id = 2 * g_max_sampler_siz;
 
 class MaterialMap {
 public:
-	MaterialMap(const std::initializer_list<std::tuple<std::wstring, TextureType, bool>>& a_texture_maps = {}, float a_shininess = 32.f);
+	MaterialMap(const std::initializer_list<std::tuple<std::wstring, TextureType, bool>>& a_texture_maps = {});
 
 	auto set_textures(const std::vector<Texture>& a_textures) -> void;
 	auto set_diffuse_maps(const std::vector<std::tuple<std::wstring,bool>>& a_diffuse_maps_names) -> void;

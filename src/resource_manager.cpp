@@ -45,21 +45,21 @@ ShaderProgram ResourceManager::new_shader(const ShaderSrc& a_vertex_shader, cons
 
 Model ResourceManager::load_model(const std::wstring& a_path, bool a_flip_UVs) {
 	// Check if model is cached.
-	std::wstring filename = fs::path(a_path).filename().wstring();
+	std::wstring path = guess_path(a_path).wstring();
 	auto it = std::find_if(m_models_cached.begin(), m_models_cached.end(),
-		[&filename, a_flip_UVs](const auto& elem) {
+		[&path, a_flip_UVs](const auto& elem) {
 			Model* cached_model = elem.second.get();
-			return (cached_model != nullptr && elem.first == filename && cached_model->is_flipped() == a_flip_UVs);
+			return (cached_model != nullptr && elem.first == path && cached_model->is_flipped() == a_flip_UVs);
 		});
 
 	// If model is not cached then cache it.
 	if (it == m_models_cached.end()) {
 		Model new_model(a_path, a_flip_UVs);
-		m_models_cached[filename] = std::make_unique<Model>(new_model);
-		return *m_models_cached[filename];
+		m_models_cached[path] = std::make_unique<Model>(new_model);
+		return *m_models_cached[path];
 	}
 
-	return *m_models_cached[filename];
+	return *m_models_cached[path];
 }
 
 Model ResourceManager::create_model(const std::vector<Mesh>& a_meshes) {
@@ -104,12 +104,13 @@ Texture ResourceManager::load_cubemap(const std::vector<std::wstring>& a_paths, 
 	for (const auto& path : a_paths) {
 		filenames.push_back(fs::path(path).filename().wstring());
 	}
+	std::wstring dir = guess_path(a_paths[0]).parent_path().wstring();
 
 	auto it = std::find_if(m_textures_cached.begin(), m_textures_cached.end(),
-		[&filenames, a_flip_images](const auto& elem) {
+		[&filenames, &a_flip_images, &dir](const auto& elem) {
 			Texture* cached_texture = elem.second.get();
 
-			if (cached_texture != nullptr) {
+			if (cached_texture != nullptr && cached_texture->get_path() != dir && a_flip_images != cached_texture->is_flipped()) {
 				auto cached_filenames = cached_texture->get_filenames(); 
 				if (cached_filenames.size() != 6)
 					return false;

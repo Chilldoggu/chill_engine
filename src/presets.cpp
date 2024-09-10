@@ -6,6 +6,10 @@
 namespace chill_engine {
 	namespace presets {
 		const BufferData g_plane_data{
+			.normals = {
+				glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 0.0f, -1.0f),
+				glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 0.0f, -1.0f)
+			},
 			.positions = {
 				glm::vec3(-1.0f,  1.0f, 0.0f), glm::vec3(-1.0f, -1.0f,  0.0f), glm::vec3(1.0f, -1.0f,  0.0f),
 				glm::vec3(-1.0f,  1.0f,  0.0f), glm::vec3(1.0f, -1.0f,  0.0f), glm::vec3(1.0f,  1.0f,  0.0f),
@@ -13,7 +17,7 @@ namespace chill_engine {
 			.UVs = {
 				glm::vec2(0.0f,  1.0f), glm::vec2(0.0f,  0.0f), glm::vec2(1.0f,  0.0f),
 				glm::vec2(0.0f,  1.0f), glm::vec2(1.0f,  0.0f), glm::vec2(1.0f,  1.0f),
-			}
+			} 
 		};
 
 		const BufferData g_skybox_data{

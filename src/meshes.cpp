@@ -16,9 +16,7 @@
 #include "chill_engine/application.hpp"
 
 namespace chill_engine { 
-MaterialMap::MaterialMap(const std::initializer_list<std::tuple<std::wstring,TextureType,bool>>& a_texture_maps, float a_shininess)
-	:m_shininess{ a_shininess }
-{
+MaterialMap::MaterialMap(const std::initializer_list<std::tuple<std::wstring,TextureType,bool>>& a_texture_maps) {
 	ResourceManager& rman = Application::get_instance().get_rmanager();
 
 	for (const auto& a_texture_map : a_texture_maps) {
@@ -43,7 +41,7 @@ MaterialMap::MaterialMap(const std::initializer_list<std::tuple<std::wstring,Tex
 	check_unit_id_limits();
 }
 
-void MaterialMap::set_textures(const std::vector<Texture>& a_textures) {
+void MaterialMap::set_textures(const std::vector<Texture>& a_textures) { 
 	m_diffuse_maps.clear();
 	m_specular_maps.clear();
 	m_emission_maps.clear();

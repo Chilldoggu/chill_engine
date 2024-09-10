@@ -67,6 +67,7 @@ public:
 	auto get_mouse_x() const -> float;
 	auto get_mouse_y() const -> float;
 	auto get_cursor_mode() const -> CursorMode;
+	auto get_aspect_ratio() const -> float;
 
 	auto get_camera() const -> Camera&;
 	auto get_input_handle() const -> InputHandler&;

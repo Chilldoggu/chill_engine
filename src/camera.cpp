@@ -28,12 +28,24 @@ glm::vec3 Camera::get_position() const {
 	return m_position;
 }
 
+glm::vec3 Camera::get_world_up() const {
+	return m_world_up;
+}
+
 float Camera::get_far_plane() const {
 	return m_far_plane;
 }
 
 float Camera::get_near_plane() const {
 	return m_near_plane;
+}
+
+glm::vec3 Camera::get_up() const {
+	return m_up;
+}
+
+glm::vec3 Camera::get_right() const {
+	return m_right;
 }
 
 glm::vec3 Camera::get_target() const {
@@ -55,6 +67,18 @@ void Camera::set_fov(float a_fov) {
 
 void Camera::set_target(const glm::vec3& a_target) {
 	m_front = a_target;
+}
+
+void Camera::set_right(const glm::vec3& a_right) {
+	m_right = a_right;
+}
+
+void Camera::set_up(const glm::vec3& a_up) {
+	m_up = a_up;
+}
+
+void Camera::set_world_up(const glm::vec3& a_world_up) {
+	m_world_up = a_world_up;
 }
 
 void Camera::set_position(const glm::vec3& a_position) {

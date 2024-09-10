@@ -189,6 +189,10 @@ CursorMode Window::get_cursor_mode() const {
 	return m_cur_mode;
 }
 
+float Window::get_aspect_ratio() const {
+	return float(m_height) / m_width;
+}
+
 float Window::get_delta() const {
 	return m_delta_time;
 }

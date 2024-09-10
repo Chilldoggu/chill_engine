@@ -29,7 +29,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 )
  
 # Create GLAD module
-add_library(glad STATIC ./src/glad.c) 
+add_library(glad STATIC "./src/glad.c")
 target_include_directories(glad PUBLIC "include")
 
 # Create ImGui module
