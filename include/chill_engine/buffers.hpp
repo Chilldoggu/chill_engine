@@ -1,20 +1,19 @@
 #pragma once
 
-#include <glad/glad.h>
+
+#include "glad/glad.h"
+#include "glm/glm.hpp" // template definitions
+#include "glm/gtc/type_ptr.hpp"  // template definitions
+
 #include <variant>
 #include <vector>
-#include <memory>
 #include <filesystem>
+#include <map>
 
-#include "chill_engine/assert.hpp"
-
-constexpr int EMPTY_VBO = 0;
-constexpr int ATTRIB_POS_LOCATION = 0;
-constexpr int ATTRIB_TEX_LOCATION = 1;
-constexpr int ATTRIB_NORMAL_LOCATION = 2;
-constexpr int ATTRIB_COLOR_LOCATION = 3;
+#include "chill_engine/assert.hpp" // template definitions
 
 namespace chill_engine { 
+constexpr int EMPTY_VBO = 0;
 namespace fs = std::filesystem;
 
 fs::path guess_path(const std::wstring& a_path);
@@ -174,4 +173,59 @@ private:
 	AttachmentBuffer m_depth_attachment{};
 	AttachmentBuffer m_depth_stencil_attachment{};
 };
+
+struct UniformBufferElement {
+	int m_size{};
+	int m_base_alignment{};
+	int m_offset_alignment{};
+	GLuint m_UBO_id{ EMPTY_VBO };
+
+	template<typename T>
+	auto operator=(const T& a_value) -> UniformBufferElement&;
+};
+
+// Implementation supports std140 memory layout. All uniform types from
+// uniform block should be set in order from top to bottom (<float, glm::vec3, int[10]> and so on).
+template<typename U, typename... T>
+class UniformBuffer {
+private:
+	struct EmptyType {};
+
+public:
+	UniformBuffer() = default;
+	UniformBuffer(const std::vector<std::string>& a_uniform_names); 
+	UniformBuffer(const UniformBuffer& a_uni_buf); 
+	UniformBuffer(UniformBuffer&& a_uni_buf) noexcept; 
+	~UniformBuffer();
+
+	UniformBuffer& operator=(const UniformBuffer& a_uni_buf);
+	UniformBuffer& operator=(UniformBuffer&& a_uni_buf) noexcept; 
+	UniformBufferElement& operator[](const std::string& a_uniform_name);
+
+	template<typename T>
+	auto push_element(const std::string& a_uniform_name) -> void;
+	template<typename U = EmptyType, typename... T>
+	void push_elements(const std::vector<std::string>& a_uniform_names);
+	auto check_status() const -> bool; 
+	auto create_buffer() -> void; 
+	auto set_binding_point(int a_binding_point) -> void;
+	auto clear() -> void;
+
+	auto get_elements() const; 
+
+private: 
+	template<typename T>
+	auto get_size_and_base_alignment();
+
+	using NameUniMap =
+		std::map<std::string, UniformBufferElement>;
+
+	int m_size{}; // bytes
+	int m_binding_point{-1};
+	GLuint m_id{ EMPTY_VBO };
+	NameUniMap m_elements{};
+}; 
+
+// Template definitions
+#include "buffers_templates.cpp"
 }

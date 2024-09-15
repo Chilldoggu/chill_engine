@@ -1,14 +1,9 @@
 #pragma once
 
-#include <glm/glm.hpp>
-#include "glm/fwd.hpp"
-
-#include <map>
 #include <memory>
 #include <string>
 
 #include "chill_engine/window.hpp"
-#include "chill_engine/shaders.hpp"
 #include "chill_engine/resource_manager.hpp"
 
 namespace chill_engine {

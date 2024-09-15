@@ -1,12 +1,10 @@
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#include <format>
+
 #include "chill_engine/window.hpp"
 #include "chill_engine/assert.hpp"
-#include "chill_engine/application.hpp"
 
 namespace chill_engine {
 static void glfw_error_callback(int error, const char* description) {
@@ -54,8 +52,8 @@ Window::Window(int a_width, int a_height, const std::string& a_title, CursorMode
 	if (!glfwInit())
 		ERROR("[WINDOW::WINDOW] Couldn't initialise glfw.", Error_action::throwing);
 
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	m_window = glfwCreateWindow(m_width, m_height, m_title.c_str(), nullptr, nullptr);
 	if (m_window == nullptr) {
@@ -88,12 +86,6 @@ Window::~Window() {
 }
 
 void Window::mouse_callback(double x_pos, double y_pos) {
-	// if () {
-	// 	set_mouse_x(x_pos);
-	// 	set_mouse_y(y_pos);
-	// 	m_mouse_focus = true;
-	// }
-
 	float x_offset = x_pos - get_mouse_x();
 	float y_offset = get_mouse_y() - y_pos;
 

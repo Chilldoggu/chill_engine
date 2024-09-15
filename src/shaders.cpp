@@ -1,14 +1,9 @@
-#include <initializer_list>
-#include <ios>
 #include <format>
 #include <fstream>
 #include <iostream>
-#include <algorithm>
-#include <stdexcept>
 
 #include "chill_engine/shaders.hpp"
 #include "chill_engine/assert.hpp"
-#include "chill_engine/meshes.hpp"
 #include "chill_engine/file_manager.hpp" // wstos
 #include "chill_engine/application.hpp"
 
@@ -45,9 +40,7 @@ ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path)
 		ERROR("[SHADERSRC::SHADERSRC] Shader type not compatible.", Error_action::throwing);
 	}
 
-	// =========
-	// LOAD CODE
-	// =========
+	// Load code
 	using std::ios;
 	std::ifstream shader_file{ m_path, ios::in | ios::binary };
 
@@ -62,16 +55,12 @@ ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path)
 	shader_file.read(code, len);
 	code[len - 1] = '\0';
 
-	// ============
-	// COMPILE CODE
-	// ============
+	// Compile code
 	glShaderSource(m_id, 1, &code, nullptr);
 	glCompileShader(m_id);
 	delete[] code;
 
-	// =================
-	// CHECK COMPILATION
-	// =================
+	// Check compilation
 	int success;
 	glGetShaderiv(m_id, GL_COMPILE_STATUS, &success);
 
@@ -148,9 +137,7 @@ ShaderProgram::ShaderProgram(const ShaderSrc& a_vertex_shader, const ShaderSrc& 
 
 	glLinkProgram(m_id);
 
-	// =============
-	// CHECK LINKING
-	// =============
+	// Check linking
 	int success;
 	glGetProgramiv(m_id, GL_LINK_STATUS, &success);
 	if (!success) {
@@ -222,7 +209,6 @@ Uniform& ShaderProgram::operator[](const std::string& uniform_var) {
 		return m_uniforms[uniform_var];
 	}
 }
-
 void ShaderProgram::use() {
 	glUseProgram(m_id);
 
@@ -246,6 +232,18 @@ void ShaderProgram::use() {
 	else {
 		glDisable(GL_STENCIL_TEST);
 	}
+
+	if (m_states.at(ShaderState::POINT_SIZE)) {
+		glEnable(GL_POINT_SIZE);
+	}
+	else {
+		glDisable(GL_POINT_SIZE); 
+	}
+}
+
+void ShaderProgram::set_binding_point(const std::string& a_uniform_block_name, int a_binding_point) {
+	auto block_index = glGetUniformBlockIndex(m_id, a_uniform_block_name.data());
+	glUniformBlockBinding(m_id, block_index, a_binding_point);
 }
 
 void ShaderProgram::set_state(ShaderState a_state, bool a_option) {
@@ -378,5 +376,5 @@ void ShaderProgram::debug() const {
 	for (const auto& [key, val] : m_uniforms) {
 		std::cout << std::format("key: {}\n", key);
 	}
-} 
+}
 }

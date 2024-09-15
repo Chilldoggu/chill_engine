@@ -7,7 +7,7 @@
 #include <string>
 #include <memory>
 
-#include "camera.hpp"
+#include "chill_engine/camera.hpp"
 
 namespace chill_engine {
 void ToggleButton(const char* str_id, bool* v);

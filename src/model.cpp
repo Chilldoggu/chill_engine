@@ -1,12 +1,10 @@
+#include <assimp/Importer.hpp>
 #include <assimp/material.h>
 #include <assimp/postprocess.h>
 
 #include <format>
-#include <memory>
-#include <algorithm>
 
 #include "chill_engine/model.hpp"
-#include "chill_engine/meshes.hpp"
 #include "chill_engine/file_manager.hpp"
 #include "chill_engine/application.hpp"
 

@@ -1,10 +1,3 @@
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
-
-#include <format>
-#include <iostream>
-#include <imgui.h>
-
 #include "chill_engine/application.hpp"
 
 namespace chill_engine {

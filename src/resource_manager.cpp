@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <iostream>
 
 #include "chill_engine/resource_manager.hpp"
 #include "chill_engine/file_manager.hpp"
@@ -154,7 +155,7 @@ RenderBuffer ResourceManager::create_render_buffer(int a_width, int a_height, Re
 }
 
 void ResourceManager::inc_ref_count(ResourceType a_res_type, GLuint a_id) {
-	std::map<unsigned, int>& res_ref_counter = m_ref_counter[a_res_type];
+	auto& res_ref_counter = m_ref_counter[a_res_type];
 
 	auto it = res_ref_counter.find(a_id);
 	if (it == res_ref_counter.end())
@@ -163,7 +164,7 @@ void ResourceManager::inc_ref_count(ResourceType a_res_type, GLuint a_id) {
 }
 
 void ResourceManager::dec_ref_count(ResourceType a_res_type, GLuint a_id) {
-	std::map<unsigned, int>& res_ref_counter = m_ref_counter[a_res_type];
+	auto& res_ref_counter = m_ref_counter[a_res_type];
 
 	auto it = res_ref_counter.find(a_id);
 	if (it == res_ref_counter.end())
@@ -174,7 +175,7 @@ void ResourceManager::dec_ref_count(ResourceType a_res_type, GLuint a_id) {
 // 'True' - there are references to this texture elsewhere.
 // 'False' - there are no references to this texture.
 bool ResourceManager::chk_ref_count(ResourceType a_res_type, GLuint a_id) {
-	std::map<unsigned, int>& res_ref_counter = m_ref_counter[a_res_type];
+	auto& res_ref_counter = m_ref_counter[a_res_type];
 
 	auto it = res_ref_counter.find(a_id);
 	if (it == res_ref_counter.end())
@@ -234,24 +235,8 @@ bool ResourceManager::chk_ref_count(ResourceType a_res_type, GLuint a_id) {
 }
 
 void ResourceManager::debug() {
-	//for (auto& x : m_ref_counter[ResourceType::TEXTURES]) {
-	//	std::wstring ret_ws{ L"" };
-	//	unsigned ret_id{x.first};
-	//	int ret_cnt{x.second};
-	//	for (auto& y : m_textures_cached) {
-	//		if (y.second != nullptr && y.second->get_id() == ret_id) {
-	//			ret_ws = y.second->get_filename();
-	//			break;
-	//		}
-	//	}
-	//	std::cout << std::format("[COUNT:{}, \tID:{}, \tFILE: {}]", ret_cnt, ret_id, wstos(ret_ws)) << '\n';
-	//}
-	//std::cout << '\n';
-
-	for (auto& x : m_ref_counter[ResourceType::MESHES]) {
-		unsigned ret_id{ x.first };
-		int ret_cnt{ x.second };
-		std::cout << std::format("[COUNT:{}, \tID:{}]", ret_cnt, ret_id) << '\n';
+	for (auto& [id, cnt] : m_ref_counter[ResourceType::MESHES]) {
+		std::cout << std::format("[COUNT:{}, \tID:{}]", id, cnt) << '\n';
 	}
 	std::cout << '\n';
 } 

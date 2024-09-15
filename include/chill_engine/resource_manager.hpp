@@ -1,8 +1,6 @@
 #pragma once
 
-#include <glad/glad.h>
 #include <map>
-#include <string>
 
 #include "chill_engine/model.hpp"
 #include "chill_engine/buffers.hpp"
@@ -15,6 +13,7 @@ enum class ResourceType {
 	SHADER_PROGRAMS,
 	RENDER_BUFFERS,
 	FRAME_BUFFERS,
+	UNIFORM_BUFFERS,
 	MESHES,
 };
 

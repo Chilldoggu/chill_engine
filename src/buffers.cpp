@@ -1,14 +1,9 @@
-#define STB_IMAGE_IMPLEMENTATION
-
+#define STB_IMAGE_IMPLEMENTATION 
 #include <stb_image/stb_image.h>
 
-#include <memory>
-#include <vector>
-#include <variant>
-#include <filesystem>
+#include <iostream>
 
 #include "chill_engine/buffers.hpp"
-#include "chill_engine/assert.hpp"
 #include "chill_engine/file_manager.hpp"
 #include "chill_engine/application.hpp"
 
@@ -658,26 +653,6 @@ bool Framebuffer::check_status() {
 	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 
 	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER); 
-	// switch (status) {
-	// case GL_FRAMEBUFFER_UNDEFINED:
-	// 	break;
-	// case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-	// 	break;
-	// case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-	// 	break;
-	// case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-	// 	break;
-	// case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
-	// 	break;
-	// case GL_FRAMEBUFFER_UNSUPPORTED:
-	// 	break;
-	// case GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE:
-	// 	break;
-	// case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-	// 	break;
-	// case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
-	// 	break;
-	// } 
 	if (status != GL_FRAMEBUFFER_COMPLETE) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		return false;
@@ -701,5 +676,5 @@ int Framebuffer::get_width() const {
 
 int Framebuffer::get_height() const {
 	return m_height;
-} 
+}
 }

@@ -1,4 +1,4 @@
-#include <cstdlib> // wsctombs_s
+#include <cstdlib> // wcstombs_s
 #include <string>  // wstring
 #include <vector>  // vector
 #include <utility> // pair

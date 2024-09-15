@@ -1,7 +1,6 @@
 #pragma once
 
 #include <glm/glm.hpp>
-#include "glm/fwd.hpp"
 
 namespace chill_engine {
 enum class LightType {

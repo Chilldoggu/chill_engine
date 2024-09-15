@@ -1,11 +1,8 @@
 #pragma once
 
-#include <assimp/Importer.hpp>
 #include <assimp/scene.h>
-#include <assimp/postprocess.h>
 
 #include <vector>
-#include <filesystem>
 
 #include "chill_engine/meshes.hpp"
 #include "chill_engine/shaders.hpp"

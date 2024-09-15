@@ -1,15 +1,17 @@
 #pragma once
 #include "glm/glm.hpp"
 
-#include <memory>
 #include <vector>
-#include <string>
-#include <filesystem>
 #include <tuple>
 
 #include "chill_engine/buffers.hpp"
 
 namespace chill_engine {
+constexpr int g_attrib_pos_location = 0;
+constexpr int g_attrib_tex_location = 1;
+constexpr int g_attrib_normal_location = 2;
+constexpr int g_attrib_color_location = 3;
+
 constexpr int g_max_sampler_siz  = 16;
 constexpr int g_diffuse_unit_id  = 0 * g_max_sampler_siz;
 constexpr int g_specular_unit_id = 1 * g_max_sampler_siz;

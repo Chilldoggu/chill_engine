@@ -1,16 +1,4 @@
-#include <algorithm>
-#include <memory>
-#include <string>
-#include <utility>
-
-#include <filesystem>
-#include <format>
-#include <tuple>
-
 #include "chill_engine/meshes.hpp"
-#include "chill_engine/assert.hpp"
-#include "chill_engine/shaders.hpp"
-#include "chill_engine/buffers.hpp"
 #include "chill_engine/assert.hpp"
 #include "chill_engine/file_manager.hpp"
 #include "chill_engine/application.hpp"
@@ -172,8 +160,8 @@ void Mesh::set_positions(const std::vector<glm::vec3>& a_positions) {
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBOs.VBO_pos);
 	glBufferData(GL_ARRAY_BUFFER, m_verticies_sum * sizeof(a_positions[0]), a_positions.data(), GL_STATIC_DRAW);
 
-	glVertexAttribPointer(ATTRIB_POS_LOCATION, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(ATTRIB_POS_LOCATION);
+	glVertexAttribPointer(g_attrib_pos_location, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(g_attrib_pos_location);
 }
 
 void Mesh::set_UVs(const std::vector<glm::vec2>& a_UVs) {
@@ -185,8 +173,8 @@ void Mesh::set_UVs(const std::vector<glm::vec2>& a_UVs) {
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBOs.VBO_UVs);
 	glBufferData(GL_ARRAY_BUFFER, a_UVs.size() * sizeof(a_UVs[0]), a_UVs.data(), GL_STATIC_DRAW);
 
-	glVertexAttribPointer(ATTRIB_TEX_LOCATION, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(ATTRIB_TEX_LOCATION);
+	glVertexAttribPointer(g_attrib_tex_location, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(g_attrib_tex_location);
 }
 
 void Mesh::set_normals(const std::vector<glm::vec3>& a_normals) {
@@ -198,8 +186,8 @@ void Mesh::set_normals(const std::vector<glm::vec3>& a_normals) {
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBOs.VBO_normals);
 	glBufferData(GL_ARRAY_BUFFER, a_normals.size() * sizeof(a_normals[0]), a_normals.data(), GL_STATIC_DRAW);
 
-	glVertexAttribPointer(ATTRIB_NORMAL_LOCATION, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(ATTRIB_NORMAL_LOCATION);
+	glVertexAttribPointer(g_attrib_normal_location, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(g_attrib_normal_location);
 }
 
 void Mesh::set_indicies(const std::vector<unsigned int>& a_indicies) {

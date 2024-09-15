@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <iostream>
 #include <stdexcept>
 
 #define ERROR(MESSAGE, ACTION) my_error_handler(__FILE__, __LINE__, MESSAGE, ACTION);

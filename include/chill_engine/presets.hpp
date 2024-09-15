@@ -1,7 +1,5 @@
 #pragma once
 
-#include <glm/glm.hpp>
-
 #include "chill_engine/meshes.hpp"
 
 namespace chill_engine {

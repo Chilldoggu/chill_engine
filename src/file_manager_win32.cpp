@@ -1,9 +1,7 @@
 #include <windows.h>      // For common windows data types and function headers
 #include <shobjidl.h>     // IFileDialog, IShellItem
 
-#include <string>    // wstring
-#include <vector>	 // vector
-#include <cstdlib> // wsctombs_s
+#include <cstdlib>   // wsctombs_s
 
 #include "chill_engine/file_manager.hpp"
 #include "chill_engine/assert.hpp" // GenericException
