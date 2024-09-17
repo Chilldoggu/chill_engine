@@ -80,12 +80,12 @@ public:
 	auto set_indicies(const std::vector<unsigned int>& a_elem_indicies) -> void;
 	auto set_material_map(const MaterialMap& a_material_map) -> void;
 
-	auto set_draw_type(BufferDrawType a_option) -> void;
+	auto set_draw_mode(BufferDrawType a_option) -> void;
 	auto set_wireframe(bool a_option) -> void;
 	auto set_visibility(bool a_option) -> void;
 
 	auto get_VAO() const -> GLuint;
-	auto get_draw_type() const -> BufferDrawType;
+	auto get_draw_mode() const -> BufferDrawType;
 	auto get_wireframe() const -> bool;
 	auto get_visibility() const -> bool;
 	auto get_material_map() -> MaterialMap&;
@@ -98,6 +98,6 @@ private:
 	MaterialMap m_material_map{};
 	BufferObjects m_VBOs{};
 	BufferDataType m_type = BufferDataType::NONE;
-	BufferDrawType m_draw_type = BufferDrawType::TRIANGLES;
+	BufferDrawType m_draw_mode = BufferDrawType::TRIANGLES;
 }; 
 }

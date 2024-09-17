@@ -25,7 +25,7 @@ public:
 	auto dec_ref_count(ResourceType a_res_type, GLuint a_id) -> void;
 	auto chk_ref_count(ResourceType a_res_type, GLuint a_id) -> bool;
 
-	auto new_shader(const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader) -> ShaderProgram;
+	auto new_shader(const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader, const ShaderSrc& a_geometry_shader = ShaderSrc{}) -> ShaderProgram;
 
 	auto load_model(const std::wstring& a_dir, bool a_flip_UVs = false) -> Model;
 	auto create_model(const std::vector<Mesh>& a_meshes) -> Model;

@@ -17,17 +17,19 @@ std::wstring ResourceManager::dialog_import_model() {
 	return basic_file_open(L"Import model", filters);
 }
 
-ShaderProgram ResourceManager::new_shader(const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader) {
+ShaderProgram ResourceManager::new_shader(const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader, const ShaderSrc& a_geometry_shader) {
 	const std::wstring& vert_path = a_vertex_shader.get_path();
 	const std::wstring& frag_path = a_fragment_shader.get_path();
+	const std::wstring& geom_path = a_geometry_shader.get_path();
 	// Check if shader is cached.
-	auto it = std::find_if(m_shaders_cached.begin(), m_shaders_cached.end(),
-		[&vert_path, &frag_path](const auto& elem) {
+	auto it = std::find_if(m_shaders_cached.cbegin(), m_shaders_cached.cend(),
+		[&vert_path, &frag_path, &geom_path](const auto& elem) {
 			ShaderProgram* cached_shader = elem.second.get();
 			if (cached_shader != nullptr) {
 				const std::wstring& cached_vert_path = cached_shader->get_vert_shader().get_path();
 				const std::wstring& cached_frag_path = cached_shader->get_frag_shader().get_path();
-				if (cached_vert_path == vert_path && cached_frag_path == frag_path)
+				const std::wstring& cached_geom_path = cached_shader->get_geom_shader().get_path();
+				if (cached_vert_path == vert_path && cached_frag_path == frag_path && cached_geom_path == geom_path)
 					return true;
 			}
 			return false;
@@ -35,7 +37,7 @@ ShaderProgram ResourceManager::new_shader(const ShaderSrc& a_vertex_shader, cons
 
 	// If shader is not cached then cache it.
 	if (it == m_shaders_cached.end()) {
-		ShaderProgram a_shader_program(a_vertex_shader, a_fragment_shader);
+		ShaderProgram a_shader_program(a_vertex_shader, a_fragment_shader, a_geometry_shader);
 		m_shaders_cached[a_shader_program.get_id()] = std::make_unique<ShaderProgram>(a_shader_program);
 		return *m_shaders_cached[a_shader_program.get_id()];
 	}

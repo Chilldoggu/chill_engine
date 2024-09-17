@@ -208,6 +208,10 @@ void Mesh::set_indicies(const std::vector<unsigned int>& a_indicies) {
 void Mesh::set_material_map(const MaterialMap& a_material_map) {
 	m_material_map = a_material_map;
 }
+ 
+void Mesh::set_draw_mode(BufferDrawType a_option) {
+	m_draw_mode = a_option;
+}
 
 void Mesh::set_wireframe(bool a_option) {
 	m_wireframe = a_option;
@@ -225,8 +229,8 @@ void Mesh::draw() {
 		else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 		switch (m_type) {
-		case BufferDataType::VERTEX:  glDrawArrays(GL_TRIANGLES, 0, m_verticies_sum); break;
-		case BufferDataType::ELEMENT: glDrawElements(GL_TRIANGLES, m_indicies_sum, GL_UNSIGNED_INT, 0); break;
+		case BufferDataType::VERTEX:  glDrawArrays(GL_POINTS + to_enum_elem_type(m_draw_mode), 0, m_verticies_sum); break;
+		case BufferDataType::ELEMENT: glDrawElements(GL_POINTS + to_enum_elem_type(m_draw_mode), m_indicies_sum, GL_UNSIGNED_INT, 0); break;
 		default:
 			ERROR("[MESH::DRAW] Unhandled draw type for buffer object type.", Error_action::throwing);
 		}
@@ -241,6 +245,10 @@ GLuint Mesh::get_VAO() const {
 
 MaterialMap& Mesh::get_material_map() {
 	return m_material_map;
+}
+
+BufferDrawType Mesh::get_draw_mode() const {
+	return m_draw_mode;
 }
 
 bool Mesh::get_wireframe() const {

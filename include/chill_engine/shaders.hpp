@@ -9,13 +9,14 @@
 
 #include "chill_engine/light.hpp"
 #include "chill_engine/meshes.hpp"
+ 
+namespace chill_engine { 
+constexpr int g_info_log_siz = 1024;
 
-#define INFO_LOG_SIZ 1024
-
-namespace chill_engine {
 enum class ShaderType {
 	VERTEX,
 	FRAGMENT,
+	GEOMETRY,
 	NONE,
 };
 
@@ -66,7 +67,7 @@ private:
 class ShaderProgram {
 public:
 	ShaderProgram() = default;
-	ShaderProgram(const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader);
+	ShaderProgram(const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader, const ShaderSrc& a_geometry_shader = ShaderSrc{});
 	ShaderProgram(const ShaderProgram& a_shader_program);
 	ShaderProgram(ShaderProgram&& a_shader_program) noexcept;
 	~ShaderProgram();
@@ -86,6 +87,7 @@ public:
 	auto get_id() const -> GLuint;
 	auto get_vert_shader() const -> ShaderSrc;
 	auto get_frag_shader() const -> ShaderSrc;
+	auto get_geom_shader() const -> ShaderSrc;
 	auto is_state(ShaderState a_state) const -> bool;
 
 	auto debug() const -> void;
@@ -98,8 +100,9 @@ private:
 	auto push_uniform_struct(const std::string& a_uniform_var, const Container& a_mamber_list) -> void;
 
 	GLuint m_id = EMPTY_VBO;
-	ShaderSrc m_vertex_sh = {};
-	ShaderSrc m_fragment_sh = {};
+	ShaderSrc m_vertex_sh = ShaderSrc{};
+	ShaderSrc m_fragment_sh = ShaderSrc{};
+	ShaderSrc m_geometry_sh = ShaderSrc{};
 	std::map<std::string, Uniform> m_uniforms;
 	std::map<ShaderState, bool> m_states{
 		{ ShaderState::DEPTH_TEST,   true },

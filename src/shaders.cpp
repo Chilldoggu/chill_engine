@@ -36,6 +36,7 @@ ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path)
 	switch (m_type) {
 	case ShaderType::VERTEX:   m_id = glCreateShader(GL_VERTEX_SHADER); break;
 	case ShaderType::FRAGMENT: m_id = glCreateShader(GL_FRAGMENT_SHADER); break;
+	case ShaderType::GEOMETRY: m_id = glCreateShader(GL_GEOMETRY_SHADER); break;
 	default:
 		ERROR("[SHADERSRC::SHADERSRC] Shader type not compatible.", Error_action::throwing);
 	}
@@ -65,8 +66,8 @@ ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path)
 	glGetShaderiv(m_id, GL_COMPILE_STATUS, &success);
 
 	if (!success) {
-		char infoLog[INFO_LOG_SIZ] = {};
-		glGetShaderInfoLog(m_id, 1024, nullptr, infoLog);
+		char infoLog[g_info_log_siz] = {};
+		glGetShaderInfoLog(m_id, g_info_log_siz, nullptr, infoLog);
 		ERROR(std::format("[SHADERSRC::SHADERSRC] shader {} can't compile. GLSL error message:\n{}", wstos(m_path), infoLog), Error_action::throwing);
 	}
 }
@@ -128,12 +129,15 @@ GLuint ShaderSrc::get_id() const {
 	return m_id;
 }
 
-ShaderProgram::ShaderProgram(const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader) 
-	:m_vertex_sh{ a_vertex_shader }, m_fragment_sh{ a_fragment_shader } {
+ShaderProgram::ShaderProgram(const ShaderSrc& a_vertex_shader, const ShaderSrc& a_fragment_shader, const ShaderSrc& a_geometry_shader) 
+	:m_vertex_sh{ a_vertex_shader }, m_fragment_sh{ a_fragment_shader }, m_geometry_sh{ a_geometry_shader } {
 	m_id = glCreateProgram();
 
 	glAttachShader(m_id, a_vertex_shader.get_id());
 	glAttachShader(m_id, a_fragment_shader.get_id());
+	if (GLuint geo_sh_id = a_geometry_shader.get_id(); geo_sh_id != EMPTY_VBO) {
+		glAttachShader(m_id, geo_sh_id); 
+	}
 
 	glLinkProgram(m_id);
 
@@ -141,8 +145,8 @@ ShaderProgram::ShaderProgram(const ShaderSrc& a_vertex_shader, const ShaderSrc& 
 	int success;
 	glGetProgramiv(m_id, GL_LINK_STATUS, &success);
 	if (!success) {
-		char infoLog[INFO_LOG_SIZ] = {};
-		glGetProgramInfoLog(m_id, 1024, nullptr, infoLog);
+		char infoLog[g_info_log_siz] = {};
+		glGetProgramInfoLog(m_id, g_info_log_siz, nullptr, infoLog);
 		ERROR(std::format("[SHADERPROGRAM::CHECK_LINKING] Shader linking error. GLSL error message:\n{}", infoLog), Error_action::throwing);
 	}
 }
@@ -192,7 +196,7 @@ ShaderProgram& ShaderProgram::operator=(ShaderProgram&& a_shader_program) noexce
 }
 
 ShaderProgram::~ShaderProgram() {
-	if (this->get_id() != EMPTY_VBO) {
+	if (m_id != EMPTY_VBO) {
 		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::SHADER_PROGRAMS, m_id);
 		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::SHADER_PROGRAMS, m_id)) {
 			glDeleteProgram(m_id);
@@ -234,10 +238,10 @@ void ShaderProgram::use() {
 	}
 
 	if (m_states.at(ShaderState::POINT_SIZE)) {
-		glEnable(GL_POINT_SIZE);
+		glEnable(GL_PROGRAM_POINT_SIZE);
 	}
 	else {
-		glDisable(GL_POINT_SIZE); 
+		glDisable(GL_PROGRAM_POINT_SIZE); 
 	}
 }
 
@@ -370,6 +374,10 @@ ShaderSrc ShaderProgram::get_vert_shader() const {
 
 ShaderSrc ShaderProgram::get_frag_shader() const {
 	return m_fragment_sh; 
+}
+
+ShaderSrc ShaderProgram::get_geom_shader() const {
+	return m_geometry_sh; 
 }
 
 void ShaderProgram::debug() const {
