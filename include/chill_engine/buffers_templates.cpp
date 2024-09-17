@@ -1,7 +1,13 @@
 #include "buffers.hpp"
+#include <type_traits>
 
 class Application;
 enum class ResourceType;
+
+template<typename T>
+constexpr decltype(auto) to_enum_elem_type(T enumerator) noexcept {
+	return static_cast<std::underlying_type_t<T>>(enumerator);
+}
 
 template<typename T>
 UniformBufferElement& UniformBufferElement::operator=(const T& a_value) {

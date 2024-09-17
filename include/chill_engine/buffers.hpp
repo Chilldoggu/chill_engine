@@ -18,6 +18,9 @@ namespace fs = std::filesystem;
 
 fs::path guess_path(const std::wstring& a_path);
 
+template<typename T>
+constexpr decltype(auto) to_enum_elem_type(T enumerator) noexcept;
+
 enum class RenderBufferType {
 	COLOR,
 	DEPTH,

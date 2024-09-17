@@ -50,6 +50,16 @@ enum class BufferDataType {
 	NONE
 };
 
+enum class BufferDrawType {
+	POINTS,
+	LINES,
+	LINE_STRIP,
+	LINE_LOOP,
+	TRIANGLES,
+	TRIANGLE_STRIP,
+	TRIANGLE_FAN,
+};
+
 struct BufferData {
 	std::vector<glm::vec3> normals = {};
 	std::vector<glm::vec3> positions = {};
@@ -70,10 +80,12 @@ public:
 	auto set_indicies(const std::vector<unsigned int>& a_elem_indicies) -> void;
 	auto set_material_map(const MaterialMap& a_material_map) -> void;
 
+	auto set_draw_type(BufferDrawType a_option) -> void;
 	auto set_wireframe(bool a_option) -> void;
 	auto set_visibility(bool a_option) -> void;
 
 	auto get_VAO() const -> GLuint;
+	auto get_draw_type() const -> BufferDrawType;
 	auto get_wireframe() const -> bool;
 	auto get_visibility() const -> bool;
 	auto get_material_map() -> MaterialMap&;
@@ -81,10 +93,11 @@ public:
 private:
 	bool m_wireframe = false;
 	bool m_visibility = true;
-	int m_verticies_sum = 0;
-	int m_indicies_sum = 0;
-	MaterialMap m_material_map;
-	BufferObjects m_VBOs;
+	int m_verticies_sum{};
+	int m_indicies_sum{};
+	MaterialMap m_material_map{};
+	BufferObjects m_VBOs{};
 	BufferDataType m_type = BufferDataType::NONE;
+	BufferDrawType m_draw_type = BufferDrawType::TRIANGLES;
 }; 
 }
