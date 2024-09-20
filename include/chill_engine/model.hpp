@@ -41,6 +41,7 @@ public:
 	auto get_meshes() -> std::vector<Mesh>&;
 	auto get_model_mat() const -> glm::mat4;
 	auto get_normal_mat() const -> glm::mat3;
+	auto get_normal_view_mat(const glm::mat4& a_view_mat) const -> glm::mat3;
 	auto is_flipped() const -> bool;
 
 private:

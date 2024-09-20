@@ -677,4 +677,97 @@ int Framebuffer::get_width() const {
 int Framebuffer::get_height() const {
 	return m_height;
 }
+
+UniformBuffer::UniformBuffer(const UniformBuffer& a_uni_buf) {
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::UNIFORM_BUFFERS, a_uni_buf.m_id);
+
+	m_id = a_uni_buf.m_id;
+	m_size = a_uni_buf.m_size;
+	m_elements = a_uni_buf.m_elements;
+	m_binding_point = a_uni_buf.m_binding_point; 
+}
+
+UniformBuffer::UniformBuffer(UniformBuffer&& a_uni_buf) noexcept {
+	m_id = a_uni_buf.m_id;
+	m_size = a_uni_buf.m_size;
+	m_elements = std::move(a_uni_buf.m_elements);
+	m_binding_point = a_uni_buf.m_binding_point;
+
+	a_uni_buf.m_id = EMPTY_VBO; 
+}
+
+UniformBuffer::~UniformBuffer() {
+	if (m_id != EMPTY_VBO) {
+		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::UNIFORM_BUFFERS, m_id);
+		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::UNIFORM_BUFFERS, m_id)) {
+			glDeleteFramebuffers(1, &m_id);
+		}
+	}
+}
+
+UniformBuffer& UniformBuffer::operator=(const UniformBuffer& a_uni_buf) {
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::UNIFORM_BUFFERS, a_uni_buf.m_id);
+
+	m_id = a_uni_buf.m_id;
+	m_size = a_uni_buf.m_size;
+	m_elements = a_uni_buf.m_elements;
+	m_binding_point = a_uni_buf.m_binding_point;
+
+	return *this; 
+}
+
+UniformBuffer& UniformBuffer::operator=(UniformBuffer&& a_uni_buf) noexcept {
+	m_id = a_uni_buf.m_id;
+	m_size = a_uni_buf.m_size;
+	m_elements = std::move(a_uni_buf.m_elements);
+	m_binding_point = a_uni_buf.m_binding_point;
+
+	a_uni_buf.m_id = EMPTY_VBO;
+
+	return *this; 
+}
+
+UniformBufferElement& UniformBuffer::operator[](const std::string& a_uniform_name) {
+	auto it = m_elements.find(a_uniform_name);
+	if (it == m_elements.end())
+		ERROR(std::format("[UNIFORMBUFFER::OPERATOR[]] Uniform name \"{}\" is not present in this uniform buffer object.", a_uniform_name), Error_action::throwing);
+	return (*it).second; 
+}
+
+bool UniformBuffer::check_status() const {
+	if (m_id == EMPTY_VBO || m_binding_point == -1)
+		return false;
+	return true; 
+}
+
+void UniformBuffer::create_buffer() {
+	if (m_id == EMPTY_VBO) {
+		glGenBuffers(1, &m_id);
+		Application::get_instance().get_rmanager().inc_ref_count(ResourceType::UNIFORM_BUFFERS, m_id);
+	}
+
+	glBindBuffer(GL_UNIFORM_BUFFER, m_id);
+	glBufferData(GL_UNIFORM_BUFFER, m_size, NULL, GL_STATIC_DRAW);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0); 
+}
+
+void UniformBuffer::set_binding_point(int a_binding_point) {
+	m_binding_point = a_binding_point;
+	glBindBufferBase(GL_UNIFORM_BUFFER, a_binding_point, m_id); 
+}
+
+void UniformBuffer::clear() {
+	m_elements.clear();
+	if (m_id != EMPTY_VBO) {
+		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::UNIFORM_BUFFERS, m_id);
+		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::UNIFORM_BUFFERS, m_id)) {
+			glDeleteFramebuffers(1, &m_id);
+		}
+		m_id = EMPTY_VBO;
+	} 
+}
+
+UniformBuffer::NameUniMap UniformBuffer::get_elements() const {
+	return m_elements; 
+} 
 }

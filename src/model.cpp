@@ -321,6 +321,10 @@ glm::mat3 Model::get_normal_mat() const {
 	return glm::transpose(glm::inverse(glm::mat3(get_model_mat())));
 }
 
+glm::mat3 Model::get_normal_view_mat(const glm::mat4& a_view_mat) const {
+	return glm::mat3(glm::transpose(glm::inverse(get_model_mat() * a_view_mat)));
+}
+
 bool Model::is_flipped() const {
 	return m_flipped_UVs;
 } 

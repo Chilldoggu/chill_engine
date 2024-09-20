@@ -189,14 +189,15 @@ struct UniformBufferElement {
 
 // Implementation supports std140 memory layout. All uniform types from
 // uniform block should be set in order from top to bottom (<float, glm::vec3, int[10]> and so on).
-template<typename U, typename... T>
 class UniformBuffer {
 private:
 	struct EmptyType {};
 
-public:
+public: 
+	using NameUniMap =
+		std::map<std::string, UniformBufferElement>;
+
 	UniformBuffer() = default;
-	UniformBuffer(const std::vector<std::string>& a_uniform_names); 
 	UniformBuffer(const UniformBuffer& a_uni_buf); 
 	UniformBuffer(UniformBuffer&& a_uni_buf) noexcept; 
 	~UniformBuffer();
@@ -214,14 +215,11 @@ public:
 	auto set_binding_point(int a_binding_point) -> void;
 	auto clear() -> void;
 
-	auto get_elements() const; 
+	NameUniMap get_elements() const; 
 
 private: 
 	template<typename T>
 	auto get_size_and_base_alignment();
-
-	using NameUniMap =
-		std::map<std::string, UniformBufferElement>;
 
 	int m_size{}; // bytes
 	int m_binding_point{-1};
