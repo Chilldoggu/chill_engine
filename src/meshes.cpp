@@ -221,7 +221,7 @@ void Mesh::set_visibility(bool a_option) {
 	m_visibility = a_option;
 }
 
-void Mesh::draw() {
+void Mesh::draw() const {
 	if (m_visibility) {
 		glBindVertexArray(m_VBOs.VAO);
 
@@ -233,6 +233,24 @@ void Mesh::draw() {
 		case BufferDataType::ELEMENT: glDrawElements(GL_POINTS + to_enum_elem_type(m_draw_mode), m_indicies_sum, GL_UNSIGNED_INT, 0); break;
 		default:
 			ERROR("[MESH::DRAW] Unhandled draw type for buffer object type.", Error_action::throwing);
+		}
+
+		glBindVertexArray(0);
+	}
+}
+
+void Mesh::draw_instances(int a_instances_siz) const {
+	if (m_visibility) {
+		glBindVertexArray(m_VBOs.VAO);
+
+		if (m_wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+		switch (m_type) {
+		case BufferDataType::VERTEX:  glDrawArraysInstanced(GL_POINTS + to_enum_elem_type(m_draw_mode), 0, m_verticies_sum, a_instances_siz); break;
+		case BufferDataType::ELEMENT: glDrawElementsInstanced(GL_POINTS + to_enum_elem_type(m_draw_mode), m_indicies_sum, GL_UNSIGNED_INT, 0, a_instances_siz); break;
+		default:
+			ERROR("[MESH::DRAW_INSTANCES] Unhandled draw type for buffer object type.", Error_action::throwing);
 		}
 
 		glBindVertexArray(0);

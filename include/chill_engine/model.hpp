@@ -7,7 +7,10 @@
 #include "chill_engine/meshes.hpp"
 #include "chill_engine/shaders.hpp"
 
-namespace chill_engine {
+namespace chill_engine { 
+constexpr int g_attrib_model_mat_arr_location = 4;
+constexpr int g_attrib_normal_mat_arr_location = 8;
+
 enum class Axis {
 	X, Y, Z
 };
@@ -18,7 +21,7 @@ public:
 	Model(const std::wstring& a_path, bool a_flip_UVs = false);
 	Model(const std::vector<Mesh>& a_meshes);
 
-	void load_model(const std::wstring& a_path, bool a_flip_UVs);
+	auto load_model(const std::wstring& a_path, bool a_flip_UVs) -> void;
 	auto set_pos(const glm::vec3& a_pos) -> void;
 	auto set_size(float a_size) -> void;
 	auto set_size(const glm::vec3& a_size) -> void;
@@ -61,4 +64,67 @@ private:
 	std::wstring m_dir = L"";
 	std::wstring m_filename = L"";
 }; 
+
+enum class ModelInstancedVecs {
+	POSITIONS,
+	ROTATIONS,
+	SIZES,
+};
+
+class ModelInstanced {
+public:
+	using InstVecsMap = std::map<ModelInstancedVecs, std::vector<glm::vec3>>;
+
+	ModelInstanced() = default;
+	ModelInstanced(const Model& a_model);
+	ModelInstanced(const ModelInstanced& a_obj);
+	ModelInstanced(ModelInstanced&& a_obj) noexcept;
+	~ModelInstanced();
+	
+	ModelInstanced& operator=(const ModelInstanced& a_obj);
+	ModelInstanced& operator=(ModelInstanced&& a_obj) noexcept;
+
+	auto set_model(const Model& a_model) -> void; 
+	auto push_position(const glm::vec3& a_position) -> void;
+	auto push_rotation(const glm::vec3& a_rotation) -> void;
+	auto push_size(const glm::vec3& a_size) -> void; 
+	auto push_positions(const std::vector<glm::vec3>& a_positions) -> void;
+	auto push_rotations(const std::vector<glm::vec3>& a_rotations) -> void;
+	auto push_sizes(const std::vector<glm::vec3>& a_sizes) -> void; 
+	auto insert_buffer(std::size_t idx) -> bool;
+	auto insert_position(std::size_t idx, const glm::vec3& a_position) -> bool;
+	auto insert_rotation(std::size_t idx, const glm::vec3& a_rotation) -> bool;
+	auto insert_size(std::size_t idx, const glm::vec3& a_size) -> bool; 
+
+	auto populate_model_mat_buffer() -> void;
+	auto populate_normal_mat_buffer() -> void;
+
+	auto draw() -> void;
+	auto draw(ShaderProgram& a_shader, const std::string& a_material_map_uniform_name) -> void;
+
+	auto get_model_base() -> Model&;
+	auto get_positions() -> std::vector<glm::vec3>&;
+	auto get_rotations() -> std::vector<glm::vec3>&;
+	auto get_size() -> std::vector<glm::vec3>&;
+
+private:
+	auto calculate_model_mat(std::size_t idx) -> glm::mat4;
+	auto calculate_normal_mat(std::size_t idx) -> glm::mat3;
+	auto calculate_model_mats() -> void;
+	auto calculate_normal_mats() -> void;
+	auto create_model_instanced_arr(const std::vector<glm::mat4>& a_model_mats) -> void;
+	auto create_normal_instanced_arr(const std::vector<glm::mat3>& a_normal_mats) -> void;
+
+	Model m_model_base{};
+	int m_instances_siz{};
+	GLuint m_model_mat_buf_id = EMPTY_VBO;
+	GLuint m_normal_mat_buf_id = EMPTY_VBO;
+	InstVecsMap m_instanced_vecs{
+		{ ModelInstancedVecs::POSITIONS, std::vector<glm::vec3>{} },
+		{ ModelInstancedVecs::ROTATIONS, std::vector<glm::vec3>{} },
+		{ ModelInstancedVecs::SIZES, std::vector<glm::vec3>{} },
+	}; 
+	std::vector<glm::mat4> m_model_mats{};
+	std::vector<glm::mat3> m_normal_mats{};
+};
 }

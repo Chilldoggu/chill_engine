@@ -327,5 +327,288 @@ glm::mat3 Model::get_normal_view_mat(const glm::mat4& a_view_mat) const {
 
 bool Model::is_flipped() const {
 	return m_flipped_UVs;
+}
+
+ModelInstanced::ModelInstanced(const Model& a_model) 
+	:m_model_base{ a_model } 
+{ }
+
+ModelInstanced::ModelInstanced(const ModelInstanced& a_obj) {
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::INSTANCED_ARRAYS, a_obj.m_model_mat_buf_id);
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::INSTANCED_ARRAYS, a_obj.m_normal_mat_buf_id);
+
+	m_model_base = a_obj.m_model_base;
+	m_instances_siz = a_obj.m_instances_siz;
+	m_model_mat_buf_id = a_obj.m_model_mat_buf_id;
+	m_normal_mat_buf_id = a_obj.m_normal_mat_buf_id;
+	m_instanced_vecs = a_obj.m_instanced_vecs;
+	m_model_mats = a_obj.m_model_mats;
+	m_normal_mats = a_obj.m_normal_mats;
+}
+
+ModelInstanced::ModelInstanced(ModelInstanced&& a_obj) noexcept { 
+	m_model_base = std::move(a_obj.m_model_base);
+	m_instances_siz = a_obj.m_instances_siz;
+	m_model_mat_buf_id = a_obj.m_model_mat_buf_id;
+	m_normal_mat_buf_id = a_obj.m_normal_mat_buf_id;
+	m_instanced_vecs = std::move(a_obj.m_instanced_vecs);
+	m_model_mats = std::move(a_obj.m_model_mats);
+	m_normal_mats = std::move(a_obj.m_normal_mats);
+
+	a_obj.m_model_mat_buf_id = EMPTY_VBO;
+	a_obj.m_normal_mat_buf_id = EMPTY_VBO;
+}
+
+ModelInstanced& ModelInstanced::operator=(const ModelInstanced& a_obj) {
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::INSTANCED_ARRAYS, a_obj.m_model_mat_buf_id);
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::INSTANCED_ARRAYS, a_obj.m_normal_mat_buf_id);
+
+	m_model_base = a_obj.m_model_base;
+	m_instances_siz = a_obj.m_instances_siz;
+	m_model_mat_buf_id = a_obj.m_model_mat_buf_id;
+	m_normal_mat_buf_id = a_obj.m_normal_mat_buf_id;
+	m_instanced_vecs = a_obj.m_instanced_vecs;
+	m_model_mats = a_obj.m_model_mats;
+	m_normal_mats = a_obj.m_normal_mats;
+
+	return *this;
+}
+
+ModelInstanced& ModelInstanced::operator=(ModelInstanced&& a_obj) noexcept {
+	m_model_base = std::move(a_obj.m_model_base);
+	m_instances_siz = a_obj.m_instances_siz;
+	m_model_mat_buf_id = a_obj.m_model_mat_buf_id;
+	m_normal_mat_buf_id = a_obj.m_normal_mat_buf_id;
+	m_instanced_vecs = std::move(a_obj.m_instanced_vecs);
+	m_model_mats = std::move(a_obj.m_model_mats);
+	m_normal_mats = std::move(a_obj.m_normal_mats); 
+
+	a_obj.m_model_mat_buf_id = EMPTY_VBO;
+	a_obj.m_normal_mat_buf_id = EMPTY_VBO;
+	return *this;
+}
+
+ModelInstanced::~ModelInstanced() {
+	if (m_model_mat_buf_id != EMPTY_VBO) {
+		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::INSTANCED_ARRAYS, m_model_mat_buf_id);
+		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::INSTANCED_ARRAYS, m_model_mat_buf_id)) {
+			glDeleteTextures(1, &m_model_mat_buf_id);
+		}
+	}
+
+	if (m_normal_mat_buf_id != EMPTY_VBO) {
+		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::INSTANCED_ARRAYS, m_normal_mat_buf_id);
+		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::INSTANCED_ARRAYS, m_normal_mat_buf_id)) {
+			glDeleteTextures(1, &m_normal_mat_buf_id);
+		}
+	}
+}
+
+void ModelInstanced::set_model(const Model& a_model) {
+	m_model_base = a_model;
+	create_model_instanced_arr(m_model_mats);
+	create_normal_instanced_arr(m_normal_mats);
+}
+
+void ModelInstanced::push_position(const glm::vec3& a_position) {
+	m_instanced_vecs[ModelInstancedVecs::POSITIONS].push_back(a_position);
+}
+
+void ModelInstanced::push_rotation(const glm::vec3& a_rotation) {
+	m_instanced_vecs[ModelInstancedVecs::ROTATIONS].push_back(a_rotation);
 } 
+
+void ModelInstanced::push_size(const glm::vec3& a_size) {
+	m_instanced_vecs[ModelInstancedVecs::SIZES].push_back(a_size);
+}
+
+void ModelInstanced::push_positions(const std::vector<glm::vec3>& a_positions) {
+	m_instanced_vecs[ModelInstancedVecs::POSITIONS] = a_positions;
+}
+
+void ModelInstanced::push_rotations(const std::vector<glm::vec3>& a_rotations) {
+	m_instanced_vecs[ModelInstancedVecs::ROTATIONS] = a_rotations;
+}
+
+void ModelInstanced::push_sizes(const std::vector<glm::vec3>& a_sizes) {
+	m_instanced_vecs[ModelInstancedVecs::SIZES] = a_sizes;
+}
+
+bool ModelInstanced::insert_buffer(std::size_t idx) { 
+	if (idx < m_instances_siz) {
+		auto model_mat = calculate_model_mat(idx);
+		auto normal_mat = calculate_normal_mat(idx);
+		glBindBuffer(GL_ARRAY_BUFFER, m_model_mat_buf_id);
+		glBufferSubData(GL_ARRAY_BUFFER, idx * sizeof(glm::mat4), sizeof(model_mat), glm::value_ptr(model_mat));
+
+		glBindBuffer(GL_ARRAY_BUFFER, m_normal_mat_buf_id);
+		glBufferSubData(GL_ARRAY_BUFFER, idx * sizeof(glm::mat4), sizeof(normal_mat), glm::value_ptr(normal_mat));
+		return true;
+	}
+	return false;
+}
+
+bool ModelInstanced::insert_position(std::size_t idx, const glm::vec3& a_position) {
+	auto& pos_vec = m_instanced_vecs[ModelInstancedVecs::POSITIONS]; 
+	if (idx >= pos_vec.size())
+		return false;
+	pos_vec[idx] = a_position;
+	return insert_buffer(idx);
+}
+
+bool ModelInstanced::insert_rotation(std::size_t idx, const glm::vec3& a_rotation) {
+	auto& rot_vec = m_instanced_vecs[ModelInstancedVecs::ROTATIONS];
+	if (idx >= rot_vec.size())
+		return false;
+
+	rot_vec[idx] = a_rotation; 
+	return insert_buffer(idx);
+}
+
+bool ModelInstanced::insert_size(std::size_t idx, const glm::vec3& a_size) {
+	auto& siz_vec = m_instanced_vecs[ModelInstancedVecs::SIZES];
+	if (idx >= siz_vec.size())
+		return false;
+
+	siz_vec[idx] = a_size; 
+	return insert_buffer(idx);
+}
+
+void ModelInstanced::populate_model_mat_buffer() {
+	calculate_model_mats();
+	create_model_instanced_arr(m_model_mats);
+	m_instances_siz = m_model_mats.size();
+}
+
+void ModelInstanced::populate_normal_mat_buffer() {
+	calculate_normal_mats();
+	create_normal_instanced_arr(m_normal_mats);
+}
+
+void ModelInstanced::draw() {
+	auto& meshes = m_model_base.get_meshes();
+	for (auto& mesh : meshes) {
+		mesh.draw_instances(m_instances_siz);
+	}
+}
+
+void ModelInstanced::draw(ShaderProgram& a_shader, const std::string& a_material_map_uniform_name) {
+	auto& meshes = m_model_base.get_meshes();
+	for (auto& mesh : meshes) {
+		if (a_material_map_uniform_name != "")
+			a_shader.set_uniform(a_material_map_uniform_name, mesh.get_material_map());
+		mesh.draw_instances(m_instances_siz);
+	}
+}
+
+Model& ModelInstanced::get_model_base() {
+	return m_model_base;
+}
+
+std::vector<glm::vec3>& ModelInstanced::get_positions() { 
+	return m_instanced_vecs[ModelInstancedVecs::POSITIONS];
+}
+
+std::vector<glm::vec3>& ModelInstanced::get_rotations() { 
+	return m_instanced_vecs[ModelInstancedVecs::ROTATIONS];
+}
+
+std::vector<glm::vec3>& ModelInstanced::get_size() {
+	return m_instanced_vecs[ModelInstancedVecs::SIZES];
+}
+
+glm::mat4 ModelInstanced::calculate_model_mat(std::size_t idx) {
+	auto& pos_vec = m_instanced_vecs[ModelInstancedVecs::POSITIONS];
+	auto& rot_vec = m_instanced_vecs[ModelInstancedVecs::ROTATIONS];
+	auto& siz_vec = m_instanced_vecs[ModelInstancedVecs::SIZES];
+
+	glm::vec3 pos = (idx < pos_vec.size()) ? pos_vec[idx] : m_model_base.get_pos();
+	glm::vec3 rot = (idx < rot_vec.size()) ? rot_vec[idx] : m_model_base.get_rotation();
+	glm::vec3 siz = (idx < siz_vec.size()) ? siz_vec[idx] : m_model_base.get_size();
+
+	glm::mat4 transform_pos = glm::translate(glm::mat4(1.0f), pos); 
+	glm::mat4 transform_scale = glm::scale(glm::mat4(1.0f), siz); 
+	glm::mat4 transform_rotation(1.0f);
+	transform_rotation = glm::rotate(transform_rotation, glm::radians(rot[0]), glm::vec3(1.0, 0.0, 0.0));
+	transform_rotation = glm::rotate(transform_rotation, glm::radians(rot[1]), glm::vec3(0.0, 1.0, 0.0));
+	transform_rotation = glm::rotate(transform_rotation, glm::radians(rot[2]), glm::vec3(0.0, 0.0, 1.0));
+
+	return transform_pos * transform_rotation * transform_scale;
+}
+
+glm::mat3 ModelInstanced::calculate_normal_mat(std::size_t idx) {
+	return glm::transpose(glm::inverse(glm::mat3(m_model_mats[idx])));
+}
+
+void ModelInstanced::calculate_model_mats() {
+	auto& pos_vec = m_instanced_vecs[ModelInstancedVecs::POSITIONS];
+	auto& rot_vec = m_instanced_vecs[ModelInstancedVecs::ROTATIONS];
+	auto& siz_vec = m_instanced_vecs[ModelInstancedVecs::SIZES];
+
+	std::size_t max_siz = 0;
+	for (const auto& size : { pos_vec.size(), rot_vec.size(), siz_vec.size()}) {
+		max_siz = max_siz < size ? size : max_siz;
+	}
+
+	m_model_mats.clear();
+	m_model_mats.reserve(max_siz); 
+	for (std::size_t i = 0; i < max_siz; ++i) {
+		m_model_mats.push_back(calculate_model_mat(i));
+	}
+	m_instances_siz = m_model_mats.size();
+}
+
+void ModelInstanced::calculate_normal_mats() {
+	m_normal_mats.clear();
+	m_normal_mats.reserve(m_model_mats.size());
+
+	for (std::size_t i = 0; i < m_model_mats.size(); ++i) {
+		m_normal_mats.push_back(calculate_normal_mat(i));
+	}
+}
+
+// Modifies original attribute pointers of original meshes, so if there are
+// other referenced meshes it might break or not, I'm not sure.
+auto ModelInstanced::create_model_instanced_arr(const std::vector<glm::mat4>& a_model_mats) -> void {
+	m_instances_siz = a_model_mats.size();
+	if (m_model_mat_buf_id != EMPTY_VBO)
+		glDeleteBuffers(1, &m_model_mat_buf_id);
+
+	glGenBuffers(1, &m_model_mat_buf_id);
+	glBindBuffer(GL_ARRAY_BUFFER, m_model_mat_buf_id);
+	glBufferData(GL_ARRAY_BUFFER, m_instances_siz * sizeof(glm::mat4), a_model_mats.data(), GL_STATIC_DRAW);
+
+	auto& meshes = m_model_base.get_meshes();
+	for (auto& mesh : meshes) {
+		GLuint VAO = mesh.get_VAO(); 
+		glBindVertexArray(VAO); 
+		for (int i = 0; i < 4; ++i) {
+			glVertexAttribPointer(g_attrib_model_mat_arr_location + i, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (void*)(i * sizeof(glm::vec4)));
+			glEnableVertexAttribArray(g_attrib_model_mat_arr_location + i); 
+			glVertexAttribDivisor(g_attrib_model_mat_arr_location + i, 1);
+		}
+	}
+	glBindVertexArray(0);
+}
+
+auto ModelInstanced::create_normal_instanced_arr(const std::vector<glm::mat3>& a_normal_mats) -> void {
+	if (m_normal_mat_buf_id != EMPTY_VBO)
+		glDeleteBuffers(1, &m_normal_mat_buf_id);
+
+	glGenBuffers(1, &m_normal_mat_buf_id);
+	glBindBuffer(GL_ARRAY_BUFFER, m_normal_mat_buf_id);
+	glBufferData(GL_ARRAY_BUFFER, a_normal_mats.size() * sizeof(glm::mat3), a_normal_mats.data(), GL_STATIC_DRAW);
+
+	auto& meshes = m_model_base.get_meshes();
+	for (auto& mesh : meshes) {
+		GLuint VAO = mesh.get_VAO(); 
+		glBindVertexArray(VAO); 
+		for (int i = 0; i < 3; ++i) {
+			glVertexAttribPointer(g_attrib_normal_mat_arr_location + i, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(glm::vec3), (void*)(i * sizeof(glm::vec3))); 
+			glEnableVertexAttribArray(g_attrib_normal_mat_arr_location + i); 
+			glVertexAttribDivisor(g_attrib_normal_mat_arr_location + i, 1);
+		}
+	}
+	glBindVertexArray(0);
+}
 }

@@ -162,7 +162,7 @@ public:
 	auto get_id() const -> GLuint;
 	auto bind() const -> void;
 	auto unbind() const -> void;
-	auto check_status() -> bool;
+	auto check_status() const -> bool;
 	auto set_width(int a_width) -> void;
 	auto set_height(int a_height) -> void;
 	auto get_width() const -> int;

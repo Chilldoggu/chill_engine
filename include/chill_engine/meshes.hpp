@@ -72,7 +72,8 @@ public:
 	Mesh() = default;
 	Mesh(const BufferData& a_data, const MaterialMap& a_mat, bool a_wireframe = false);
 
-	auto draw() -> void;
+	auto draw() const -> void;
+	auto draw_instances(int a_instances_siz) const -> void;
 
 	auto set_positions(const std::vector<glm::vec3>& a_pos) -> void;
 	auto set_UVs(const std::vector<glm::vec2>& a_UVs) -> void;
@@ -99,5 +100,5 @@ private:
 	BufferObjects m_VBOs{};
 	BufferDataType m_type = BufferDataType::NONE;
 	BufferDrawType m_draw_mode = BufferDrawType::TRIANGLES;
-}; 
+};
 }

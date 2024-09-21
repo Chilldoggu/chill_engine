@@ -649,7 +649,7 @@ void Framebuffer::unbind() const {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-bool Framebuffer::check_status() {
+bool Framebuffer::check_status() const {
 	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 
 	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER); 

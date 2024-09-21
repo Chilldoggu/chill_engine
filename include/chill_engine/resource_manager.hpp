@@ -15,6 +15,7 @@ enum class ResourceType {
 	FRAME_BUFFERS,
 	UNIFORM_BUFFERS,
 	MESHES,
+	INSTANCED_ARRAYS,
 };
 
 class ResourceManager {
