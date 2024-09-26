@@ -13,8 +13,9 @@
 #include "chill_engine/assert.hpp" // template definitions
 
 namespace chill_engine { 
-constexpr int EMPTY_VBO = 0;
 namespace fs = std::filesystem;
+
+inline constexpr int EMPTY_VBO = 0;
 
 fs::path guess_path(const std::wstring& a_path);
 
@@ -39,6 +40,9 @@ enum class AttachmentType {
 enum class AttachmentBufferType {
 	TEXTURE,
 	RENDER_BUFFER,
+	MSAA_TEXTURE,
+	MSAA_RENDER_BUFFER,
+	NONE
 };
 
 enum class TextureType {
@@ -81,6 +85,7 @@ public:
 	Texture(std::wstring a_path, TextureType a_type, bool a_flip_image, int texture_unit);
 	Texture(std::vector<std::wstring> a_paths, bool a_flip_images, int texture_unit);
 	Texture(int a_width, int a_height, TextureType a_type);
+	Texture(int a_width, int a_height, int a_samples, TextureType a_type);
 	Texture(const Texture& a_texture);
 	Texture(Texture&& a_texture) noexcept;
 	~Texture();
@@ -105,9 +110,10 @@ private:
 	GLuint m_id = EMPTY_VBO;
 	std::wstring m_path = L"";
 	std::wstring m_filename = L"";
-	std::vector<std::wstring> m_filenames = {};
+	std::vector<std::wstring> m_filenames{};
 	TextureType m_type = TextureType::NONE;
 	int m_unit_id = 0;
+	int m_samples = 1;
 	bool m_flipped = false;
 };
 
@@ -115,6 +121,7 @@ class RenderBuffer {
 public:
 	RenderBuffer() = default;
 	RenderBuffer(int a_width, int a_height, RenderBufferType a_type);
+	RenderBuffer(int a_width, int a_height, int a_samples, RenderBufferType a_type);
 	RenderBuffer(const RenderBuffer& a_ren_buf);
 	RenderBuffer(RenderBuffer&& a_ren_buf) noexcept;
 	~RenderBuffer();
@@ -128,34 +135,37 @@ public:
 private:
 	GLuint m_rbo = EMPTY_VBO;
 	RenderBufferType m_type = RenderBufferType::NONE;
+	int m_samples = 1;
 };
 
 class AttachmentBuffer {
 public:
 	AttachmentBuffer() = default;
-	AttachmentBuffer(int a_width, int a_height, AttachmentType a_attach_type, AttachmentBufferType a_buf_type);
+	AttachmentBuffer(int a_width, int a_height, AttachmentType a_attach_type, AttachmentBufferType a_buf_type, int a_samples = 1);
 
 	auto activate() const -> void;
 	auto get_type() const -> AttachmentType;
+	auto get_buf_type() const -> AttachmentBufferType;
 	auto get_attachment() const -> std::variant<Texture, RenderBuffer>;
 
 private:
 	std::variant<Texture, RenderBuffer> m_attachment;
 	AttachmentType m_type = AttachmentType::NONE;
+	AttachmentBufferType m_buf_type = AttachmentBufferType::NONE;
 };
 
+// Move-only because set_id()/attach() alters attachments which would not be
+// reflected on copies.
 class Framebuffer {
 public:
 	Framebuffer() = default;
 	Framebuffer(int a_width, int a_height);
-	Framebuffer(const Framebuffer& a_frame_buf);
 	Framebuffer(Framebuffer&& a_frame_buf) noexcept;
 	~Framebuffer();
 
-	auto operator=(const Framebuffer& a_frame_buf) -> Framebuffer&;
 	auto operator=(Framebuffer&& a_frame_buf) noexcept -> Framebuffer&;
 
-	auto attach(AttachmentType a_attach_type, AttachmentBufferType a_buf_type) -> void;
+	auto attach(AttachmentType a_attach_type, AttachmentBufferType a_buf_type, int a_samples = 1) -> void;
 	auto attach_cubemap_face(GLenum a_cubemap_face) -> void;
 	auto get_attachment_buffer(AttachmentType a_type) const -> AttachmentBuffer;
 	auto activate_color() const -> void;
@@ -165,13 +175,16 @@ public:
 	auto check_status() const -> bool;
 	auto set_width(int a_width) -> void;
 	auto set_height(int a_height) -> void;
+	auto set_samples(int a_samples) -> bool;
 	auto get_width() const -> int;
 	auto get_height() const -> int;
+	auto get_samples() const -> int;
 
 private:
-	GLuint m_fbo = EMPTY_VBO;
 	int m_width = 0;
 	int m_height = 0;
+	int m_samples = 1;
+	GLuint m_fbo = EMPTY_VBO;
 	AttachmentBuffer m_color_attachment{};
 	AttachmentBuffer m_depth_attachment{};
 	AttachmentBuffer m_depth_stencil_attachment{};

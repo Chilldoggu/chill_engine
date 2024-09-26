@@ -8,8 +8,8 @@
 #include "chill_engine/shaders.hpp"
 
 namespace chill_engine { 
-constexpr int g_attrib_model_mat_arr_location = 4;
-constexpr int g_attrib_normal_mat_arr_location = 8;
+inline constexpr int g_attrib_model_mat_arr_location = 4;
+inline constexpr int g_attrib_normal_mat_arr_location = 8;
 
 enum class Axis {
 	X, Y, Z

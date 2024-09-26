@@ -11,7 +11,7 @@
 #include "chill_engine/meshes.hpp"
  
 namespace chill_engine { 
-constexpr int g_info_log_siz = 1024;
+inline constexpr int g_info_log_siz = 1024;
 
 enum class ShaderType {
 	VERTEX,

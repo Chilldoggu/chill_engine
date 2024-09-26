@@ -567,8 +567,7 @@ void ModelInstanced::calculate_normal_mats() {
 	}
 }
 
-// Modifies original attribute pointers of original meshes, so if there are
-// other referenced meshes it might break or not, I'm not sure.
+// Modifies attribute pointers of original mesh.
 auto ModelInstanced::create_model_instanced_arr(const std::vector<glm::mat4>& a_model_mats) -> void {
 	m_instances_siz = a_model_mats.size();
 	if (m_model_mat_buf_id != EMPTY_VBO)
