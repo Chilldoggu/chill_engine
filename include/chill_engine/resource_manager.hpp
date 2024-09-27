@@ -37,7 +37,7 @@ public:
 
 	auto create_render_buffer(int a_width, int a_height, RenderBufferType a_type) -> RenderBuffer;
 
-	auto debug() -> void;
+	auto debug(ResourceType a_type) -> void;
 
 private:
 	std::map<GLuint, std::unique_ptr<ShaderProgram>> m_shaders_cached;

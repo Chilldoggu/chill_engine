@@ -53,8 +53,11 @@ BufferObjects::BufferObjects(BufferObjects&& a_obj) noexcept {
 }
 
 BufferObjects& BufferObjects::operator=(BufferObjects& a_obj) {
-	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::MESHES, a_obj.VAO);
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::MESHES, a_obj.VAO); 
 
+	if (a_obj.VAO != VAO) {
+		refcnt_dec();
+	} 
 	VAO = a_obj.VAO;
 	VBO_UVs = a_obj.VBO_UVs;
 	VBO_pos = a_obj.VBO_pos;
@@ -65,6 +68,9 @@ BufferObjects& BufferObjects::operator=(BufferObjects& a_obj) {
 }
 
 BufferObjects& BufferObjects::operator=(BufferObjects&& a_obj) noexcept {
+	if (a_obj.VAO != VAO) {
+		refcnt_dec();
+	} 
 	VAO = a_obj.VAO;
 	EBO = a_obj.EBO;
 	VBO_UVs = a_obj.VBO_UVs;
@@ -81,6 +87,10 @@ BufferObjects& BufferObjects::operator=(BufferObjects&& a_obj) noexcept {
 }
 
 BufferObjects::~BufferObjects() {
+	refcnt_dec();
+}
+
+void BufferObjects::refcnt_dec() { 
 	if (VAO != EMPTY_VBO) {
 		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::MESHES, VAO);
 		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::MESHES, VAO)) {
@@ -249,7 +259,9 @@ Texture::Texture(std::vector<std::wstring> a_paths, bool a_flip_images, int text
 	glGenerateMipmap(GL_TEXTURE_CUBE_MAP); 
 }
 
-Texture::Texture(int a_width, int a_height, TextureType a_type) :m_type{ a_type } {
+Texture::Texture(int a_width, int a_height, TextureType a_type) 
+	:m_type{ a_type } 
+{
 	if (a_type != TextureType::COLOR_2D && a_type != TextureType::COLOR_3D && a_type != TextureType::DEPTH && a_type != TextureType::DEPTH_STENCIL)
 		ERROR("[TEXTURE::TEXTURE] Bad texture type", Error_action::throwing);
 
@@ -287,7 +299,7 @@ Texture::Texture(int a_width, int a_height, TextureType a_type) :m_type{ a_type 
 }
 
 Texture::Texture(int a_width, int a_height, int a_samples, TextureType a_type)
-	:m_samples{ a_samples }
+	:m_samples{ a_samples }, m_type{ a_type }
 {
 	if (a_type != TextureType::COLOR_2D && a_type != TextureType::DEPTH && a_type != TextureType::DEPTH_STENCIL)
 		ERROR("[TEXTURE::TEXTURE] Bad MSAA texture type.", Error_action::throwing);
@@ -329,6 +341,9 @@ Texture::Texture(Texture&& a_texture) noexcept {
 Texture& Texture::operator=(const Texture& a_texture) {
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, a_texture.m_id);
 
+	if (m_id != a_texture.m_id) {
+		refcnt_dec();
+	}
 	m_id = a_texture.m_id;
 	m_path = a_texture.m_path;
 	m_type = a_texture.m_type;
@@ -341,6 +356,9 @@ Texture& Texture::operator=(const Texture& a_texture) {
 
 // When moving an object, reference count shouldn't increment.
 Texture& Texture::operator=(Texture&& a_texture) noexcept {
+	if (m_id != a_texture.m_id) {
+		refcnt_dec();
+	}
 	m_id = a_texture.m_id;
 	m_path = std::move(a_texture.m_path);
 	m_type = a_texture.m_type;
@@ -354,13 +372,17 @@ Texture& Texture::operator=(Texture&& a_texture) noexcept {
 }
 
 Texture::~Texture() {
+	refcnt_dec();
+}
+
+void Texture::refcnt_dec() {
 	if (m_id != EMPTY_VBO && m_type != TextureType::NONE) {
 		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::TEXTURES, m_id);
 		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::TEXTURES, m_id)) {
-			std::cout << "DELETING: " << wstos(m_path) << std::endl;
+			std::cout << "DELETING: ID: " << m_id << ", PATH: [" << wstos(m_path) << "]" << std::endl;
 			glDeleteTextures(1, &m_id);
 		}
-	}
+	} 
 }
 
 void Texture::set_unit_id(int a_unit_id) {
@@ -429,7 +451,7 @@ RenderBuffer::RenderBuffer(int a_width, int a_height, RenderBufferType a_type) :
 }
 
 RenderBuffer::RenderBuffer(int a_width, int a_height, int a_samples, RenderBufferType a_type) 
-	:m_samples{ a_samples }
+	:m_samples{ a_samples }, m_type{ a_type }
 { 
 	if (a_type != RenderBufferType::COLOR && a_type != RenderBufferType::DEPTH && a_type != RenderBufferType::DEPTH_STENCIL)
 		ERROR("[RENDERBUFFER::RENDERBUFFER] Bad MSAA renderbuffer type.", Error_action::throwing);
@@ -465,6 +487,9 @@ RenderBuffer::RenderBuffer(RenderBuffer&& a_ren_buf) noexcept {
 RenderBuffer& RenderBuffer::operator=(const RenderBuffer& a_ren_buf) {
 	Application::get_instance().get_instance().get_rmanager().inc_ref_count(ResourceType::RENDER_BUFFERS, a_ren_buf.get_id());
 
+	if (m_rbo != a_ren_buf.m_rbo) {
+		refcnt_dec();
+	}
 	m_rbo = a_ren_buf.m_rbo;
 	m_type = a_ren_buf.m_type;
 
@@ -472,6 +497,9 @@ RenderBuffer& RenderBuffer::operator=(const RenderBuffer& a_ren_buf) {
 }
 
 RenderBuffer& RenderBuffer::operator=(RenderBuffer&& a_ren_buf) noexcept {
+	if (m_rbo != a_ren_buf.m_rbo) {
+		refcnt_dec();
+	}
 	m_rbo = a_ren_buf.m_rbo;
 	m_type = a_ren_buf.m_type;
 
@@ -482,12 +510,16 @@ RenderBuffer& RenderBuffer::operator=(RenderBuffer&& a_ren_buf) noexcept {
 }
 
 RenderBuffer::~RenderBuffer() {
+	refcnt_dec();
+}
+
+void RenderBuffer::refcnt_dec() {
 	if (m_rbo != EMPTY_VBO && m_type != RenderBufferType::NONE) {
 		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::RENDER_BUFFERS, m_rbo);
 		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::RENDER_BUFFERS, m_rbo)) {
 			glDeleteRenderbuffers(1, &m_rbo);
 		}
-	}
+	} 
 }
 
 GLuint RenderBuffer::get_id() const {
@@ -501,7 +533,6 @@ RenderBufferType RenderBuffer::get_type() const {
 AttachmentBuffer::AttachmentBuffer(int a_width, int a_height, AttachmentType a_attach_type, AttachmentBufferType a_buf_type, int a_samples) 
 	:m_type{ a_attach_type }, m_buf_type{ a_buf_type }
 {
-	ResourceManager& rman = Application::get_instance().get_rmanager();
 	if (a_buf_type == AttachmentBufferType::TEXTURE) {
 		switch (a_attach_type) {
 		case AttachmentType::COLOR_2D:      m_attachment = Texture(a_width, a_height, TextureType::COLOR_2D); break;
@@ -583,6 +614,9 @@ Framebuffer::Framebuffer(Framebuffer&& a_frame_buf) noexcept {
 }
 
 Framebuffer& Framebuffer::operator=(Framebuffer&& a_frame_buf) noexcept {
+	if (m_fbo != a_frame_buf.m_fbo) {
+		refcnt_dec();
+	}
 	m_fbo = a_frame_buf.m_fbo;
 	m_width = a_frame_buf.m_width;
 	m_height = a_frame_buf.m_height;
@@ -597,12 +631,16 @@ Framebuffer& Framebuffer::operator=(Framebuffer&& a_frame_buf) noexcept {
 }
 
 Framebuffer::~Framebuffer() {
+	refcnt_dec();
+}
+
+void Framebuffer::refcnt_dec() {
 	if (m_fbo != EMPTY_VBO) {
 		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::FRAME_BUFFERS, m_fbo);
 		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::FRAME_BUFFERS, m_fbo)) {
 			glDeleteFramebuffers(1, &m_fbo);
 		}
-	}
+	} 
 }
 
 void Framebuffer::attach(AttachmentType a_attach_type, AttachmentBufferType a_buf_type, int a_samples) {
@@ -784,17 +822,24 @@ UniformBuffer::UniformBuffer(UniformBuffer&& a_uni_buf) noexcept {
 }
 
 UniformBuffer::~UniformBuffer() {
+	refcnt_dec();
+}
+
+void UniformBuffer::refcnt_dec() {
 	if (m_id != EMPTY_VBO) {
 		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::UNIFORM_BUFFERS, m_id);
 		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::UNIFORM_BUFFERS, m_id)) {
 			glDeleteFramebuffers(1, &m_id);
 		}
-	}
+	} 
 }
 
 UniformBuffer& UniformBuffer::operator=(const UniformBuffer& a_uni_buf) {
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::UNIFORM_BUFFERS, a_uni_buf.m_id);
 
+	if (m_id != a_uni_buf.m_id) { 
+		refcnt_dec();
+	}
 	m_id = a_uni_buf.m_id;
 	m_size = a_uni_buf.m_size;
 	m_elements = a_uni_buf.m_elements;
@@ -804,6 +849,9 @@ UniformBuffer& UniformBuffer::operator=(const UniformBuffer& a_uni_buf) {
 }
 
 UniformBuffer& UniformBuffer::operator=(UniformBuffer&& a_uni_buf) noexcept {
+	if (m_id != a_uni_buf.m_id) { 
+		refcnt_dec();
+	}
 	m_id = a_uni_buf.m_id;
 	m_size = a_uni_buf.m_size;
 	m_elements = std::move(a_uni_buf.m_elements);

@@ -77,6 +77,8 @@ struct BufferObjects {
 	GLuint VBO_pos = EMPTY_VBO;
 	GLuint VBO_normals = EMPTY_VBO;
 	GLuint EBO = EMPTY_VBO;
+private:
+	auto refcnt_dec() -> void;
 };
 
 class Texture {
@@ -107,6 +109,8 @@ public:
 	auto is_flipped() const -> bool;
 
 private:
+	auto refcnt_dec() -> void;
+
 	GLuint m_id = EMPTY_VBO;
 	std::wstring m_path = L"";
 	std::wstring m_filename = L"";
@@ -133,6 +137,8 @@ public:
 	auto get_type() const -> RenderBufferType;
 
 private:
+	auto refcnt_dec() -> void;
+
 	GLuint m_rbo = EMPTY_VBO;
 	RenderBufferType m_type = RenderBufferType::NONE;
 	int m_samples = 1;
@@ -161,9 +167,11 @@ public:
 	Framebuffer() = default;
 	Framebuffer(int a_width, int a_height);
 	Framebuffer(Framebuffer&& a_frame_buf) noexcept;
+	Framebuffer(const Framebuffer& a_frame_buf) = delete;
 	~Framebuffer();
 
-	auto operator=(Framebuffer&& a_frame_buf) noexcept -> Framebuffer&;
+	auto operator=(Framebuffer&& a_frame_buf) noexcept -> Framebuffer&; 
+	auto operator=(const Framebuffer& a_frame_buf) -> Framebuffer& = delete;
 
 	auto attach(AttachmentType a_attach_type, AttachmentBufferType a_buf_type, int a_samples = 1) -> void;
 	auto attach_cubemap_face(GLenum a_cubemap_face) -> void;
@@ -181,6 +189,8 @@ public:
 	auto get_samples() const -> int;
 
 private:
+	auto refcnt_dec() -> void;
+
 	int m_width = 0;
 	int m_height = 0;
 	int m_samples = 1;
@@ -231,6 +241,8 @@ public:
 	NameUniMap get_elements() const; 
 
 private: 
+	auto refcnt_dec() -> void;
+
 	template<typename T>
 	auto get_size_and_base_alignment();
 

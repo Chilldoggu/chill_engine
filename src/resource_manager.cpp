@@ -236,9 +236,9 @@ bool ResourceManager::chk_ref_count(ResourceType a_res_type, GLuint a_id) {
 	return true;
 }
 
-void ResourceManager::debug() {
-	for (auto& [id, cnt] : m_ref_counter[ResourceType::MESHES]) {
-		std::cout << std::format("[COUNT:{}, \tID:{}]", id, cnt) << '\n';
+void ResourceManager::debug(ResourceType a_type) {
+	for (auto& [id, cnt] : m_ref_counter[a_type]) {
+		std::cout << std::format("[ID:{}, \tCOUNT:{}]", id, cnt) << '\n';
 	}
 	std::cout << '\n';
 } 
