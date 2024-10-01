@@ -4,23 +4,24 @@
 #include "chill_engine/application.hpp"
 
 namespace chill_engine { 
-MaterialMap::MaterialMap(const std::initializer_list<std::tuple<std::wstring,TextureType,bool>>& a_texture_maps) {
+MaterialMap::MaterialMap(const std::initializer_list<std::tuple<std::wstring,TextureType,bool,bool>>& a_texture_maps) {
 	ResourceManager& rman = Application::get_instance().get_rmanager();
 
 	for (const auto& a_texture_map : a_texture_maps) {
 		std::wstring texture_path = std::get<0>(a_texture_map);
 		TextureType texture_type = std::get<1>(a_texture_map);
 		bool texture_flip = std::get<2>(a_texture_map);
+		bool gamme_correction = std::get<3>(a_texture_map);
 
 		switch (texture_type) {
 		case TextureType::DIFFUSE:
-			m_diffuse_maps.push_back(rman.load_texture(texture_path, texture_type, texture_flip, m_cur_diffuse_unit_id++));
+			m_diffuse_maps.push_back(rman.load_texture(texture_path, texture_type, m_cur_diffuse_unit_id++, texture_flip, gamme_correction));
 			break;
 		case TextureType::SPECULAR:
-			m_specular_maps.push_back(rman.load_texture(texture_path, texture_type, texture_flip, m_cur_specular_unit_id++));
+			m_specular_maps.push_back(rman.load_texture(texture_path, texture_type, m_cur_specular_unit_id++, texture_flip, gamme_correction));
 			break;
 		case TextureType::EMISSION:
-			m_emission_maps.push_back(rman.load_texture(texture_path, texture_type, texture_flip, m_cur_emission_unit_id++));
+			m_emission_maps.push_back(rman.load_texture(texture_path, texture_type, m_cur_emission_unit_id++, texture_flip, gamme_correction));
 			break;
 		case TextureType::NONE:
 			ERROR(std::format("[MATERIALMAP::MATERIALMAP] Bad texture type for {}", wstos(texture_path)), Error_action::throwing);
@@ -69,59 +70,68 @@ void MaterialMap::set_textures(const std::vector<Texture>& a_textures) {
 	check_unit_id_limits();
 }
 
-void MaterialMap::set_diffuse_maps(const std::vector<std::tuple<std::wstring,bool>>& a_diffuse_maps_names) {
+void MaterialMap::set_diffuse_maps(const std::vector<std::tuple<std::wstring,bool,bool>>& a_diffuse_maps_names) {
 	ResourceManager& rman = Application::get_instance().get_rmanager();
 
 	m_diffuse_maps.clear();
 	m_cur_diffuse_unit_id = g_diffuse_unit_id;
 
 	for (auto& diffuse_map : a_diffuse_maps_names) {
-		m_diffuse_maps.push_back(rman.load_texture(std::get<0>(diffuse_map), TextureType::DIFFUSE, std::get<1>(diffuse_map), m_cur_diffuse_unit_id++));
+		auto& path = std::get<0>(diffuse_map);
+		auto& texture_flip = std::get<1>(diffuse_map);
+		auto& gamma_correction = std::get<2>(diffuse_map);
+		m_diffuse_maps.push_back(rman.load_texture(path, TextureType::DIFFUSE, m_cur_diffuse_unit_id++, texture_flip, gamma_correction));
 	}
 	check_unit_id_limits();
 }
 
-void MaterialMap::set_specular_maps(const std::vector<std::tuple<std::wstring,bool>>& a_specular_maps_names) {
+void MaterialMap::set_specular_maps(const std::vector<std::tuple<std::wstring,bool,bool>>& a_specular_maps_names) {
 	ResourceManager& rman = Application::get_instance().get_rmanager();
 
 	m_specular_maps.clear();
 	m_cur_specular_unit_id = g_specular_unit_id;
 
 	for (auto& specular_map : a_specular_maps_names) {
-		m_specular_maps.push_back(rman.load_texture(std::get<0>(specular_map), TextureType::SPECULAR, std::get<1>(specular_map), m_cur_specular_unit_id++));
+		auto& path = std::get<0>(specular_map);
+		auto& texture_flip = std::get<1>(specular_map);
+		auto& gamma_correction = std::get<2>(specular_map);
+		m_specular_maps.push_back(rman.load_texture(path, TextureType::SPECULAR, m_cur_specular_unit_id++, texture_flip, gamma_correction));
 	}
 	check_unit_id_limits();
 }
 
-void MaterialMap::set_emission_maps(const std::vector<std::tuple<std::wstring,bool>>& a_emission_maps_names) {
+void MaterialMap::set_emission_maps(const std::vector<std::tuple<std::wstring,bool,bool>>& a_emission_maps_names) {
 	ResourceManager& rman = Application::get_instance().get_rmanager();
 
 	m_emission_maps.clear();
 	m_cur_emission_unit_id = g_emission_unit_id;
 
 	for (auto& emission_map : a_emission_maps_names) {
-		m_emission_maps.push_back(rman.load_texture(std::get<0>(emission_map), TextureType::EMISSION, std::get<1>(emission_map), m_cur_emission_unit_id++));
+		auto& path = std::get<0>(emission_map);
+		auto& texture_flip = std::get<1>(emission_map);
+		auto& gamma_correction = std::get<2>(emission_map);
+		m_emission_maps.push_back(rman.load_texture(path, TextureType::EMISSION, m_cur_emission_unit_id++, texture_flip, gamma_correction));
 	}
 	check_unit_id_limits();
 }
 
-void MaterialMap::set_shininess(float a_shininess) {
+void MaterialMap::set_shininess(float a_shininess) noexcept {
 	m_shininess = a_shininess;
 }
 
-std::vector<Texture> MaterialMap::get_diffuse_maps() const {
+std::vector<Texture> MaterialMap::get_diffuse_maps() const noexcept {
 	return m_diffuse_maps;
 }
 
-std::vector<Texture> MaterialMap::get_specular_maps() const {
+std::vector<Texture> MaterialMap::get_specular_maps() const noexcept {
 	return m_specular_maps;
 }
 
-std::vector<Texture> MaterialMap::get_emission_maps() const {
+std::vector<Texture> MaterialMap::get_emission_maps() const noexcept {
 	return m_emission_maps;
 }
 
-float MaterialMap::get_shininess() const {
+float MaterialMap::get_shininess() const noexcept {
 	return m_shininess;
 }
 
@@ -205,19 +215,19 @@ void Mesh::set_indicies(const std::vector<unsigned int>& a_indicies) {
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, a_indicies.size() * sizeof(a_indicies[0]), a_indicies.data(), GL_STATIC_DRAW);
 }
 
-void Mesh::set_material_map(const MaterialMap& a_material_map) {
+void Mesh::set_material_map(const MaterialMap& a_material_map) noexcept {
 	m_material_map = a_material_map;
 }
  
-void Mesh::set_draw_mode(BufferDrawType a_option) {
+void Mesh::set_draw_mode(BufferDrawType a_option) noexcept {
 	m_draw_mode = a_option;
 }
 
-void Mesh::set_wireframe(bool a_option) {
+void Mesh::set_wireframe(bool a_option) noexcept {
 	m_wireframe = a_option;
 }
 
-void Mesh::set_visibility(bool a_option) {
+void Mesh::set_visibility(bool a_option) noexcept {
 	m_visibility = a_option;
 }
 
@@ -257,23 +267,23 @@ void Mesh::draw_instances(int a_instances_siz) const {
 	}
 }
 
-GLuint Mesh::get_VAO() const {
+GLuint Mesh::get_VAO() const noexcept {
 	return m_VBOs.VAO;
 }
 
-MaterialMap& Mesh::get_material_map() {
+MaterialMap& Mesh::get_material_map() noexcept {
 	return m_material_map;
 }
 
-BufferDrawType Mesh::get_draw_mode() const {
+BufferDrawType Mesh::get_draw_mode() const noexcept {
 	return m_draw_mode;
 }
 
-bool Mesh::get_wireframe() const {
+bool Mesh::get_wireframe() const noexcept {
 	return m_wireframe;
 }
 
-bool Mesh::get_visibility() const {
+bool Mesh::get_visibility() const noexcept {
 	return m_visibility;
 } 
 }

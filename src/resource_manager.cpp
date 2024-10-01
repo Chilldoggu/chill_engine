@@ -43,23 +43,24 @@ ShaderProgram ResourceManager::new_shader(const ShaderSrc& a_vertex_shader, cons
 	}
 
 	// Return cached shader.
-	return *(*it).second;
+	return *it->second;
 }
 
-Model ResourceManager::load_model(const std::wstring& a_path, bool a_flip_UVs) {
+Model ResourceManager::load_model(const std::wstring& a_path, bool a_flip_UVs, bool a_gamma_corr) {
 	// Check if model is cached.
 	std::wstring path = guess_path(a_path).wstring();
 	auto it = std::find_if(m_models_cached.begin(), m_models_cached.end(),
-		[&path, a_flip_UVs](const auto& elem) {
+		[&path, &a_flip_UVs, &a_gamma_corr](const auto& elem) {
 			Model* cached_model = elem.second.get();
-			return (cached_model != nullptr && elem.first == path && cached_model->is_flipped() == a_flip_UVs);
+			return cached_model != nullptr && 
+				   elem.first == path && 
+				   cached_model->is_flipped() == a_flip_UVs &&
+				   cached_model->is_gamma_corr() == a_gamma_corr;
 		});
 
 	// If model is not cached then cache it.
 	if (it == m_models_cached.end()) {
-		Model new_model(a_path, a_flip_UVs);
-		m_models_cached[path] = std::make_unique<Model>(new_model);
-		return *m_models_cached[path];
+		m_models_cached[path] = std::make_unique<Model>(a_path, a_flip_UVs, a_gamma_corr);
 	}
 
 	return *m_models_cached[path];
@@ -69,28 +70,28 @@ Model ResourceManager::create_model(const std::vector<Mesh>& a_meshes) {
 	return Model(a_meshes);
 }
 
-Texture ResourceManager::load_texture(const std::wstring& a_path, TextureType a_type, bool a_flip_image, int a_unit_id) {
+Texture ResourceManager::load_texture(const std::wstring& a_path, TextureType a_type, int a_unit_id, bool a_flip_image, bool a_gamma_corr) {
 	// Check if texture is cached.
 	std::wstring filename = fs::path(a_path).filename().wstring();
 	auto it = std::find_if(m_textures_cached.begin(), m_textures_cached.end(),
-		[&filename, a_flip_image](const auto& elem) {
+		[&filename, &a_flip_image, &a_gamma_corr](const auto& elem) {
 			Texture* cached_texture = elem.second.get();
 
 			return cached_texture != nullptr &&
 				   cached_texture->get_filename() == filename &&
-				   cached_texture->is_flipped() == a_flip_image;
+				   cached_texture->is_flipped() == a_flip_image &&
+				   cached_texture->is_gamma_corr() == a_gamma_corr;
 		});
 
 	// If texture is not cached then cache it.
 	if (it == m_textures_cached.end()) {
-		Texture new_texture(a_path, a_type, a_flip_image, a_unit_id);
+		Texture new_texture(a_path, a_type, a_unit_id, a_flip_image, a_gamma_corr);
 		m_textures_cached[new_texture.get_id()] = std::make_unique<Texture>(new_texture);
 		return *m_textures_cached[new_texture.get_id()];
 	}
 
 	// Texture is cached. Modify possibly wrong attributes to match user parameters.
-	auto id = (*it).second->get_id();
-	Texture cached_texture = *m_textures_cached[id];
+	Texture cached_texture = *it->second;
 
 	if (cached_texture.get_type() != a_type)
 		cached_texture.set_type(a_type);
@@ -101,7 +102,7 @@ Texture ResourceManager::load_texture(const std::wstring& a_path, TextureType a_
 	return cached_texture;
 }
 
-Texture ResourceManager::load_cubemap(const std::vector<std::wstring>& a_paths, bool a_flip_images, int a_unit_id) {
+Texture ResourceManager::load_cubemap(const std::vector<std::wstring>& a_paths, int a_unit_id, bool a_flip_images, bool a_gamma_corr) {
 	// Check if texture is cached.
 	std::vector<std::wstring> filenames{};
 	for (const auto& path : a_paths) {
@@ -110,10 +111,14 @@ Texture ResourceManager::load_cubemap(const std::vector<std::wstring>& a_paths, 
 	std::wstring dir = guess_path(a_paths[0]).parent_path().wstring();
 
 	auto it = std::find_if(m_textures_cached.begin(), m_textures_cached.end(),
-		[&filenames, &a_flip_images, &dir](const auto& elem) {
+		[&filenames, &dir, &a_flip_images, &a_gamma_corr](const auto& elem) {
 			Texture* cached_texture = elem.second.get();
 
-			if (cached_texture != nullptr && cached_texture->get_path() != dir && a_flip_images != cached_texture->is_flipped()) {
+			if (cached_texture != nullptr && 
+				cached_texture->get_path() != dir && 
+				a_flip_images != cached_texture->is_flipped() &&
+				a_gamma_corr != cached_texture->is_gamma_corr()) 
+			{
 				auto cached_filenames = cached_texture->get_filenames(); 
 				if (cached_filenames.size() != 6)
 					return false;
@@ -133,14 +138,13 @@ Texture ResourceManager::load_cubemap(const std::vector<std::wstring>& a_paths, 
 
 	// If texture is not cached then cache it.
 	if (it == m_textures_cached.end()) {
-		Texture new_texture(a_paths, a_flip_images, a_unit_id);
+		Texture new_texture(a_paths, a_unit_id, a_flip_images, a_gamma_corr);
 		m_textures_cached[new_texture.get_id()] = std::make_unique<Texture>(new_texture);
 		return *m_textures_cached[new_texture.get_id()];
 	}
 
 	// Texture is cached. Modify possibly wrong attributes to match user parameters.
-	auto id = (*it).second->get_id();
-	Texture cached_texture = *m_textures_cached[id];
+	Texture cached_texture = *it->second;
 
 	if (cached_texture.get_unit_id() != a_unit_id)
 		cached_texture.set_unit_id(a_unit_id);
@@ -156,7 +160,7 @@ RenderBuffer ResourceManager::create_render_buffer(int a_width, int a_height, Re
 	return RenderBuffer(a_width, a_height, a_type);
 }
 
-void ResourceManager::inc_ref_count(ResourceType a_res_type, GLuint a_id) {
+void ResourceManager::inc_ref_count(ResourceType a_res_type, GLuint a_id) noexcept {
 	auto& res_ref_counter = m_ref_counter[a_res_type];
 
 	auto it = res_ref_counter.find(a_id);
@@ -165,7 +169,7 @@ void ResourceManager::inc_ref_count(ResourceType a_res_type, GLuint a_id) {
 	res_ref_counter[a_id]++;
 }
 
-void ResourceManager::dec_ref_count(ResourceType a_res_type, GLuint a_id) {
+void ResourceManager::dec_ref_count(ResourceType a_res_type, GLuint a_id) noexcept {
 	auto& res_ref_counter = m_ref_counter[a_res_type];
 
 	auto it = res_ref_counter.find(a_id);
@@ -183,7 +187,7 @@ bool ResourceManager::chk_ref_count(ResourceType a_res_type, GLuint a_id) {
 	if (it == res_ref_counter.end())
 		return false;
 
-	int ref_count = (*it).second;
+	int ref_count = it->second;
 	if (ref_count <= 0) {
 		return false;
 	}
@@ -193,20 +197,20 @@ bool ResourceManager::chk_ref_count(ResourceType a_res_type, GLuint a_id) {
 		if (a_res_type == ResourceType::SHADER_PROGRAMS) {
 			return true;
 			auto it = m_shaders_cached.find(a_id);
-			ShaderProgram* cached_shader = (it == m_shaders_cached.end()) ? nullptr : (*it).second.get();
+			ShaderProgram* cached_shader = (it == m_shaders_cached.end()) ? nullptr : it->second.get();
 			if (cached_shader != nullptr && cached_shader->get_id() == a_id) {
 				// Resetting should call ShaderProgram's destructor and decrement reference counter.
-				(*it).second.reset(nullptr);
+				it->second.reset(nullptr);
 				return false;
 			}
 		}
 
 		else if (a_res_type == ResourceType::TEXTURES) {
 			auto it = m_textures_cached.find(a_id);
-			Texture* cached_texture = (it == m_textures_cached.end()) ? nullptr : (*it).second.get();
+			Texture* cached_texture = (it == m_textures_cached.end()) ? nullptr : it->second.get();
 			if (cached_texture != nullptr && cached_texture->get_id() == a_id) {
 				// Resetting should call Texture's destructor and decrement reference counter.
-				(*it).second.reset(nullptr);
+				it->second.reset(nullptr);
 				return false;
 			}
 		}
@@ -227,7 +231,7 @@ bool ResourceManager::chk_ref_count(ResourceType a_res_type, GLuint a_id) {
 					return false;
 				});
 			if (it != m_models_cached.end()) {
-				(*it).second.reset(nullptr);
+				it->second.reset(nullptr);
 				return false;
 			}
 		}

@@ -85,7 +85,7 @@ Window::~Window() {
 	glfwTerminate();
 }
 
-void Window::mouse_callback(double x_pos, double y_pos) {
+void Window::mouse_callback(double x_pos, double y_pos) noexcept {
 	float x_offset = x_pos - get_mouse_x();
 	float y_offset = get_mouse_y() - y_pos;
 
@@ -96,7 +96,7 @@ void Window::mouse_callback(double x_pos, double y_pos) {
 		m_camera->process_mouse_movement(x_offset, y_offset);
 }
 
-void Window::framebuffer_size_callback(int width, int height) {
+void Window::framebuffer_size_callback(int width, int height) noexcept {
 	glViewport(0, 0, width, height);
 	set_width(width);
 	set_height(height);
@@ -110,7 +110,7 @@ void Window::title_lshift(int n) {
 	int siz = m_title.size();
 	n %= siz;
 
-	if (!n) return;
+	if (n == 0) return;
 
 	m_title = m_title.substr(n, siz) + m_title.substr(0, n);
 	title_change();
@@ -120,7 +120,7 @@ void Window::title_rshift(int n) {
 	int siz = m_title.size();
 	n %= siz;
 
-	if (!n) return;
+	if (n == 0) return;
 
 	m_title = m_title.substr(siz - n, siz) + m_title.substr(0, siz - n);
 	title_change();
@@ -130,23 +130,23 @@ void Window::title_change() {
 	glfwSetWindowTitle(m_window, m_title.c_str());
 }
 
-void Window::set_mouse_x(float x_pos) {
-	m_mouse_pos_x = x_pos;
-}
-
-void Window::set_mouse_y(float y_pos) {
-	m_mouse_pos_y = y_pos;
-}
-
-void Window::set_width(float width) {
+void Window::set_width(float width) noexcept {
 	m_width = width;
 }
 
-void Window::set_height(float height) {
+void Window::set_height(float height) noexcept {
 	m_height = height;
 }
 
-auto Window::set_cursor_mode(CursorMode a_mode) -> void {
+void Window::set_mouse_x(float x_pos) noexcept {
+	m_mouse_pos_x = x_pos;
+}
+
+void Window::set_mouse_y(float y_pos) noexcept {
+	m_mouse_pos_y = y_pos;
+}
+
+void Window::set_cursor_mode(CursorMode a_mode) noexcept {
 	m_cur_mode = a_mode;
 	switch (a_mode) {
 	case CursorMode::NORMAL:  glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); break;
@@ -154,46 +154,46 @@ auto Window::set_cursor_mode(CursorMode a_mode) -> void {
 	}
 }
 
-float Window::calculate_delta() {
+float Window::calculate_delta() noexcept {
 	m_current_frame = glfwGetTime();
 	m_delta_time = m_current_frame - m_last_frame;
 	m_last_frame = m_current_frame;
 	return m_delta_time;
 }
 
-int Window::get_width() const {
+int Window::get_width() const noexcept {
 	return m_width;
 }
 
-int Window::get_height() const {
+int Window::get_height() const noexcept {
 	return m_height;
 }
 
-float Window::get_mouse_x() const {
+float Window::get_mouse_x() const noexcept {
 	return m_mouse_pos_x;
 }
 
-float Window::get_mouse_y() const {
+float Window::get_mouse_y() const noexcept {
 	return m_mouse_pos_y;
 }
 
-CursorMode Window::get_cursor_mode() const {
+CursorMode Window::get_cursor_mode() const noexcept {
 	return m_cur_mode;
 }
 
-float Window::get_aspect_ratio() const {
-	return float(m_height) / m_width;
+float Window::get_aspect_ratio() const noexcept {
+	return (m_width == 0) ? 0.f : float(m_height) / m_width;
 }
 
-float Window::get_delta() const {
+float Window::get_delta() const noexcept {
 	return m_delta_time;
 }
 
-std::string Window::get_title() const {
+std::string Window::get_title() const noexcept {
 	return m_title;
 }
 
-GLFWwindow* Window::get_obj() const {
+GLFWwindow* Window::get_obj() const noexcept {
 	return m_window;
 }
 

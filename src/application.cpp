@@ -27,11 +27,11 @@ Application::~Application() {
 	delete& get_instance();
 }
 
-Window& Application::get_win() {
+Window& Application::get_win() noexcept {
 	return *m_win;
 }
 
-ResourceManager& Application::get_rmanager() {
+ResourceManager& Application::get_rmanager() noexcept {
 	return *m_rmanager;
 } 
 }

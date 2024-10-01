@@ -16,9 +16,8 @@ public:
 	static auto get_instance() -> Application&;
 	static auto shutdown() -> void;
 
-	auto get_win() -> Window&;
-	auto get_rmanager() -> ResourceManager&;
-
+	auto get_win() noexcept -> Window&;
+	auto get_rmanager() noexcept -> ResourceManager&;
 private:
 	Application(int win_width, int win_height, const std::string& win_title, CursorMode win_mode);
 	~Application();

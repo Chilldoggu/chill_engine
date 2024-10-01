@@ -18,34 +18,35 @@ enum class Axis {
 class Model {
 public:
 	Model() = default;
-	Model(const std::wstring& a_path, bool a_flip_UVs = false);
+	Model(const std::wstring& a_path, bool a_flip_UVs = false, bool a_gamma_corr = false);
 	Model(const std::vector<Mesh>& a_meshes);
 
-	auto load_model(const std::wstring& a_path, bool a_flip_UVs) -> void;
-	auto set_pos(const glm::vec3& a_pos) -> void;
-	auto set_size(float a_size) -> void;
-	auto set_size(const glm::vec3& a_size) -> void;
-	auto set_rotation(const glm::vec3& a_rotation) -> void;
-	auto set_meshes(const std::vector<Mesh>& a_meshes) -> void;
-	auto move(const glm::vec3& a_vec) -> void;
-	auto rotate(float a_angle, Axis a_axis = Axis::X) -> void;
+	auto load_model(const std::wstring& a_path, bool a_flip_UVs, bool a_gamma_corr) -> void;
+	auto set_pos(const glm::vec3& a_pos) noexcept -> void;
+	auto set_size(float a_size) noexcept -> void;
+	auto set_size(const glm::vec3& a_size) noexcept -> void;
+	auto set_rotation(const glm::vec3& a_rotation) noexcept -> void;
+	auto set_meshes(const std::vector<Mesh>& a_meshes) noexcept -> void;
+	auto move(const glm::vec3& a_vec) noexcept -> void;
+	auto rotate(float a_angle, Axis a_axis = Axis::X) noexcept -> void;
 
 	auto draw() -> void;
 	auto draw(ShaderProgram& a_shader, const std::string& a_material_map_uniform_name) -> void;
 	auto draw_outlined(float a_thickness, ShaderProgram& a_object_shader, ShaderProgram& a_outline_shader, const std::string& a_model_uniform_name, const std::string& a_material_map_uniform_name) -> void;
-	auto clear() -> void;
+	auto clear() noexcept -> void;
 
-	auto get_pos() const -> glm::vec3;
-	auto get_size() const -> glm::vec3;
-	auto get_rotation() const -> glm::vec3;
-	auto get_dir() const -> std::wstring;
-	auto get_path() const -> std::wstring;
-	auto get_filename() const -> std::wstring;
-	auto get_meshes() -> std::vector<Mesh>&;
-	auto get_model_mat() const -> glm::mat4;
-	auto get_normal_mat() const -> glm::mat3;
-	auto get_normal_view_mat(const glm::mat4& a_view_mat) const -> glm::mat3;
-	auto is_flipped() const -> bool;
+	auto get_pos() const noexcept -> glm::vec3;
+	auto get_size() const noexcept -> glm::vec3;
+	auto get_rotation() const noexcept -> glm::vec3;
+	auto get_dir() const noexcept -> std::wstring;
+	auto get_path() const noexcept -> std::wstring;
+	auto get_filename() const noexcept -> std::wstring;
+	auto get_meshes() noexcept -> std::vector<Mesh>&;
+	auto get_model_mat() const noexcept -> glm::mat4;
+	auto get_normal_mat() const noexcept -> glm::mat3;
+	auto get_normal_view_mat(const glm::mat4& a_view_mat) const noexcept -> glm::mat3;
+	auto is_flipped() const noexcept -> bool;
+	auto is_gamma_corr() const noexcept -> bool;
 
 private:
 	auto process_node(aiNode* a_node, const aiScene* a_scene) -> void;
@@ -53,6 +54,7 @@ private:
 	auto process_texture(std::vector<Texture>& a_textures, aiMaterial* a_mat, aiTextureType a_ai_texture_type) -> void;
 
 	bool m_flipped_UVs = false;
+	bool m_gamma_corr = false;
 	glm::vec3 m_pos = glm::vec3(0.0f);
 	glm::vec3 m_size = glm::vec3(1.0f);
 	glm::vec3 m_rotation = glm::vec3(0.0f);
@@ -85,12 +87,12 @@ public:
 	ModelInstanced& operator=(ModelInstanced&& a_obj) noexcept;
 
 	auto set_model(const Model& a_model) -> void; 
-	auto push_position(const glm::vec3& a_position) -> void;
-	auto push_rotation(const glm::vec3& a_rotation) -> void;
-	auto push_size(const glm::vec3& a_size) -> void; 
-	auto push_positions(const std::vector<glm::vec3>& a_positions) -> void;
-	auto push_rotations(const std::vector<glm::vec3>& a_rotations) -> void;
-	auto push_sizes(const std::vector<glm::vec3>& a_sizes) -> void; 
+	auto push_position(const glm::vec3& a_position) noexcept -> void;
+	auto push_rotation(const glm::vec3& a_rotation) noexcept -> void;
+	auto push_size(const glm::vec3& a_size) noexcept -> void; 
+	auto push_positions(const std::vector<glm::vec3>& a_positions) noexcept -> void;
+	auto push_rotations(const std::vector<glm::vec3>& a_rotations) noexcept -> void;
+	auto push_sizes(const std::vector<glm::vec3>& a_sizes) noexcept -> void; 
 	auto insert_buffer(std::size_t idx) -> bool;
 	auto insert_position(std::size_t idx, const glm::vec3& a_position) -> bool;
 	auto insert_rotation(std::size_t idx, const glm::vec3& a_rotation) -> bool;
@@ -102,16 +104,16 @@ public:
 	auto draw() -> void;
 	auto draw(ShaderProgram& a_shader, const std::string& a_material_map_uniform_name) -> void;
 
-	auto get_model_base() -> Model&;
-	auto get_positions() -> std::vector<glm::vec3>&;
-	auto get_rotations() -> std::vector<glm::vec3>&;
-	auto get_size() -> std::vector<glm::vec3>&;
+	auto get_model_base() noexcept -> Model&;
+	auto get_positions() noexcept -> std::vector<glm::vec3>&;
+	auto get_rotations() noexcept -> std::vector<glm::vec3>&;
+	auto get_size() noexcept -> std::vector<glm::vec3>&;
 
 private:
-	auto calculate_model_mat(std::size_t idx) -> glm::mat4;
-	auto calculate_normal_mat(std::size_t idx) -> glm::mat3;
-	auto calculate_model_mats() -> void;
-	auto calculate_normal_mats() -> void;
+	auto calculate_model_mat(std::size_t idx) noexcept -> glm::mat4;
+	auto calculate_normal_mat(std::size_t idx) noexcept -> glm::mat3;
+	auto calculate_model_mats() noexcept -> void;
+	auto calculate_normal_mats() noexcept -> void;
 	auto create_model_instanced_arr(const std::vector<glm::mat4>& a_model_mats) -> void;
 	auto create_normal_instanced_arr(const std::vector<glm::mat3>& a_normal_mats) -> void;
 

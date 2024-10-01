@@ -17,29 +17,29 @@ public:
 	// constructor vector values
 	Camera(GLFWwindow* a_window, const glm::vec3& position = glm::vec3(0.0f, 0.0f, 0.0f));
 
-	auto set_fov(float a_fov) -> void;
-	auto set_up(const glm::vec3& a_up) -> void;
-	auto set_right(const glm::vec3& a_right) -> void;
-	auto set_target(const glm::vec3& a_target) -> void;
-	auto set_world_up(const glm::vec3& a_world_up) -> void;
-	auto set_position(const glm::vec3& a_position) -> void;
-	auto set_far_plane(float a_far) -> void;
-	auto set_near_plane(float a_near) -> void;
-	auto set_movement_speed(float a_speed) -> void;
-	auto process_keyboard(CameraMovement direction, float delta_time) -> void;
-	auto process_mouse_movement(float x_offset, float y_offset, bool constrain_pitch = true) -> void;
-	auto process_mouse_scroll(float y_offset) -> void;
+	auto set_fov(float a_fov) noexcept -> void;
+	auto set_up(const glm::vec3& a_up) noexcept -> void;
+	auto set_right(const glm::vec3& a_right) noexcept -> void;
+	auto set_target(const glm::vec3& a_target) noexcept -> void;
+	auto set_world_up(const glm::vec3& a_world_up) noexcept -> void;
+	auto set_position(const glm::vec3& a_position) noexcept -> void;
+	auto set_far_plane(float a_far) noexcept -> void;
+	auto set_near_plane(float a_near) noexcept -> void;
+	auto set_movement_speed(float a_speed) noexcept -> void;
+	auto process_keyboard(CameraMovement direction, float delta_time) noexcept -> void;
+	auto process_mouse_movement(float x_offset, float y_offset, bool constrain_pitch = true) noexcept -> void;
+	auto process_mouse_scroll(float y_offset) noexcept -> void;
 
-	auto get_fov() const -> float;
-	auto get_up() const -> glm::vec3;
-	auto get_right() const -> glm::vec3;
-	auto get_target() const -> glm::vec3;
+	auto get_fov() const noexcept -> float;
+	auto get_up() const noexcept -> glm::vec3;
+	auto get_right() const noexcept -> glm::vec3;
+	auto get_target() const noexcept -> glm::vec3;
 	auto get_look_at() const -> glm::mat4;
-	auto get_position() const -> glm::vec3;
-	auto get_world_up() const -> glm::vec3;
-	auto get_far_plane() const -> float;
-	auto get_near_plane() const -> float;
-	auto get_movement_speed() const -> float;
+	auto get_position() const noexcept -> glm::vec3;
+	auto get_world_up() const noexcept -> glm::vec3;
+	auto get_far_plane() const noexcept -> float;
+	auto get_near_plane() const noexcept -> float;
+	auto get_movement_speed() const noexcept -> float;
 	auto get_projection_matrix(float width, float height) const -> glm::mat4;
 
 private:
@@ -61,6 +61,6 @@ private:
 	float m_mouse_sensitivity = 0.1f;
 
 	// calculates the front vector from the Camera's (updated) Euler Angles
-	void update_camera_vectors();
+	void update_camera_vectors() noexcept;
 }; 
 }

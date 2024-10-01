@@ -13,11 +13,11 @@ namespace fs = std::filesystem;
 
 extern fs::path guess_path(const std::wstring& a_path);
 
-Model::Model(const std::wstring& a_path, bool a_flip_UVs) :m_flipped_UVs{ a_flip_UVs } {
-	load_model(a_path, a_flip_UVs);
+Model::Model(const std::wstring& a_path, bool a_flip_UVs, bool a_gamma_corr) {
+	load_model(a_path, a_flip_UVs, a_gamma_corr);
 }
 
-void Model::load_model(const std::wstring & a_path, bool a_flip_UVs) {
+void Model::load_model(const std::wstring & a_path, bool a_flip_UVs, bool a_gamma_corr) {
 	clear();
 
 	fs::path p = guess_path(a_path);
@@ -25,6 +25,7 @@ void Model::load_model(const std::wstring & a_path, bool a_flip_UVs) {
 		ERROR(std::format("[MODEL::MODEL] Bad model path: {}", wstos(a_path)), Error_action::throwing);
 
 	m_flipped_UVs = a_flip_UVs;
+	m_gamma_corr = a_gamma_corr;
 	m_path = p.wstring();
 	m_dir = p.parent_path().wstring();
 	m_filename = p.filename().wstring();
@@ -55,7 +56,7 @@ Model::Model(const std::vector<Mesh>& a_meshes) {
 	set_meshes(a_meshes);
 }
 
-void Model::clear() {
+void Model::clear() noexcept {
 	m_pos = glm::vec3(0.0f);
 	m_size = glm::vec3(1.0f);
 	m_transform_scale = 1.0f;
@@ -66,6 +67,7 @@ void Model::clear() {
 	m_dir = L"";
 	m_filename = L"";
 	m_flipped_UVs = false;
+	m_gamma_corr = false;
 }
 
 // Nodes are laid out in tree like fashion. Each aiNode::mMeshes is an array of indicies into
@@ -85,6 +87,10 @@ Mesh Model::process_mesh(aiMesh* a_mesh, const aiScene* a_scene) {
 	BufferData data;
 	MaterialMap mat;
 	std::vector<Texture> textures;
+	auto texture_siz = a_scene->mMaterials[a_mesh->mMaterialIndex]->GetTextureCount(aiTextureType::aiTextureType_DIFFUSE);
+	texture_siz += a_scene->mMaterials[a_mesh->mMaterialIndex]->GetTextureCount(aiTextureType::aiTextureType_SPECULAR);
+	texture_siz += a_scene->mMaterials[a_mesh->mMaterialIndex]->GetTextureCount(aiTextureType::aiTextureType_EMISSIVE);
+	textures.reserve(texture_siz);
 
 	// Load VBO specific data
 	if (a_mesh->HasPositions()) {
@@ -166,18 +172,18 @@ void Model::process_texture(std::vector<Texture>& a_textures, aiMaterial* a_mat,
 		// Use rmanager to load texture (see Application class).
 		ResourceManager& rman = Application::get_instance().get_rmanager();
 		std::wstring texture_path = (fs::path(m_dir) / fs::path(texture_name.C_Str())).wstring();
-		Texture texture_ptr = rman.load_texture(texture_path, texture_type, false, unit_id + i);
+		Texture texture_ptr = rman.load_texture(texture_path, texture_type, unit_id + i, false, m_gamma_corr);
 		a_textures.push_back(texture_ptr);
 	}
 }
 
-void Model::set_pos(const glm::vec3& a_pos) {
+void Model::set_pos(const glm::vec3& a_pos) noexcept {
 	m_pos = a_pos;
 	m_transform_pos = glm::mat4(1.0f);
 	m_transform_pos = glm::translate(m_transform_pos, a_pos);
 }
 
-void Model::set_rotation(const glm::vec3& a_rotation) {
+void Model::set_rotation(const glm::vec3& a_rotation) noexcept {
 	m_rotation = a_rotation;
 	m_transform_rotation = glm::mat4(1.0f);
 	m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_rotation[0]), glm::vec3(1.0, 0.0, 0.0));
@@ -185,28 +191,28 @@ void Model::set_rotation(const glm::vec3& a_rotation) {
 	m_transform_rotation = glm::rotate(m_transform_rotation, glm::radians(a_rotation[2]), glm::vec3(0.0, 0.0, 1.0));
 }
 
-void Model::set_meshes(const std::vector<Mesh>& a_meshes) {
+void Model::set_meshes(const std::vector<Mesh>& a_meshes) noexcept {
 	m_meshes = a_meshes;
 }
 
-void Model::set_size(float a_size) {
+void Model::set_size(float a_size) noexcept {
 	m_size = glm::vec3(a_size);
 	m_transform_scale = glm::mat4(1.0f);
 	m_transform_scale = glm::scale(m_transform_scale, glm::vec3(a_size));
 }
 
-void Model::set_size(const glm::vec3& a_size) {
+void Model::set_size(const glm::vec3& a_size) noexcept {
 	m_size = a_size;
 	m_transform_scale = glm::mat4(1.0f);
 	m_transform_scale = glm::scale(m_transform_scale, a_size);
 }
 
-void Model::move(const glm::vec3& a_vec) {
+void Model::move(const glm::vec3& a_vec) noexcept {
 	m_pos += a_vec;
 	m_transform_pos = glm::translate(m_transform_pos, a_vec);
 }
 
-void Model::rotate(float a_angle, Axis a_axis) {
+void Model::rotate(float a_angle, Axis a_axis) noexcept {
 	switch (a_axis) {
 	case Axis::X:
 		m_rotation[0] += a_angle;
@@ -284,49 +290,53 @@ void Model::draw() {
 	}
 }
 
-glm::vec3 Model::get_pos() const {
+glm::vec3 Model::get_pos() const noexcept {
 	return m_pos;
 }
 
-glm::vec3 Model::get_size() const {
+glm::vec3 Model::get_size() const noexcept {
 	return m_size;
 }
 
-glm::vec3 Model::get_rotation() const {
+glm::vec3 Model::get_rotation() const noexcept {
 	return m_rotation;
 }
 
-std::wstring Model::get_path() const {
+std::wstring Model::get_path() const noexcept {
 	return m_path;
 }
 
-std::wstring Model::get_dir() const {
+std::wstring Model::get_dir() const noexcept {
 	return m_dir;
 }
 
-std::wstring Model::get_filename() const {
+std::wstring Model::get_filename() const noexcept {
 	return m_filename;
 }
 
-std::vector<Mesh>& Model::get_meshes() {
+std::vector<Mesh>& Model::get_meshes() noexcept {
 	return m_meshes;
 }
 
-glm::mat4 Model::get_model_mat() const {
+glm::mat4 Model::get_model_mat() const noexcept {
 	return m_transform_pos * m_transform_rotation * m_transform_scale;
 }
 
-glm::mat3 Model::get_normal_mat() const {
+glm::mat3 Model::get_normal_mat() const noexcept {
 	// Get normal matix from M matrix
 	return glm::transpose(glm::inverse(glm::mat3(get_model_mat())));
 }
 
-glm::mat3 Model::get_normal_view_mat(const glm::mat4& a_view_mat) const {
+glm::mat3 Model::get_normal_view_mat(const glm::mat4& a_view_mat) const noexcept {
 	return glm::mat3(glm::transpose(glm::inverse(get_model_mat() * a_view_mat)));
 }
 
-bool Model::is_flipped() const {
+bool Model::is_flipped() const noexcept {
 	return m_flipped_UVs;
+}
+
+bool Model::is_gamma_corr() const noexcept {
+	return m_gamma_corr;
 }
 
 ModelInstanced::ModelInstanced(const Model& a_model) 
@@ -410,27 +420,27 @@ void ModelInstanced::set_model(const Model& a_model) {
 	create_normal_instanced_arr(m_normal_mats);
 }
 
-void ModelInstanced::push_position(const glm::vec3& a_position) {
+void ModelInstanced::push_position(const glm::vec3& a_position) noexcept {
 	m_instanced_vecs[ModelInstancedVecs::POSITIONS].push_back(a_position);
 }
 
-void ModelInstanced::push_rotation(const glm::vec3& a_rotation) {
+void ModelInstanced::push_rotation(const glm::vec3& a_rotation) noexcept {
 	m_instanced_vecs[ModelInstancedVecs::ROTATIONS].push_back(a_rotation);
 } 
 
-void ModelInstanced::push_size(const glm::vec3& a_size) {
+void ModelInstanced::push_size(const glm::vec3& a_size) noexcept {
 	m_instanced_vecs[ModelInstancedVecs::SIZES].push_back(a_size);
 }
 
-void ModelInstanced::push_positions(const std::vector<glm::vec3>& a_positions) {
+void ModelInstanced::push_positions(const std::vector<glm::vec3>& a_positions) noexcept {
 	m_instanced_vecs[ModelInstancedVecs::POSITIONS] = a_positions;
 }
 
-void ModelInstanced::push_rotations(const std::vector<glm::vec3>& a_rotations) {
+void ModelInstanced::push_rotations(const std::vector<glm::vec3>& a_rotations) noexcept {
 	m_instanced_vecs[ModelInstancedVecs::ROTATIONS] = a_rotations;
 }
 
-void ModelInstanced::push_sizes(const std::vector<glm::vec3>& a_sizes) {
+void ModelInstanced::push_sizes(const std::vector<glm::vec3>& a_sizes) noexcept {
 	m_instanced_vecs[ModelInstancedVecs::SIZES] = a_sizes;
 }
 
@@ -501,23 +511,23 @@ void ModelInstanced::draw(ShaderProgram& a_shader, const std::string& a_material
 	}
 }
 
-Model& ModelInstanced::get_model_base() {
+Model& ModelInstanced::get_model_base() noexcept {
 	return m_model_base;
 }
 
-std::vector<glm::vec3>& ModelInstanced::get_positions() { 
+std::vector<glm::vec3>& ModelInstanced::get_positions() noexcept { 
 	return m_instanced_vecs[ModelInstancedVecs::POSITIONS];
 }
 
-std::vector<glm::vec3>& ModelInstanced::get_rotations() { 
+std::vector<glm::vec3>& ModelInstanced::get_rotations() noexcept { 
 	return m_instanced_vecs[ModelInstancedVecs::ROTATIONS];
 }
 
-std::vector<glm::vec3>& ModelInstanced::get_size() {
+std::vector<glm::vec3>& ModelInstanced::get_size() noexcept {
 	return m_instanced_vecs[ModelInstancedVecs::SIZES];
 }
 
-glm::mat4 ModelInstanced::calculate_model_mat(std::size_t idx) {
+glm::mat4 ModelInstanced::calculate_model_mat(std::size_t idx) noexcept {
 	auto& pos_vec = m_instanced_vecs[ModelInstancedVecs::POSITIONS];
 	auto& rot_vec = m_instanced_vecs[ModelInstancedVecs::ROTATIONS];
 	auto& siz_vec = m_instanced_vecs[ModelInstancedVecs::SIZES];
@@ -536,11 +546,11 @@ glm::mat4 ModelInstanced::calculate_model_mat(std::size_t idx) {
 	return transform_pos * transform_rotation * transform_scale;
 }
 
-glm::mat3 ModelInstanced::calculate_normal_mat(std::size_t idx) {
+glm::mat3 ModelInstanced::calculate_normal_mat(std::size_t idx) noexcept {
 	return glm::transpose(glm::inverse(glm::mat3(m_model_mats[idx])));
 }
 
-void ModelInstanced::calculate_model_mats() {
+void ModelInstanced::calculate_model_mats() noexcept {
 	auto& pos_vec = m_instanced_vecs[ModelInstancedVecs::POSITIONS];
 	auto& rot_vec = m_instanced_vecs[ModelInstancedVecs::ROTATIONS];
 	auto& siz_vec = m_instanced_vecs[ModelInstancedVecs::SIZES];
@@ -558,7 +568,7 @@ void ModelInstanced::calculate_model_mats() {
 	m_instances_siz = m_model_mats.size();
 }
 
-void ModelInstanced::calculate_normal_mats() {
+void ModelInstanced::calculate_normal_mats() noexcept {
 	m_normal_mats.clear();
 	m_normal_mats.reserve(m_model_mats.size());
 

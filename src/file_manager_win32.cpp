@@ -14,7 +14,7 @@ do {																	       \
 
 namespace chill_engine { 
 std::string wstos(const std::wstring& a_ws_src) {
-	static constexpr int BUF_SIZ{ 1024 };
+	static const int BUF_SIZ{ 1024 };
 	size_t len;
 	char* buffer = new char[BUF_SIZ];
 	wcstombs_s(&len, buffer, (size_t)BUF_SIZ, a_ws_src.c_str(), (size_t)BUF_SIZ - 1);

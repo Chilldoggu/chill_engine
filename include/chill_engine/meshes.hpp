@@ -19,18 +19,18 @@ inline constexpr int g_emission_unit_id = 2 * g_max_sampler_siz;
 
 class MaterialMap {
 public:
-	MaterialMap(const std::initializer_list<std::tuple<std::wstring, TextureType, bool>>& a_texture_maps = {});
+	MaterialMap(const std::initializer_list<std::tuple<std::wstring, TextureType, bool, bool>>& a_texture_maps = {});
 
 	auto set_textures(const std::vector<Texture>& a_textures) -> void;
-	auto set_diffuse_maps(const std::vector<std::tuple<std::wstring,bool>>& a_diffuse_maps_names) -> void;
-	auto set_specular_maps(const std::vector<std::tuple<std::wstring,bool>>& a_specular_maps_names) -> void;
-	auto set_emission_maps(const std::vector<std::tuple<std::wstring,bool>>& a_emission_maps_names) -> void;
-	auto set_shininess(float a_shininess) -> void;
+	auto set_diffuse_maps(const std::vector<std::tuple<std::wstring,bool,bool>>& a_diffuse_maps_names) -> void;
+	auto set_specular_maps(const std::vector<std::tuple<std::wstring,bool,bool>>& a_specular_maps_names) -> void;
+	auto set_emission_maps(const std::vector<std::tuple<std::wstring,bool,bool>>& a_emission_maps_names) -> void;
+	auto set_shininess(float a_shininess) noexcept -> void;
 
-	auto get_diffuse_maps() const -> std::vector<Texture>;
-	auto get_specular_maps() const -> std::vector<Texture>;
-	auto get_emission_maps() const -> std::vector<Texture>;
-	auto get_shininess() const -> float;
+	auto get_diffuse_maps() const noexcept -> std::vector<Texture>;
+	auto get_specular_maps() const noexcept -> std::vector<Texture>;
+	auto get_emission_maps() const noexcept -> std::vector<Texture>;
+	auto get_shininess() const noexcept -> float;
 
 private:
 	auto check_unit_id_limits() const -> void;
@@ -79,17 +79,17 @@ public:
 	auto set_UVs(const std::vector<glm::vec2>& a_UVs) -> void;
 	auto set_normals(const std::vector<glm::vec3>& a_normals) -> void;
 	auto set_indicies(const std::vector<unsigned int>& a_elem_indicies) -> void;
-	auto set_material_map(const MaterialMap& a_material_map) -> void;
+	auto set_material_map(const MaterialMap& a_material_map) noexcept -> void;
 
-	auto set_draw_mode(BufferDrawType a_option) -> void;
-	auto set_wireframe(bool a_option) -> void;
-	auto set_visibility(bool a_option) -> void;
+	auto set_draw_mode(BufferDrawType a_option) noexcept -> void;
+	auto set_wireframe(bool a_option) noexcept -> void;
+	auto set_visibility(bool a_option) noexcept -> void;
 
-	auto get_VAO() const -> GLuint;
-	auto get_draw_mode() const -> BufferDrawType;
-	auto get_wireframe() const -> bool;
-	auto get_visibility() const -> bool;
-	auto get_material_map() -> MaterialMap&;
+	auto get_VAO() const noexcept -> GLuint;
+	auto get_draw_mode() const noexcept -> BufferDrawType;
+	auto get_wireframe() const noexcept -> bool;
+	auto get_visibility() const noexcept -> bool;
+	auto get_material_map() noexcept -> MaterialMap&;
 
 private:
 	bool m_wireframe = false;

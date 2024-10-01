@@ -120,8 +120,8 @@ std::ostream& operator<<(std::ostream& os, const TextureType& a_type) {
 	return os;
 }
 
-Texture::Texture(std::wstring a_path, TextureType a_type, bool a_flip_image, int a_unit_id)
-	:m_type{ a_type }, m_unit_id{ a_unit_id }, m_flipped{ a_flip_image }
+Texture::Texture(std::wstring a_path, TextureType a_type, int a_unit_id, bool a_flip_image, bool a_gamma_corr)
+	:m_type{ a_type }, m_unit_id{ a_unit_id }, m_flipped{ a_flip_image }, m_gamma_corr{ a_gamma_corr }
 {
 	if (a_type != TextureType::DIFFUSE && a_type != TextureType::SPECULAR && a_type != TextureType::EMISSION)
 		ERROR("[TEXTURE::TEXTURE] Bad texture type", Error_action::throwing);
@@ -143,21 +143,26 @@ Texture::Texture(std::wstring a_path, TextureType a_type, bool a_flip_image, int
 	stbi_set_flip_vertically_on_load(a_flip_image);
 	unsigned char* data = stbi_load(wstos(m_path).c_str(), &width, &height, &nrChannels, 0);
 
-	unsigned format = GL_NONE;
+	unsigned in_format = GL_NONE;
+	unsigned ex_format = GL_NONE;
 	if (nrChannels == 1) {
-		format = GL_RED;
+		in_format = ex_format = GL_RED;
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	}
 	else if (nrChannels == 3) {
-		format = GL_RGB;
+		auto cond = a_gamma_corr && (a_type == TextureType::DIFFUSE || a_type == TextureType::EMISSION);
+		in_format = cond ? GL_SRGB : GL_RGB;
+		ex_format = GL_RGB;
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	}
 	else if (nrChannels == 4) {
-		format = GL_RGBA;
+		auto cond = a_gamma_corr && (a_type == TextureType::DIFFUSE || a_type == TextureType::EMISSION);
+		in_format = cond ? GL_SRGB_ALPHA : GL_RGBA;
+		ex_format = GL_RGBA;
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -170,7 +175,7 @@ Texture::Texture(std::wstring a_path, TextureType a_type, bool a_flip_image, int
 	}
 
 	if (data) {
-		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		glTexImage2D(GL_TEXTURE_2D, 0, in_format, width, height, 0, ex_format, GL_UNSIGNED_BYTE, data);
 		stbi_image_free(data);
 	}
 	else {
@@ -182,8 +187,9 @@ Texture::Texture(std::wstring a_path, TextureType a_type, bool a_flip_image, int
 	glGenerateMipmap(GL_TEXTURE_2D);
 }
 
-Texture::Texture(std::vector<std::wstring> a_paths, bool a_flip_images, int texture_unit)
-	:m_type{ TextureType::CUBEMAP }, m_flipped{ a_flip_images }, m_unit_id{ texture_unit }
+// Cubemaps
+Texture::Texture(std::vector<std::wstring> a_paths, int texture_unit, bool a_flip_images, bool a_gamma_corr)
+	:m_type{ TextureType::CUBEMAP }, m_unit_id{ texture_unit }, m_flipped{ a_flip_images }, m_gamma_corr{ a_gamma_corr }
 {
 	// Each cubemap face has to be single texture
 	if (a_paths.size() != 6)
@@ -231,12 +237,15 @@ Texture::Texture(std::vector<std::wstring> a_paths, bool a_flip_images, int text
 		std::string full_path = (fs::path(m_path) / fs::path(m_filenames[i])).string();
 		unsigned char* data = stbi_load(full_path.c_str(), &width, &height, &nrChannels, 0);
 
-		unsigned format = GL_NONE;
+		unsigned in_format = GL_NONE;
+		unsigned ex_format = GL_NONE;
 		if (nrChannels == 3) {
-			format = GL_RGB;
+			in_format = a_gamma_corr ? GL_SRGB : GL_RGB;
+			ex_format = GL_RGB;
 		}
 		else if (nrChannels == 4) {
-			format = GL_RGBA;
+			in_format = a_gamma_corr ? GL_SRGB_ALPHA : GL_RGBA;
+			ex_format = GL_RGBA;
 
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -246,7 +255,7 @@ Texture::Texture(std::vector<std::wstring> a_paths, bool a_flip_images, int text
 		}
 
 		if (data) {
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, in_format, width, height, 0, ex_format, GL_UNSIGNED_BYTE, data);
 			stbi_image_free(data); 
 		}
 		else {
@@ -324,6 +333,8 @@ Texture::Texture(const Texture& a_texture) {
 	m_unit_id = a_texture.m_unit_id;
 	m_filename = a_texture.m_filename;
 	m_filenames = a_texture.m_filenames;
+	m_flipped = a_texture.m_flipped;
+	m_gamma_corr = a_texture.m_gamma_corr;
 }
 
 // When moving an object, reference count shouldn't increment.
@@ -334,6 +345,8 @@ Texture::Texture(Texture&& a_texture) noexcept {
 	m_unit_id = a_texture.m_unit_id;
 	m_filename = std::move(a_texture.m_filename);
 	m_filenames = std::move(a_texture.m_filenames);
+	m_flipped = a_texture.m_flipped;
+	m_gamma_corr = a_texture.m_gamma_corr;
 
 	a_texture.m_id = EMPTY_VBO;
 }
@@ -350,6 +363,8 @@ Texture& Texture::operator=(const Texture& a_texture) {
 	m_unit_id = a_texture.m_unit_id;
 	m_filename = a_texture.m_filename;
 	m_filenames = a_texture.m_filenames;
+	m_flipped = a_texture.m_flipped;
+	m_gamma_corr = a_texture.m_gamma_corr;
 
 	return *this;
 }
@@ -365,6 +380,8 @@ Texture& Texture::operator=(Texture&& a_texture) noexcept {
 	m_unit_id = a_texture.m_unit_id;
 	m_filename = std::move(a_texture.m_filename);
 	m_filenames = std::move(a_texture.m_filenames);
+	m_flipped = a_texture.m_flipped;
+	m_gamma_corr = a_texture.m_gamma_corr;
 
 	a_texture.m_id = EMPTY_VBO;
 
@@ -385,15 +402,15 @@ void Texture::refcnt_dec() {
 	} 
 }
 
-void Texture::set_unit_id(int a_unit_id) {
+void Texture::set_unit_id(int a_unit_id) noexcept {
 	m_unit_id = a_unit_id;
 }
 
-void Texture::set_type(TextureType a_type) {
+void Texture::set_type(TextureType a_type) noexcept {
 	m_type = a_type;
 }
 
-void Texture::activate() const {
+void Texture::activate() const noexcept {
 	if (m_type != TextureType::NONE) {
 		glActiveTexture(GL_TEXTURE0 + m_unit_id);
 		if (m_type == TextureType::CUBEMAP || m_type == TextureType::COLOR_3D) { 
@@ -405,32 +422,36 @@ void Texture::activate() const {
 	}
 }
 
-TextureType Texture::get_type() const {
+TextureType Texture::get_type() const noexcept {
 	return m_type;
 }
 
-std::wstring Texture::get_path() const {
+std::wstring Texture::get_path() const noexcept {
 	return m_path;
 }
 
-std::wstring Texture::get_filename() const {
+std::wstring Texture::get_filename() const noexcept {
 	return m_filename;
 }
 
-std::vector<std::wstring> Texture::get_filenames() const {
+std::vector<std::wstring> Texture::get_filenames() const noexcept {
 	return m_filenames;
 }
 
-GLuint Texture::get_id() const {
+GLuint Texture::get_id() const noexcept {
 	return m_id;
 }
 
-int Texture::get_unit_id() const {
+int Texture::get_unit_id() const noexcept {
 	return m_unit_id;
 }
 
-bool Texture::is_flipped() const {
+bool Texture::is_flipped() const noexcept {
 	return m_flipped;
+}
+
+bool Texture::is_gamma_corr() const noexcept {
+	return m_gamma_corr;
 }
 
 RenderBuffer::RenderBuffer(int a_width, int a_height, RenderBufferType a_type) :m_type{ a_type } {
@@ -522,11 +543,11 @@ void RenderBuffer::refcnt_dec() {
 	} 
 }
 
-GLuint RenderBuffer::get_id() const {
+GLuint RenderBuffer::get_id() const noexcept {
 	return m_rbo;
 }
 
-RenderBufferType RenderBuffer::get_type() const {
+RenderBufferType RenderBuffer::get_type() const noexcept {
 	return m_type;
 }
 
@@ -574,7 +595,7 @@ AttachmentBuffer::AttachmentBuffer(int a_width, int a_height, AttachmentType a_a
 	}
 }
 
-void AttachmentBuffer::activate() const {
+void AttachmentBuffer::activate() const noexcept {
 	if (std::holds_alternative<Texture>(m_attachment)) {
 		std::get<Texture>(m_attachment).activate();
 	}
@@ -584,24 +605,24 @@ void AttachmentBuffer::activate() const {
 	}
 }
 
-AttachmentType AttachmentBuffer::get_type() const {
+AttachmentType AttachmentBuffer::get_type() const noexcept {
 	return m_type;
 }
 
-AttachmentBufferType AttachmentBuffer::get_buf_type() const {
+AttachmentBufferType AttachmentBuffer::get_buf_type() const noexcept {
 	return m_buf_type;
 }
 
-std::variant<Texture, RenderBuffer> AttachmentBuffer::get_attachment() const {
+std::variant<Texture, RenderBuffer> AttachmentBuffer::get_attachment() const noexcept {
 	return m_attachment;
 }
 
-Framebuffer::Framebuffer(int a_width, int a_height) :m_width{ a_width }, m_height{ a_height } {
+FrameBuffer::FrameBuffer(int a_width, int a_height) :m_width{ a_width }, m_height{ a_height } {
 	glGenFramebuffers(1, &m_fbo);
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::FRAME_BUFFERS, m_fbo);
 }
 
-Framebuffer::Framebuffer(Framebuffer&& a_frame_buf) noexcept {
+FrameBuffer::FrameBuffer(FrameBuffer&& a_frame_buf) noexcept {
 	m_fbo = a_frame_buf.m_fbo;
 	m_width = a_frame_buf.m_width;
 	m_height = a_frame_buf.m_height;
@@ -613,7 +634,7 @@ Framebuffer::Framebuffer(Framebuffer&& a_frame_buf) noexcept {
 	a_frame_buf.m_fbo = EMPTY_VBO;
 }
 
-Framebuffer& Framebuffer::operator=(Framebuffer&& a_frame_buf) noexcept {
+FrameBuffer& FrameBuffer::operator=(FrameBuffer&& a_frame_buf) noexcept {
 	if (m_fbo != a_frame_buf.m_fbo) {
 		refcnt_dec();
 	}
@@ -630,11 +651,11 @@ Framebuffer& Framebuffer::operator=(Framebuffer&& a_frame_buf) noexcept {
 	return *this;
 }
 
-Framebuffer::~Framebuffer() {
+FrameBuffer::~FrameBuffer() {
 	refcnt_dec();
 }
 
-void Framebuffer::refcnt_dec() {
+void FrameBuffer::refcnt_dec() {
 	if (m_fbo != EMPTY_VBO) {
 		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::FRAME_BUFFERS, m_fbo);
 		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::FRAME_BUFFERS, m_fbo)) {
@@ -643,7 +664,7 @@ void Framebuffer::refcnt_dec() {
 	} 
 }
 
-void Framebuffer::attach(AttachmentType a_attach_type, AttachmentBufferType a_buf_type, int a_samples) {
+void FrameBuffer::attach(AttachmentType a_attach_type, AttachmentBufferType a_buf_type, int a_samples) {
 	if (a_attach_type == AttachmentType::NONE || a_buf_type == AttachmentBufferType::NONE || a_samples <= 0 ||
 		((a_buf_type == AttachmentBufferType::TEXTURE || a_buf_type == AttachmentBufferType::RENDER_BUFFER) && a_samples > 1)) {
 		return; 
@@ -697,7 +718,7 @@ void Framebuffer::attach(AttachmentType a_attach_type, AttachmentBufferType a_bu
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Framebuffer::attach_cubemap_face(GLenum a_cubemap_face) { 
+void FrameBuffer::attach_cubemap_face(GLenum a_cubemap_face) { 
 	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 
 	// Ensure that attached color buffer is a cubemap
@@ -711,7 +732,7 @@ void Framebuffer::attach_cubemap_face(GLenum a_cubemap_face) {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); 
 }
 
-AttachmentBuffer Framebuffer::get_attachment_buffer(AttachmentType a_type) const {
+AttachmentBuffer FrameBuffer::get_attachment_buffer(AttachmentType a_type) const noexcept {
 	if (a_type == AttachmentType::COLOR_2D || a_type == AttachmentType::COLOR_3D) {
 			return m_color_attachment;
 	}
@@ -724,23 +745,23 @@ AttachmentBuffer Framebuffer::get_attachment_buffer(AttachmentType a_type) const
 	return AttachmentBuffer();
 }
 
-void Framebuffer::activate_color() const {
+void FrameBuffer::activate_color() const noexcept {
 	m_color_attachment.activate(); 
 }
 
-GLuint Framebuffer::get_id() const {
+GLuint FrameBuffer::get_id() const noexcept {
 	return m_fbo;
 }
 
-void Framebuffer::bind() const {
+void FrameBuffer::bind() const noexcept {
 	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 }
 
-void Framebuffer::unbind() const {
+void FrameBuffer::unbind() const noexcept {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-bool Framebuffer::check_status() const {
+bool FrameBuffer::check_status() const noexcept {
 	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 
 	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER); 
@@ -753,15 +774,15 @@ bool Framebuffer::check_status() const {
 	return true;
 }
 
-void Framebuffer::set_width(int a_width) {
+void FrameBuffer::set_width(int a_width) noexcept {
 	m_width = a_width;
 }
 
-void Framebuffer::set_height(int a_height) {
+void FrameBuffer::set_height(int a_height) noexcept {
 	m_height = a_height;
 }
 
-bool Framebuffer::set_samples(int a_samples) {
+bool FrameBuffer::set_samples(int a_samples) {
 	if (!check_status() || a_samples == m_samples) {
 		return false;
 	}
@@ -791,15 +812,15 @@ bool Framebuffer::set_samples(int a_samples) {
 	return true;
 }
 
-int Framebuffer::get_width() const {
+int FrameBuffer::get_width() const noexcept {
 	return m_width;
 }
 
-int Framebuffer::get_height() const {
+int FrameBuffer::get_height() const noexcept {
 	return m_height;
 }
 
-int Framebuffer::get_samples() const {
+int FrameBuffer::get_samples() const noexcept {
 	return m_samples;
 }
 
@@ -869,13 +890,13 @@ UniformBufferElement& UniformBuffer::operator[](const std::string& a_uniform_nam
 	return (*it).second; 
 }
 
-bool UniformBuffer::check_status() const {
+bool UniformBuffer::check_status() const noexcept {
 	if (m_id == EMPTY_VBO || m_binding_point == -1)
 		return false;
 	return true; 
 }
 
-void UniformBuffer::create_buffer() {
+void UniformBuffer::create_buffer() noexcept {
 	if (m_id == EMPTY_VBO) {
 		glGenBuffers(1, &m_id);
 		Application::get_instance().get_rmanager().inc_ref_count(ResourceType::UNIFORM_BUFFERS, m_id);
@@ -886,7 +907,7 @@ void UniformBuffer::create_buffer() {
 	glBindBuffer(GL_UNIFORM_BUFFER, 0); 
 }
 
-void UniformBuffer::set_binding_point(int a_binding_point) {
+void UniformBuffer::set_binding_point(int a_binding_point) noexcept {
 	m_binding_point = a_binding_point;
 	glBindBufferBase(GL_UNIFORM_BUFFER, a_binding_point, m_id); 
 }
@@ -902,7 +923,7 @@ void UniformBuffer::clear() {
 	} 
 }
 
-UniformBuffer::NameUniMap UniformBuffer::get_elements() const {
+UniformBuffer::NameUniMap UniformBuffer::get_elements() const noexcept {
 	return m_elements; 
 } 
 }

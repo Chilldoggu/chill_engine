@@ -25,6 +25,7 @@ enum class ShaderState {
 	STENCIL_TEST,
 	FACE_CULLING,
 	POINT_SIZE,
+	GAMMA_CORRECTION,
 };
 
 class Uniform {
@@ -32,7 +33,7 @@ public:
 	Uniform() = default;
 	Uniform(const std::string& a_name, int a_location, GLuint a_program);
 
-	auto get_name() const -> std::string;
+	auto get_name() const noexcept -> std::string;
 
 	template<typename T>
 	auto operator=(const T& val) -> Uniform&;
@@ -54,9 +55,9 @@ public:
 	auto operator=(const ShaderSrc& a_shader_src) -> ShaderSrc&;
 	auto operator=(ShaderSrc&& a_shader_src) noexcept -> ShaderSrc&;
 
-	auto get_type() const -> ShaderType;
-	auto get_path() const -> std::wstring;
-	auto get_id() const -> GLuint;
+	auto get_type() const noexcept -> ShaderType;
+	auto get_path() const noexcept -> std::wstring;
+	auto get_id() const noexcept -> GLuint;
 
 private:
 	ShaderType m_type = ShaderType::NONE;
@@ -73,24 +74,22 @@ public:
 	~ShaderProgram();
 
 	auto operator=(const ShaderProgram& a_shader_program) -> ShaderProgram&;
-	auto operator=(ShaderProgram&& a_shader_program) noexcept -> ShaderProgram&;
-
+	auto operator=(ShaderProgram&& a_shader_program) noexcept -> ShaderProgram&; 
 	auto operator[](const std::string& a_uniform_var) -> Uniform&;
-	void set_state(ShaderState a_state, bool a_option);
+
+	auto set_state(ShaderState a_state, bool a_option) noexcept -> void;
 	auto set_uniform(const std::string& a_dirlight_name, const DirLight& a_light) -> void;
 	auto set_uniform(const std::string& a_pointlight_name, const PointLight& a_light) -> void;
 	auto set_uniform(const std::string& a_spotlight_name, const SpotLight& a_light) -> void;
 	auto set_uniform(const std::string& a_material_name, const MaterialMap& a_material) -> void;
-	auto set_binding_point(const std::string& a_uniform_block_name, int a_binding_point) -> void;
+	auto set_binding_point(const std::string& a_uniform_block_name, int a_binding_point) noexcept -> void;
 	auto use() -> void;
 
-	auto get_id() const -> GLuint;
-	auto get_vert_shader() const -> ShaderSrc;
-	auto get_frag_shader() const -> ShaderSrc;
-	auto get_geom_shader() const -> ShaderSrc;
-	auto is_state(ShaderState a_state) const -> bool;
-
-	auto debug() const -> void;
+	auto get_id() const noexcept -> GLuint;
+	auto get_vert_shader() const noexcept -> ShaderSrc;
+	auto get_frag_shader() const noexcept -> ShaderSrc;
+	auto get_geom_shader() const noexcept -> ShaderSrc;
+	auto is_state(ShaderState a_state) const noexcept -> bool;
 
 private:
 	auto push_uniform(const std::string& a_uniform_var) -> void;
@@ -108,7 +107,8 @@ private:
 		{ ShaderState::DEPTH_TEST,   true },
 		{ ShaderState::STENCIL_TEST, false },
 		{ ShaderState::FACE_CULLING, true },
-		{ ShaderState::POINT_SIZE, true }
+		{ ShaderState::POINT_SIZE, true },
+		{ ShaderState::GAMMA_CORRECTION, false },
 	};
 }; 
 

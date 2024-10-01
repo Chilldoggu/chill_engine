@@ -20,7 +20,7 @@ Uniform::Uniform(const std::string& a_name, int a_location, GLuint a_program)
 	}
 }
 
-std::string Uniform::get_name() const {
+std::string Uniform::get_name() const noexcept {
 	return m_name;
 }
 
@@ -117,15 +117,15 @@ ShaderSrc::~ShaderSrc() {
 	}
 }
 
-ShaderType ShaderSrc::get_type() const {
+ShaderType ShaderSrc::get_type() const noexcept {
 	return m_type;
 }
 
-std::wstring ShaderSrc::get_path() const {
+std::wstring ShaderSrc::get_path() const noexcept {
 	return m_path;
 }
 
-GLuint ShaderSrc::get_id() const {
+GLuint ShaderSrc::get_id() const noexcept {
 	return m_id;
 }
 
@@ -205,53 +205,60 @@ ShaderProgram::~ShaderProgram() {
 }
 
 Uniform& ShaderProgram::operator[](const std::string& uniform_var) {
-	try {
-		return m_uniforms.at(uniform_var);
-	}
-	catch (std::out_of_range) {
-		push_uniform(uniform_var);
+	auto it = m_uniforms.find(uniform_var);
+	if (it == m_uniforms.end()) {
+		push_uniform(uniform_var); 
 		return m_uniforms[uniform_var];
 	}
+	return it->second;
 }
+
 void ShaderProgram::use() {
 	glUseProgram(m_id);
 
-	if (m_states.at(ShaderState::FACE_CULLING)) {
+	if (m_states[ShaderState::FACE_CULLING]) {
 		glEnable(GL_CULL_FACE);
 	}
 	else {
 		glDisable(GL_CULL_FACE);
 	}
 
-	if (m_states.at(ShaderState::DEPTH_TEST)) {
+	if (m_states[ShaderState::DEPTH_TEST]) {
 		glEnable(GL_DEPTH_TEST);
 	}
 	else {
 		glDisable(GL_DEPTH_TEST);
 	}
 
-	if (m_states.at(ShaderState::STENCIL_TEST)) {
+	if (m_states[ShaderState::STENCIL_TEST]) {
 		glEnable(GL_STENCIL_TEST);
 	}
 	else {
 		glDisable(GL_STENCIL_TEST);
 	}
 
-	if (m_states.at(ShaderState::POINT_SIZE)) {
+	if (m_states[ShaderState::POINT_SIZE]) {
 		glEnable(GL_PROGRAM_POINT_SIZE);
 	}
 	else {
 		glDisable(GL_PROGRAM_POINT_SIZE); 
 	}
+	
+	if (m_states[ShaderState::GAMMA_CORRECTION]) {
+		glEnable(GL_FRAMEBUFFER_SRGB);
+	}
+	else {
+		glDisable(GL_FRAMEBUFFER_SRGB); 
+	}
 }
 
-void ShaderProgram::set_binding_point(const std::string& a_uniform_block_name, int a_binding_point) {
+void ShaderProgram::set_binding_point(const std::string& a_uniform_block_name, int a_binding_point) noexcept {
 	auto block_index = glGetUniformBlockIndex(m_id, a_uniform_block_name.data());
 	glUniformBlockBinding(m_id, block_index, a_binding_point);
 }
 
-void ShaderProgram::set_state(ShaderState a_state, bool a_option) {
-	m_states.at(a_state) = a_option;
+void ShaderProgram::set_state(ShaderState a_state, bool a_option) noexcept {
+	m_states[a_state] = a_option;
 }
 
 template<typename Container>
@@ -264,7 +271,7 @@ void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, const 
 
 template<typename T>
 void ShaderProgram::push_uniform_struct(const std::string& a_uniform_var, std::initializer_list<T> a_member_list) {
-	push_uniform_struct(a_uniform_var, std::vector( a_member_list ));
+	push_uniform_struct(a_uniform_var, std::vector(a_member_list));
 }
 
 void ShaderProgram::push_uniform(const std::string& uniform_var) {
@@ -272,73 +279,67 @@ void ShaderProgram::push_uniform(const std::string& uniform_var) {
 	m_uniforms[uniform_var] = Uniform(uniform_var, loc, m_id);
 }
 
-// WARNING: Exception abuse
 void ShaderProgram::set_uniform(const std::string& a_dirlight_name, const DirLight& a_light) {
-	try {
-		m_uniforms.at(a_dirlight_name + ".color") = a_light.get_color();
-		m_uniforms.at(a_dirlight_name + ".dir") = a_light.get_dir();
-		m_uniforms.at(a_dirlight_name + ".ambient_intens") = a_light.get_ambient();
-		m_uniforms.at(a_dirlight_name + ".diffuse_intens") = a_light.get_diffuse();
-		m_uniforms.at(a_dirlight_name + ".specular_intens") = a_light.get_specular();
+	auto it = m_uniforms.find(a_dirlight_name + ".dir");
+	if (it == m_uniforms.end()) {
+		push_uniform_struct(a_dirlight_name, 
+			{ "dir", "color", "ambient_intens", "diffuse_intens", "specular_intens" }
+		);
 	}
-	catch (std::out_of_range) {
-		push_uniform_struct(a_dirlight_name, { "dir", "color", "ambient_intens", "diffuse_intens", "specular_intens" });
-	}
+
+	m_uniforms[a_dirlight_name + ".color"] = a_light.get_color();
+	m_uniforms[a_dirlight_name + ".dir"] = a_light.get_dir();
+	m_uniforms[a_dirlight_name + ".ambient_intens"] = a_light.get_ambient();
+	m_uniforms[a_dirlight_name + ".diffuse_intens"] = a_light.get_diffuse();
+	m_uniforms[a_dirlight_name + ".specular_intens"] = a_light.get_specular();
 }
 
-// WARNING: Exception abuse
 void ShaderProgram::set_uniform(const std::string& a_pointlight_name, const PointLight& a_light) {
-	try {
-		m_uniforms.at(a_pointlight_name + ".color") = a_light.get_color();
-		m_uniforms.at(a_pointlight_name + ".pos") = a_light.get_pos();
-		m_uniforms.at(a_pointlight_name + ".ambient_intens") = a_light.get_ambient();
-		m_uniforms.at(a_pointlight_name + ".diffuse_intens") = a_light.get_diffuse();
-		m_uniforms.at(a_pointlight_name + ".specular_intens") = a_light.get_specular();
-		m_uniforms.at(a_pointlight_name + ".linear") = a_light.get_linear();
-		m_uniforms.at(a_pointlight_name + ".constant") = a_light.get_constant();
-		m_uniforms.at(a_pointlight_name + ".quadratic") = a_light.get_quadratic();
+	auto it = m_uniforms.find(a_pointlight_name + ".pos");
+	if (it == m_uniforms.end()) {
+		push_uniform_struct(a_pointlight_name, 
+			{ "pos", "color", "ambient_intens", "diffuse_intens", "specular_intens", "linear", "constant", "quadratic" }
+		); 
 	}
-	catch (std::out_of_range) {
-		push_uniform_struct(a_pointlight_name, { "pos", "color", "ambient_intens", "diffuse_intens", "specular_intens", "linear", "constant", "quadratic" });
-	}
+
+	m_uniforms[a_pointlight_name + ".color"] = a_light.get_color();
+	m_uniforms[a_pointlight_name + ".pos"] = a_light.get_pos();
+	m_uniforms[a_pointlight_name + ".ambient_intens"] = a_light.get_ambient();
+	m_uniforms[a_pointlight_name + ".diffuse_intens"] = a_light.get_diffuse();
+	m_uniforms[a_pointlight_name + ".specular_intens"] = a_light.get_specular();
+	m_uniforms[a_pointlight_name + ".linear"] = a_light.get_linear();
+	m_uniforms[a_pointlight_name + ".constant"] = a_light.get_constant();
+	m_uniforms[a_pointlight_name + ".quadratic"] = a_light.get_quadratic();
 }
 
-// WARNING: Exception abuse
 void ShaderProgram::set_uniform(const std::string& a_spotlight_name, const SpotLight& a_light) {
-	try {
-		m_uniforms.at(a_spotlight_name + ".color") = a_light.get_color();
-		m_uniforms.at(a_spotlight_name + ".pos") = a_light.get_pos();
-		m_uniforms.at(a_spotlight_name + ".ambient_intens") = a_light.get_ambient();
-		m_uniforms.at(a_spotlight_name + ".diffuse_intens") = a_light.get_diffuse();
-		m_uniforms.at(a_spotlight_name + ".specular_intens") = a_light.get_specular();
-		m_uniforms.at(a_spotlight_name + ".linear") = a_light.get_linear();
-		m_uniforms.at(a_spotlight_name + ".constant") = a_light.get_constant();
-		m_uniforms.at(a_spotlight_name + ".quadratic") = a_light.get_quadratic();
-		m_uniforms.at(a_spotlight_name + ".inner_cutoff") = a_light.get_inner_cutoff();
-		m_uniforms.at(a_spotlight_name + ".outer_cutoff") = a_light.get_outer_cutoff();
-		m_uniforms.at(a_spotlight_name + ".spot_dir") = a_light.get_spot_dir();
+	auto it = m_uniforms.find(a_spotlight_name + ".pos");
+	if (it == m_uniforms.end()) {
+		push_uniform_struct(a_spotlight_name, 
+			{ "pos", "color", "ambient_intens", "diffuse_intens", "specular_intens", "linear", "constant", "quadratic", "spot_dir", "inner_cutoff", "outer_cutoff" }
+		);
 	}
-	catch (std::out_of_range) {
-		push_uniform_struct(a_spotlight_name, { "pos", "color", "ambient_intens", "diffuse_intens", "specular_intens", "linear", "constant", "quadratic", "spot_dir", "inner_cutoff", "outer_cutoff" });
-	}
+
+	m_uniforms[a_spotlight_name + ".color"] = a_light.get_color();
+	m_uniforms[a_spotlight_name + ".pos"] = a_light.get_pos();
+	m_uniforms[a_spotlight_name + ".ambient_intens"] = a_light.get_ambient();
+	m_uniforms[a_spotlight_name + ".diffuse_intens"] = a_light.get_diffuse();
+	m_uniforms[a_spotlight_name + ".specular_intens"] = a_light.get_specular();
+	m_uniforms[a_spotlight_name + ".linear"] = a_light.get_linear();
+	m_uniforms[a_spotlight_name + ".constant"] = a_light.get_constant();
+	m_uniforms[a_spotlight_name + ".quadratic"] = a_light.get_quadratic();
+	m_uniforms[a_spotlight_name + ".inner_cutoff"] = a_light.get_inner_cutoff();
+	m_uniforms[a_spotlight_name + ".outer_cutoff"] = a_light.get_outer_cutoff();
+	m_uniforms[a_spotlight_name + ".spot_dir"] = a_light.get_spot_dir();
 }
 
-// WARNING: Exception abuse
 void ShaderProgram::set_uniform(const std::string& a_material_name, const MaterialMap& a_material) {
 	auto diffuse_maps = a_material.get_diffuse_maps();
 	auto specular_maps = a_material.get_specular_maps();
 	auto emission_maps = a_material.get_emission_maps();
-	try {
-		m_uniforms.at(a_material_name + ".shininess") = a_material.get_shininess();
 
-		for (const auto& diffuse_map : diffuse_maps)
-			diffuse_map.activate();
-		for (const auto& specular_map : specular_maps)
-			specular_map.activate();
-		for (const auto& emission_map : emission_maps)
-			emission_map.activate();
-	}
-	catch (std::out_of_range) {
+	auto it = m_uniforms.find(a_material_name + ".shininess");
+	if (it == m_uniforms.end()) {
 		std::vector<std::string> maps = {};
 		for (size_t i = 0; i < diffuse_maps.size(); i++)
 			maps.push_back(std::format("diffuse_maps[{}]", i));
@@ -346,43 +347,46 @@ void ShaderProgram::set_uniform(const std::string& a_material_name, const Materi
 			maps.push_back(std::format("specular_maps[{}]", i));
 		for (size_t i = 0; i < emission_maps.size(); i++)
 			maps.push_back(std::format("emission_maps[{}]", i));
-		maps.push_back("shininess");
-
-		push_uniform_struct(a_material_name, maps);
-
-		for (size_t i = 0; i < diffuse_maps.size(); i++)
-			m_uniforms.at(std::format("{}.diffuse_maps[{}]", a_material_name, i)) = diffuse_maps[i].get_unit_id();
-		for (size_t i = 0; i < specular_maps.size(); i++)
-			m_uniforms.at(std::format("{}.specular_maps[{}]", a_material_name, i)) = specular_maps[i].get_unit_id();
-		for (size_t i = 0; i < emission_maps.size(); i++)
-			m_uniforms.at(std::format("{}.emission_maps[{}]", a_material_name, i)) = emission_maps[i].get_unit_id();
-		m_uniforms.at(a_material_name + ".shininess") = a_material.get_shininess();
+		maps.push_back("shininess"); 
+		push_uniform_struct(a_material_name, maps); 
 	}
+		
+	m_uniforms[a_material_name + ".shininess"] = a_material.get_shininess();
+	for (size_t i = 0; i < diffuse_maps.size(); ++i) {
+		m_uniforms[std::format("{}.diffuse_maps[{}]", a_material_name, i)] = diffuse_maps[i].get_unit_id(); 
+	}
+	for (size_t i = 0; i < specular_maps.size(); ++i) {
+		m_uniforms[std::format("{}.specular_maps[{}]", a_material_name, i)] = specular_maps[i].get_unit_id(); 
+	}
+	for (size_t i = 0; i < emission_maps.size(); ++i) {
+		m_uniforms[std::format("{}.emission_maps[{}]", a_material_name, i)] = emission_maps[i].get_unit_id(); 
+	}
+
+	for (const auto& diffuse_map : diffuse_maps)
+		diffuse_map.activate();
+	for (const auto& specular_map : specular_maps)
+		specular_map.activate();
+	for (const auto& emission_map : emission_maps)
+		emission_map.activate();
 }
 
-bool ShaderProgram::is_state(ShaderState a_state) const {
+bool ShaderProgram::is_state(ShaderState a_state) const noexcept {
 	return m_states.at(a_state);
 }
 
-GLuint ShaderProgram::get_id() const {
+GLuint ShaderProgram::get_id() const noexcept {
 	return m_id;
 }
 
-ShaderSrc ShaderProgram::get_vert_shader() const {
+ShaderSrc ShaderProgram::get_vert_shader() const noexcept {
 	return m_vertex_sh;
 }
 
-ShaderSrc ShaderProgram::get_frag_shader() const {
+ShaderSrc ShaderProgram::get_frag_shader() const noexcept {
 	return m_fragment_sh; 
 }
 
-ShaderSrc ShaderProgram::get_geom_shader() const {
+ShaderSrc ShaderProgram::get_geom_shader() const noexcept {
 	return m_geometry_sh; 
-}
-
-void ShaderProgram::debug() const {
-	for (const auto& [key, val] : m_uniforms) {
-		std::cout << std::format("key: {}\n", key);
-	}
 }
 }
