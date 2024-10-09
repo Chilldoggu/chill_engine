@@ -1,19 +1,2 @@
 # About
-This project is an OpenGL renderer that I'm developing as I learn more about graphic programming. As I continued to study, the renderer grew significantly, so I decided to save and share it on GitHub. The renderer currently lacks a GUI and serves solely as an API for quickly drawing shapes and creating effects using OpenGL. Many uniform names are hard-coded and need to be correctly named in GLSL shaders. Additionally, files such as textures should be stored in the `assets` directory.
-
-# Technologies
-- **Glad**: OpenGL loader for OpenGL core profile version 3.3 functions. Although I've included my own generated loader, you will need to generate and overwrite it to match your specific platform requirements.
-- **GLM**: Used for transformations and GLSL type compatibility.
-- **GLFW3**: Manages window creation and input handling.
-
-# Project Structure
-The project directory should be organized as follows:
-```
-.
-├── CMakeLists.txt
-├── project_source_files
-├── assets
-│   └── ...
-└── chill_engine
-    └── ...
-```
+This project is an OpenGL renderer that I'm developing as I learn more about graphics programming. As I continued to study, the renderer grew significantly, so I decided to save and share it on GitHub. The renderer currently lacks GUI and serves solely as an API for quickly drawing shapes and creating effects using OpenGL. Many uniform names are hard-coded and need to be correctly named in GLSL shaders. This project compiles into shared library object and can be dynamically linked to other projects. To build it you need to have precompiled libraries of [assimp](https://github.com/assimp/assimp) and [glfw3](https://github.com/glfw/glfw) placed into lib directory (*.dll + *.lib into _chill_renderer/lib) (Windows) or use PkgConfig (Linux).

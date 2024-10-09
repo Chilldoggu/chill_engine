@@ -27,9 +27,13 @@
 *.lib
 
 # Executables
-*.exe
+*.exe:w
 *.out
 *.app
 
 .vs
 out
+assets/Private
+assets/Public
+install
+CMakeSettings.json
