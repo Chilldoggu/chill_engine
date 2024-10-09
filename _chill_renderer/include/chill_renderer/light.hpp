@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 
-namespace chill_engine {
+namespace chill_renderer {
 enum class LightType {
 	DIRECTIONAL,
 	POINT,

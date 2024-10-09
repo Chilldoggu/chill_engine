@@ -1,8 +1,8 @@
 #include <cmath>
 
-#include "chill_engine/light.hpp"
+#include "chill_renderer/light.hpp"
 
-namespace chill_engine {
+namespace chill_renderer {
 Light::Light(const glm::vec4& a_pos) :m_pos_dir{ a_pos } {}
 
 void Light::set_color(const glm::vec3& a_color) noexcept {

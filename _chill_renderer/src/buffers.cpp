@@ -3,11 +3,11 @@
 
 #include <iostream>
 
-#include "chill_engine/buffers.hpp"
-#include "chill_engine/file_manager.hpp"
-#include "chill_engine/application.hpp"
+#include "chill_renderer/buffers.hpp"
+#include "chill_renderer/file_manager.hpp"
+#include "chill_renderer/application.hpp"
 
-namespace chill_engine { 
+namespace chill_renderer { 
 namespace fs = std::filesystem;
 
 fs::path guess_path(const std::wstring& a_path) {

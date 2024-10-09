@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
-namespace chill_engine {
+namespace chill_renderer {
 enum class CameraMovement {
 	FORWARD,
 	BACKWARD,

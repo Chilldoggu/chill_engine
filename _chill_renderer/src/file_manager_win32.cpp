@@ -3,8 +3,8 @@
 
 #include <cstdlib>   // wsctombs_s
 
-#include "chill_engine/file_manager.hpp"
-#include "chill_engine/assert.hpp" // GenericException
+#include "chill_renderer/file_manager.hpp"
+#include "chill_renderer/assert.hpp" // GenericException
 
 #define CHECK_HRESULT(expr)												       \
 do {																	       \
@@ -12,7 +12,7 @@ do {																	       \
 		throw GenericException("[ERROR] Couldn't create WIN32 FileDialog.\n"); \
 } while (false);
 
-namespace chill_engine { 
+namespace chill_renderer { 
 std::string wstos(const std::wstring& a_ws_src) {
 	static const int BUF_SIZ{ 1024 };
 	size_t len;

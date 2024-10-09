@@ -3,10 +3,10 @@
 #include <memory>
 #include <string>
 
-#include "chill_engine/window.hpp"
-#include "chill_engine/resource_manager.hpp"
+#include "chill_renderer/window.hpp"
+#include "chill_renderer/resource_manager.hpp"
 
-namespace chill_engine {
+namespace chill_renderer {
 class Application {
 public:
 	Application(const Application&) = delete;

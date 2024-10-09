@@ -1,6 +1,6 @@
-#include "chill_engine/application.hpp"
+#include "chill_renderer/application.hpp"
 
-namespace chill_engine {
+namespace chill_renderer {
 static Application* s_instance = nullptr;
 
 Application& Application::init(int win_width, int win_height, const std::string& win_title, CursorMode win_mode) {

@@ -10,9 +10,9 @@
 #include <filesystem>
 #include <map>
 
-#include "chill_engine/assert.hpp" // template definitions
+#include "chill_renderer/assert.hpp" // template definitions
 
-namespace chill_engine { 
+namespace chill_renderer { 
 namespace fs = std::filesystem;
 
 inline constexpr int EMPTY_VBO = 0;
@@ -119,7 +119,7 @@ private:
 	int m_unit_id = 0;
 	int m_samples = 1;
 	bool m_flipped = false;
-	bool m_gamma_corr = false;
+	bool m_gamma_corr = true;
 };
 
 class RenderBuffer {

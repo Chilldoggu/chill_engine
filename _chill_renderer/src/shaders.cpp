@@ -2,12 +2,12 @@
 #include <fstream>
 #include <iostream>
 
-#include "chill_engine/shaders.hpp"
-#include "chill_engine/assert.hpp"
-#include "chill_engine/file_manager.hpp" // wstos
-#include "chill_engine/application.hpp"
+#include "chill_renderer/shaders.hpp"
+#include "chill_renderer/assert.hpp"
+#include "chill_renderer/file_manager.hpp" // wstos
+#include "chill_renderer/application.hpp"
 
-namespace chill_engine {
+namespace chill_renderer {
 namespace fs = std::filesystem;
 
 extern fs::path guess_path(const std::wstring& a_path);

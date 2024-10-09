@@ -1,10 +1,10 @@
 #include <filesystem>
 #include <iostream>
 
-#include "chill_engine/resource_manager.hpp"
-#include "chill_engine/file_manager.hpp"
+#include "chill_renderer/resource_manager.hpp"
+#include "chill_renderer/file_manager.hpp"
 
-namespace chill_engine {
+namespace chill_renderer {
 namespace fs = std::filesystem;
 
 // TODO: Make it more general or whatever.

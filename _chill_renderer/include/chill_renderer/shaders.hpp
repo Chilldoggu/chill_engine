@@ -7,10 +7,10 @@
 #include <string>
 #include <vector>
 
-#include "chill_engine/light.hpp"
-#include "chill_engine/meshes.hpp"
+#include "chill_renderer/light.hpp"
+#include "chill_renderer/meshes.hpp"
  
-namespace chill_engine { 
+namespace chill_renderer { 
 inline constexpr int g_info_log_siz = 1024;
 
 enum class ShaderType {

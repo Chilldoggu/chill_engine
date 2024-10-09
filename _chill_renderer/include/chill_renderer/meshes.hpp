@@ -4,9 +4,9 @@
 #include <vector>
 #include <tuple>
 
-#include "chill_engine/buffers.hpp"
+#include "chill_renderer/buffers.hpp"
 
-namespace chill_engine {
+namespace chill_renderer {
 inline constexpr int g_attrib_pos_location = 0;
 inline constexpr int g_attrib_tex_location = 1;
 inline constexpr int g_attrib_normal_location = 2;

@@ -1,9 +1,9 @@
-#include "chill_engine/meshes.hpp"
-#include "chill_engine/assert.hpp"
-#include "chill_engine/file_manager.hpp"
-#include "chill_engine/application.hpp"
+#include "chill_renderer/meshes.hpp"
+#include "chill_renderer/assert.hpp"
+#include "chill_renderer/file_manager.hpp"
+#include "chill_renderer/application.hpp"
 
-namespace chill_engine { 
+namespace chill_renderer { 
 MaterialMap::MaterialMap(const std::initializer_list<std::tuple<std::wstring,TextureType,bool,bool>>& a_texture_maps) {
 	ResourceManager& rman = Application::get_instance().get_rmanager();
 

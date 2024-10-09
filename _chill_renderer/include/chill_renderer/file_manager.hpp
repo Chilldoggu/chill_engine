@@ -4,7 +4,7 @@
 #include <vector>  // vector
 #include <utility> // pair
 
-namespace chill_engine {
+namespace chill_renderer {
 std::string wstos(const std::wstring& a_ws_src);
 
 std::wstring basic_file_open(

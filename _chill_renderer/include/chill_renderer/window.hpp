@@ -7,9 +7,9 @@
 #include <string>
 #include <memory>
 
-#include "chill_engine/camera.hpp"
+#include "chill_renderer/camera.hpp"
 
-namespace chill_engine {
+namespace chill_renderer {
 void ToggleButton(const char* str_id, bool* v);
 
 enum class CursorMode {

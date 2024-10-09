@@ -1,9 +1,9 @@
 #include "glm/gtc/matrix_transform.hpp"
 
-#include "chill_engine/camera.hpp"
-#include "chill_engine/window.hpp"
+#include "chill_renderer/camera.hpp"
+#include "chill_renderer/window.hpp"
 
-namespace chill_engine {
+namespace chill_renderer {
 Camera::Camera(GLFWwindow* a_window, const glm::vec3& a_position)
 	:m_position{ a_position }, m_window{ a_window }
 {

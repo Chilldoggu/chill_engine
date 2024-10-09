@@ -3,10 +3,10 @@
 #include <vector>  // vector
 #include <utility> // pair
 
-#include "file_manager.hpp"
-#include "assert.hpp" // GenericException
+#include "chill_renderer/file_manager.hpp"
+#include "chill_renderer/assert.hpp" // GenericException
 
-namespace chill_engine {
+namespace chill_renderer {
 std::string wstos(const std::wstring& a_ws_src) {
 	static constexpr int BUF_SIZ{ 1024 };
 	size_t len;

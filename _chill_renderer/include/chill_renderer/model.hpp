@@ -4,10 +4,10 @@
 
 #include <vector>
 
-#include "chill_engine/meshes.hpp"
-#include "chill_engine/shaders.hpp"
+#include "chill_renderer/meshes.hpp"
+#include "chill_renderer/shaders.hpp"
 
-namespace chill_engine { 
+namespace chill_renderer { 
 inline constexpr int g_attrib_model_mat_arr_location = 4;
 inline constexpr int g_attrib_normal_mat_arr_location = 8;
 
@@ -27,12 +27,15 @@ public:
 	auto set_size(const glm::vec3& a_size) noexcept -> void;
 	auto set_rotation(const glm::vec3& a_rotation) noexcept -> void;
 	auto set_meshes(const std::vector<Mesh>& a_meshes) noexcept -> void;
+	auto set_outline(bool a_option) noexcept -> void;
+	auto set_outline_thickness(float a_thickness) noexcept -> void;
+	auto set_outline_color(glm::vec3 a_color) noexcept -> void;
 	auto move(const glm::vec3& a_vec) noexcept -> void;
 	auto rotate(float a_angle, Axis a_axis = Axis::X) noexcept -> void;
 
 	auto draw() -> void;
 	auto draw(ShaderProgram& a_shader, const std::string& a_material_map_uniform_name) -> void;
-	auto draw_outlined(float a_thickness, ShaderProgram& a_object_shader, ShaderProgram& a_outline_shader, const std::string& a_model_uniform_name, const std::string& a_material_map_uniform_name) -> void;
+	auto draw_outline(ShaderProgram& a_object_shader, ShaderProgram& a_outline_shader, const std::string& a_model_uniform_name, const std::string& a_material_map_uniform_name) -> void;
 	auto clear() noexcept -> void;
 
 	auto get_pos() const noexcept -> glm::vec3;
@@ -45,6 +48,9 @@ public:
 	auto get_model_mat() const noexcept -> glm::mat4;
 	auto get_normal_mat() const noexcept -> glm::mat3;
 	auto get_normal_view_mat(const glm::mat4& a_view_mat) const noexcept -> glm::mat3;
+	auto get_outline_thickness() const noexcept -> float;
+	auto get_outline_color() const noexcept -> glm::vec3;
+	auto is_outlined() const noexcept -> bool;
 	auto is_flipped() const noexcept -> bool;
 	auto is_gamma_corr() const noexcept -> bool;
 
@@ -55,6 +61,11 @@ private:
 
 	bool m_flipped_UVs = false;
 	bool m_gamma_corr = false;
+	struct Outline {
+		bool enabled = false;
+		float thickness = 1.1f; 
+		glm::vec3 color = glm::vec3(0, 1, 0);
+	} m_outline;
 	glm::vec3 m_pos = glm::vec3(0.0f);
 	glm::vec3 m_size = glm::vec3(1.0f);
 	glm::vec3 m_rotation = glm::vec3(0.0f);

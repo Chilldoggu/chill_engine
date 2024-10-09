@@ -5,7 +5,7 @@
 
 #define ERROR(MESSAGE, ACTION) my_error_handler(__FILE__, __LINE__, MESSAGE, ACTION);
 
-namespace chill_engine {
+namespace chill_renderer {
 enum class Error_action { ignore, throwing, terminating, logging };
 
 class GenericException : public std::runtime_error {

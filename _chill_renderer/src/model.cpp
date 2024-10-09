@@ -4,11 +4,11 @@
 
 #include <format>
 
-#include "chill_engine/model.hpp"
-#include "chill_engine/file_manager.hpp"
-#include "chill_engine/application.hpp"
+#include "chill_renderer/model.hpp"
+#include "chill_renderer/file_manager.hpp"
+#include "chill_renderer/application.hpp"
 
-namespace chill_engine {
+namespace chill_renderer {
 namespace fs = std::filesystem;
 
 extern fs::path guess_path(const std::wstring& a_path);
@@ -195,6 +195,18 @@ void Model::set_meshes(const std::vector<Mesh>& a_meshes) noexcept {
 	m_meshes = a_meshes;
 }
 
+void Model::set_outline(bool a_option) noexcept {
+	m_outline.enabled = a_option;
+}
+
+void Model::set_outline_thickness(float a_thickness) noexcept {
+	m_outline.thickness = a_thickness;
+}
+ 
+void Model::set_outline_color(glm::vec3 a_color) noexcept {
+	m_outline.color = a_color;
+}
+
 void Model::set_size(float a_size) noexcept {
 	m_size = glm::vec3(a_size);
 	m_transform_scale = glm::mat4(1.0f);
@@ -229,7 +241,7 @@ void Model::rotate(float a_angle, Axis a_axis) noexcept {
 	}
 }
 
-void Model::draw_outlined(float a_thickness, ShaderProgram& a_object_shader, ShaderProgram& a_outline_shader, const std::string& a_model_uniform_name, const std::string& a_material_map_uniform_name) {
+void Model::draw_outline(ShaderProgram& a_object_shader, ShaderProgram& a_outline_shader, const std::string& a_model_uniform_name, const std::string& a_material_map_uniform_name) {
 	// Save shader options
 	bool obj_depth = a_object_shader.is_state(ShaderState::DEPTH_TEST);
 	bool obj_stencil = a_object_shader.is_state(ShaderState::STENCIL_TEST);
@@ -250,13 +262,13 @@ void Model::draw_outlined(float a_thickness, ShaderProgram& a_object_shader, Sha
 	// of outline.
 
 	a_outline_shader.set_state(ShaderState::STENCIL_TEST, true);
-	a_outline_shader.set_state(ShaderState::DEPTH_TEST, false);
+	a_outline_shader.set_state(ShaderState::DEPTH_TEST, true);
 	glStencilMask(0x00);
 	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
 
 	auto tmp_scale_mat = m_transform_scale;
 	auto tmp_size = m_size;
-	set_size(get_size() * a_thickness);
+	set_size(get_size() * m_outline.thickness);
 	a_outline_shader[a_model_uniform_name] = get_model_mat();
 	a_outline_shader.use();
 	draw();
@@ -329,6 +341,18 @@ glm::mat3 Model::get_normal_mat() const noexcept {
 
 glm::mat3 Model::get_normal_view_mat(const glm::mat4& a_view_mat) const noexcept {
 	return glm::mat3(glm::transpose(glm::inverse(get_model_mat() * a_view_mat)));
+}
+
+float Model::get_outline_thickness() const noexcept {
+	return m_outline.thickness;
+}
+
+glm::vec3 Model::get_outline_color() const noexcept {
+	return m_outline.color;
+}
+
+bool Model::is_outlined() const noexcept {
+	return m_outline.enabled;
 }
 
 bool Model::is_flipped() const noexcept {

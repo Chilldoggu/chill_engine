@@ -1,8 +1,8 @@
 #include <glm/glm.hpp>
 
-#include "chill_engine/presets.hpp" 
+#include "chill_renderer/presets.hpp" 
 
-namespace chill_engine {
+namespace chill_renderer {
 	namespace presets {
 		const BufferData g_plane_data{
 			.normals = {

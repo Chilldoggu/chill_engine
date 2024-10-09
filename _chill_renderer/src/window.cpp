@@ -3,10 +3,10 @@
 
 #include <format>
 
-#include "chill_engine/window.hpp"
-#include "chill_engine/assert.hpp"
+#include "chill_renderer/window.hpp"
+#include "chill_renderer/assert.hpp"
 
-namespace chill_engine {
+namespace chill_renderer {
 static void glfw_error_callback(int error, const char* description) {
 	ERROR(std::format("[GLFW_ERROR_CALLBACK] GLFW Error {}: {}", error, description), Error_action::throwing);
 }

@@ -2,9 +2,9 @@
 #include <sstream>
 #include <iostream>
 
-#include "chill_engine/assert.hpp"
+#include "chill_renderer/assert.hpp"
 
-namespace chill_engine {
+namespace chill_renderer {
 void my_error_handler(const std::string& file, int line, const std::string& message, Error_action action) {
 	std::stringstream err_msg;
 	err_msg << "[ERROR] [" << file << ":" << line << "] " << message << "\n";
