@@ -11,7 +11,43 @@
 #include "chill_renderer/resource_manager.hpp"
 #include "chill_renderer/file_manager.hpp"
 #include "chill_renderer/application.hpp"
-#include "chill_renderer/presets.hpp"
+
+Rand::DistStruct::DistStruct(float a_min, float a_max) 
+	:min{ a_min }, max{ a_max }
+{
+	float mean = (a_min + a_max) / 2;
+	float sigma = (a_max - mean) / 3;
+	distribution = DistType(mean, sigma);
+}
+
+Rand::Rand() {
+	seed(sys_clck::now().time_since_epoch().count());
+}
+
+glm::vec3 Rand::roll_vec3(float min, float max) { 
+	auto& dist = find_dist(min, max);
+	glm::vec3 ret{};
+	for (int i = 0; i < 3; ++i) {
+		ret[i] = dist(m_engine);
+	}
+	return ret;
+}
+
+float Rand::roll_f(float min, float max) {
+	auto& dist = find_dist(min, max);
+	return dist(m_engine);
+} 
+
+Rand::DistType& Rand::find_dist(float min, float max) {
+	auto it = std::find_if(m_distributions.begin(), m_distributions.end(), [&min, &max](const DistStruct& elem) {
+		return (elem.min == min && elem.max == max);
+		});
+	if (it == m_distributions.end()) {
+		m_distributions.emplace_back(min, max);
+		return m_distributions.back().distribution;
+	}
+	return (*it).distribution;
+}
 
 CurShaderState::CurShaderState() {
 	m_kernel[0][0] = 1.f; m_kernel[0][1] =  1.f; m_kernel[0][2] = 1.f;

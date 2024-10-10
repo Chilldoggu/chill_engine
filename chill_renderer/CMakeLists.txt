@@ -31,6 +31,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 # Create GLAD module
 add_library(glad STATIC "./src/glad.c")
 target_include_directories(glad PUBLIC "include")
+set_property(TARGET glad PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Create ImGui module
 add_library(imgui STATIC)
@@ -44,6 +45,7 @@ target_sources(imgui PUBLIC
 	"${IMGUI_BACKEND_DIR}/imgui_impl_opengl3.cpp"
 ) 
 target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${IMGUI_BACKEND_DIR} "include")
+set_property(TARGET imgui PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Link chill_engine library to platform specific implementations and external dependencies (Assimp, GLFW3, ImGui, GLAD):
 #    1. Windows: load previously built .dll/.lib libraries from ./lib directory.
@@ -71,7 +73,7 @@ if (WIN32)
 		assimp
 	)
 elseif (UNIX)
-	# target_sources(${PROJECT_NAME} PUBLIC "${SRC}/file_manager_linux.cpp") 
+	target_sources(${PROJECT_NAME} PUBLIC "${SRC}/file_manager_linux.cpp") 
 
 	find_package(PkgConfig REQUIRED)
 	pkg_check_modules(glfw3 REQUIRED IMPORTED_TARGET glfw3)

@@ -33,7 +33,9 @@
 
 .vs
 out
-assets/Private
-assets/Public
+resources/Private
+resources/Public
 install
 CMakeSettings.json
+.chache
+build

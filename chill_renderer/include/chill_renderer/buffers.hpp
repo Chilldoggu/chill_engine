@@ -9,8 +9,10 @@
 #include <vector>
 #include <filesystem>
 #include <map>
+#include <type_traits>
 
 #include "chill_renderer/assert.hpp" // template definitions
+
 
 namespace chill_renderer { 
 namespace fs = std::filesystem;
@@ -69,7 +71,7 @@ struct BufferObjects {
 	BufferObjects(BufferObjects&& a_obj) noexcept;
 	~BufferObjects();
 
-	auto operator=(BufferObjects& a_obj) -> BufferObjects&;
+	auto operator=(const BufferObjects& a_obj) -> BufferObjects&;
 	auto operator=(BufferObjects&& a_obj) noexcept -> BufferObjects&;
 
 	GLuint VAO = EMPTY_VBO;
@@ -243,6 +245,7 @@ public:
 
 private: 
 	auto refcnt_dec() -> void;
+	auto refcnt_inc() -> void;
 
 	template<typename T>
 	auto get_size_and_base_alignment();

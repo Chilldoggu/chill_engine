@@ -1,9 +1,3 @@
-#include "buffers.hpp"
-#include <type_traits>
-
-class Application;
-enum class ResourceType;
-
 template<typename T>
 constexpr decltype(auto) to_enum_elem_type(T enumerator) noexcept {
 	return static_cast<std::underlying_type_t<T>>(enumerator);
@@ -41,7 +35,7 @@ template<typename T>
 void UniformBuffer::push_element(const std::string& a_uniform_name) {
 	if (m_id == EMPTY_VBO) {
 		glGenBuffers(1, &m_id);
-		Application::get_instance().get_rmanager().inc_ref_count(ResourceType::UNIFORM_BUFFERS, m_id);
+		refcnt_inc();
 	}
 
 	auto [size, base_alignment] = get_size_and_base_alignment<T>();

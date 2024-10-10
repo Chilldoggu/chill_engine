@@ -1,20 +1,15 @@
-#include <cstdlib> // wcstombs_s
 #include <string>  // wstring
 #include <vector>  // vector
 #include <utility> // pair
+#include <filesystem>
 
 #include "chill_renderer/file_manager.hpp"
 #include "chill_renderer/assert.hpp" // GenericException
 
 namespace chill_renderer {
+// Delegate all problems with wstring to filesystem::path object.
 std::string wstos(const std::wstring& a_ws_src) {
-	static constexpr int BUF_SIZ{ 1024 };
-	size_t len;
-	char* buffer = new char[BUF_SIZ];
-	wcstombs_s(&len, buffer, (size_t)BUF_SIZ, a_ws_src.c_str(), (size_t)BUF_SIZ - 1);
-	std::string ret{ buffer };
-	delete[] buffer;
-	return ret;
+	return std::filesystem::path(a_ws_src).string();
 }
 
 std::wstring basic_file_open(const std::wstring& a_title, const std::vector<std::pair<std::wstring, std::wstring>>& a_save_types) {

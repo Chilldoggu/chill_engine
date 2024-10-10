@@ -20,7 +20,7 @@ void my_error_handler(const std::string& file, int line, const std::string& mess
 		throw GenericException(err_msg.str());
 		break;
 	case Error_action::terminating:
-		terminate();
+		std::terminate();
 		break;
 	}
 } 

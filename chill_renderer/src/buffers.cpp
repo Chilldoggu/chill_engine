@@ -52,7 +52,7 @@ BufferObjects::BufferObjects(BufferObjects&& a_obj) noexcept {
 	a_obj.EBO = EMPTY_VBO;
 }
 
-BufferObjects& BufferObjects::operator=(BufferObjects& a_obj) {
+BufferObjects& BufferObjects::operator=(const BufferObjects& a_obj) {
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::MESHES, a_obj.VAO); 
 
 	if (a_obj.VAO != VAO) {
@@ -853,6 +853,10 @@ void UniformBuffer::refcnt_dec() {
 			glDeleteFramebuffers(1, &m_id);
 		}
 	} 
+}
+
+void UniformBuffer::refcnt_inc() {
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::UNIFORM_BUFFERS, m_id);
 }
 
 UniformBuffer& UniformBuffer::operator=(const UniformBuffer& a_uni_buf) {

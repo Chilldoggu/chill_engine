@@ -8,7 +8,7 @@ uniform sampler2D framebuffer_texture;
 uniform mat3 kernel;
 uniform float offset;
 
-const vec2 sampled_pos[] = vec2[](
+vec2 sampled_pos[] = vec2[](
 	vec2(-offset, offset),  // Top left
 	vec2(0,		  offset),  // Top
 	vec2(offset,  offset),  // Top right

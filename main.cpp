@@ -6,13 +6,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/fwd.hpp>
 
-#include <string>
-#include <format>
-#include <tuple>
-#include <type_traits>
 #include <chrono>
 #include <random>
-#include <iostream>
+#include <filesystem>
 
 #include "chill_renderer/meshes.hpp"
 #include "chill_renderer/light.hpp"
@@ -20,70 +16,12 @@
 #include "chill_renderer/window.hpp"
 #include "chill_renderer/shaders.hpp"
 #include "chill_renderer/model.hpp"
-#include "chill_renderer/file_manager.hpp"
 #include "chill_renderer/buffers.hpp"
 #include "chill_renderer/presets.hpp"
 #include "scene.hpp"
 
 using namespace chill_renderer;
- 
-class Rand {
-public: 
-	using EngType = std::default_random_engine;
-	using DistType = std::normal_distribution<>;
-	using sys_clck = std::chrono::system_clock;
-
-	struct DistStruct {
-		DistStruct(float a_min, float a_max) 
-			:min{ a_min }, max{ a_max }
-		{
-			float mean = (a_min + a_max) / 2;
-			float sigma = (a_max - mean) / 3;
-			distribution = DistType(mean, sigma);
-		}
-		float min{};
-		float max{};
-		DistType distribution{};
-	};
-
-	Rand() {
-		seed(sys_clck::now().time_since_epoch().count());
-	}
-
-	glm::vec3 roll_vec3(float min, float max) { 
-		auto& dist = find_dist(min, max);
-		glm::vec3 ret{};
-		for (int i = 0; i < 3; ++i) {
-			ret[i] = dist(m_engine);
-		}
-		return ret;
-	}
-
-	float roll_f(float min, float max) {
-		auto& dist = find_dist(min, max);
-		return dist(m_engine);
-	} 
-
-private: 
-	DistType& find_dist(float min, float max) {
-		auto it = std::find_if(m_distributions.begin(), m_distributions.end(), [&min, &max](const DistStruct& elem) {
-			return (elem.min == min && elem.max == max);
-			});
-		if (it == m_distributions.end()) {
-			m_distributions.emplace_back(min, max);
-			return m_distributions.back().distribution;
-		}
-		return (*it).distribution;
-	}
-
-	template<typename T>
-	void seed(T&& s) { 
-		m_engine.seed(s); 
-	}
-
-	EngType m_engine{};
-	std::vector<DistStruct> m_distributions{};
-};
+namespace fs = std::filesystem;
 
 int main() {
 	Application::init(1280, 720, "OpenGL", CursorMode::NORMAL);
@@ -97,72 +35,76 @@ int main() {
 	main_scene.get_camera()->set_far_plane(800.f);
 	main_scene.get_camera()->set_position(glm::vec3(0.f, 30.0f, 60.f));
 
-	main_scene.set_default_material(L"assets\\Public\\default.png");
+	auto gpath = [](const auto& p) { return fs::path(p).wstring(); };
+
+	main_scene.set_default_material(gpath("resources/Public/default.png"));
 
 	// SHADERS
 	main_scene.push_shader("multi", rmanager.new_shader(
-		{ ShaderType::VERTEX, L"shaders\\main.vert" },
-		{ ShaderType::FRAGMENT, L"shaders\\multi_light.frag" },
-		//{ ShaderType::GEOMETRY, L"shaders\\explosion.geom" })
-		{ ShaderType::GEOMETRY, L"shaders\\pass_through.geom" })
+		{ ShaderType::VERTEX, gpath("shaders/main.vert") },
+		{ ShaderType::FRAGMENT, gpath("shaders/multi_light.frag") },
+		//{ ShaderType::GEOMETRY, gpath("shaders/explosion.geom") })
+		{ ShaderType::GEOMETRY, gpath("shaders/pass_through.geom") })
 	);
 	main_scene.push_shader("multi_instanced", rmanager.new_shader(
-		{ ShaderType::VERTEX, L"shaders\\multi_instanced.vert" },
-		{ ShaderType::FRAGMENT, L"shaders\\instanced.frag" },
-		{ ShaderType::GEOMETRY, L"shaders\\pass_through.geom" })
+		{ ShaderType::VERTEX, gpath("shaders/multi_instanced.vert") },
+		{ ShaderType::FRAGMENT, gpath("shaders/instanced.frag") },
+		{ ShaderType::GEOMETRY, gpath("shaders/pass_through.geom") })
 	);
 	main_scene.push_shader("normal_vis", rmanager.new_shader(
-		{ ShaderType::VERTEX, L"shaders\\NormalVisualizer\\normal_vis.vert" },
-		{ ShaderType::FRAGMENT, L"shaders\\NormalVisualizer\\normal_vis.frag" },
-		{ ShaderType::GEOMETRY, L"shaders\\NormalVisualizer\\normal_vis.geom" })
+		{ ShaderType::VERTEX, gpath("shaders/NormalVisualizer/normal_vis.vert") },
+		{ ShaderType::FRAGMENT, gpath("shaders/NormalVisualizer/normal_vis.frag") },
+		{ ShaderType::GEOMETRY, gpath("shaders/NormalVisualizer/normal_vis.geom") })
 	);
 	main_scene.push_shader("single", rmanager.new_shader(
-		{ ShaderType::VERTEX, L"shaders\\SingleColor\\single_color.vert" },
-		{ ShaderType::FRAGMENT, L"shaders\\SingleColor\\single_color.frag" })
+		{ ShaderType::VERTEX, gpath("shaders/SingleColor/single_color.vert") },
+		{ ShaderType::FRAGMENT, gpath("shaders/SingleColor/single_color.frag") })
 	);
 	main_scene.push_shader("skybox", rmanager.new_shader(
-		{ ShaderType::VERTEX, L"shaders\\skybox.vert" },
-		{ ShaderType::FRAGMENT, L"shaders\\skybox.frag" })
+		{ ShaderType::VERTEX, gpath("shaders/skybox.vert") },
+		{ ShaderType::FRAGMENT, gpath("shaders/skybox.frag") })
 	);
 	main_scene.push_shader("refl", rmanager.new_shader(
-		{ ShaderType::VERTEX, L"shaders\\main.vert" },
-		{ ShaderType::FRAGMENT, L"shaders\\reflection.frag" })
+		{ ShaderType::VERTEX, gpath("shaders/main.vert") },
+		{ ShaderType::FRAGMENT, gpath("shaders/reflection.frag") },
+		{ ShaderType::GEOMETRY, gpath("shaders/pass_through.geom") })
 	);
 	main_scene.push_shader("refr", rmanager.new_shader(
-		{ ShaderType::VERTEX, L"shaders\\main.vert" },
-		{ ShaderType::FRAGMENT, L"shaders\\refraction.frag" })
+		{ ShaderType::VERTEX, gpath("shaders/main.vert") },
+		{ ShaderType::FRAGMENT, gpath("shaders/refraction.frag") },
+		{ ShaderType::GEOMETRY, gpath("shaders/pass_through.geom") })
 	);
 	main_scene.push_shader("dynamic_env", rmanager.new_shader(
-		{ ShaderType::VERTEX, L"shaders\\dynamic_env.vert" },
-		{ ShaderType::FRAGMENT, L"shaders\\dynamic_env.frag" })
+		{ ShaderType::VERTEX, gpath("shaders/dynamic_env.vert") },
+		{ ShaderType::FRAGMENT, gpath("shaders/dynamic_env.frag") })
 	);
 	main_scene.push_shader("post_inv", rmanager.new_shader(
-		{ ShaderType::VERTEX, L"shaders\\PostProcess\\post.vert" },
-		{ ShaderType::FRAGMENT, L"shaders\\PostProcess\\post_inverse.frag" })
+		{ ShaderType::VERTEX, gpath("shaders/PostProcess/post.vert") },
+		{ ShaderType::FRAGMENT, gpath("shaders/PostProcess/post_inverse.frag") })
 	);
 	main_scene.push_shader("post_gray_avg", rmanager.new_shader(
-		{ ShaderType::VERTEX, L"shaders\\PostProcess\\post.vert" },
-		{ ShaderType::FRAGMENT, L"shaders\\PostProcess\\post_grayscale_average.frag" })
+		{ ShaderType::VERTEX, gpath("shaders/PostProcess/post.vert") },
+		{ ShaderType::FRAGMENT, gpath("shaders/PostProcess/post_grayscale_average.frag") })
 	);
 	main_scene.push_shader("post_gray_wgt", rmanager.new_shader(
-		{ ShaderType::VERTEX, L"shaders\\PostProcess\\post.vert" },
-		{ ShaderType::FRAGMENT, L"shaders\\PostProcess\\post_grayscale_weighted.frag" })
+		{ ShaderType::VERTEX, gpath("shaders/PostProcess/post.vert") },
+		{ ShaderType::FRAGMENT, gpath("shaders/PostProcess/post_grayscale_weighted.frag") })
 	);
 	main_scene.push_shader("post_kernel", rmanager.new_shader(
-		{ ShaderType::VERTEX, L"shaders\\PostProcess\\post.vert" },
-		{ ShaderType::FRAGMENT, L"shaders\\PostProcess\\post_kernel.frag" })
+		{ ShaderType::VERTEX, gpath("shaders/PostProcess/post.vert") },
+		{ ShaderType::FRAGMENT, gpath("shaders/PostProcess/post_kernel.frag") })
 	);
 	main_scene.push_shader("post_none", rmanager.new_shader(
-		{ ShaderType::VERTEX, L"shaders\\PostProcess\\post.vert" },
-		{ ShaderType::FRAGMENT, L"shaders\\PostProcess\\post_none.frag" })
+		{ ShaderType::VERTEX, gpath("shaders/PostProcess/post.vert") },
+		{ ShaderType::FRAGMENT, gpath("shaders/PostProcess/post_none.frag") })
 	);
 	main_scene.push_shader("MSAA_post_none", rmanager.new_shader(
-		{ ShaderType::VERTEX, L"shaders\\PostProcess\\post.vert" },
-		{ ShaderType::FRAGMENT, L"shaders\\PostProcess\\post_none_MSAA.frag" })
+		{ ShaderType::VERTEX, gpath("shaders/PostProcess/post.vert") },
+		{ ShaderType::FRAGMENT, gpath("shaders/PostProcess/post_none_MSAA.frag") })
 	);
 	main_scene.push_shader("post_gamma", rmanager.new_shader(
-		{ ShaderType::VERTEX, L"shaders\\PostProcess\\post.vert" },
-		{ ShaderType::FRAGMENT, L"shaders\\PostProcess\\post_gamma.frag" })
+		{ ShaderType::VERTEX, gpath("shaders/PostProcess/post.vert") },
+		{ ShaderType::FRAGMENT, gpath("shaders/PostProcess/post_gamma.frag") })
 	);
 
 	// UBO
@@ -174,7 +116,7 @@ int main() {
 	main_scene.push_uniform_buffer(UBO);
 
 	// LIGHTS
-	Model light_obj = rmanager.load_model(L"assets\\Public\\MIT\\basic-shapes\\sphere\\sphere.obj");
+	Model light_obj = rmanager.load_model(gpath("resources/Public/MIT/basic-shapes/sphere/sphere.obj"));
 	light_obj.set_size(1.f / 3.f);
 	Model dirlight_model = light_obj;
 	dirlight_model.set_pos(glm::vec3(0.0f, 135.0f, 0.0f));
@@ -189,23 +131,23 @@ int main() {
 	// SKYBOX
 	Skybox skybox_river{
 		.cubemap = rmanager.load_cubemap({
-				L"assets\\Public\\skybox\\RiverMountains\\right.jpg",
-				L"assets\\Public\\skybox\\RiverMountains\\left.jpg",
-				L"assets\\Public\\skybox\\RiverMountains\\top.jpg",
-				L"assets\\Public\\skybox\\RiverMountains\\bottom.jpg",
-				L"assets\\Public\\skybox\\RiverMountains\\front.jpg",
-				L"assets\\Public\\skybox\\RiverMountains\\back.jpg"
+				gpath("resources/Public/skybox/RiverMountains/right.jpg"),
+				gpath("resources/Public/skybox/RiverMountains/left.jpg"),
+				gpath("resources/Public/skybox/RiverMountains/top.jpg"),
+				gpath("resources/Public/skybox/RiverMountains/bottom.jpg"),
+				gpath("resources/Public/skybox/RiverMountains/front.jpg"),
+				gpath("resources/Public/skybox/RiverMountains/back.jpg")
 			}, 0),
 		.cube = rmanager.create_model({ Mesh(presets::g_skybox_data, MaterialMap()) })
 	};
 	Skybox skybox_starmap{
 		.cubemap = rmanager.load_cubemap({
-				L"assets\\Public\\skybox\\Starmap\\4k\\right.jpg",
-				L"assets\\Public\\skybox\\Starmap\\4k\\left.jpg",
-				L"assets\\Public\\skybox\\Starmap\\4k\\top.jpg",
-				L"assets\\Public\\skybox\\Starmap\\4k\\bottom.jpg",
-				L"assets\\Public\\skybox\\Starmap\\4k\\front.jpg",
-				L"assets\\Public\\skybox\\Starmap\\4k\\back.jpg"
+				gpath("resources/Public/skybox/Starmap/4k/right.jpg"),
+				gpath("resources/Public/skybox/Starmap/4k/left.jpg"),
+				gpath("resources/Public/skybox/Starmap/4k/top.jpg"),
+				gpath("resources/Public/skybox/Starmap/4k/bottom.jpg"),
+				gpath("resources/Public/skybox/Starmap/4k/front.jpg"),
+				gpath("resources/Public/skybox/Starmap/4k/back.jpg")
 			}, 0),
 		.cube = rmanager.create_model({ Mesh(presets::g_skybox_data, MaterialMap()) })
 	};
@@ -213,11 +155,11 @@ int main() {
 
 	// MODELS 
 	// Planet
-	Model planet = rmanager.load_model(L"assets\\Public\\LearnOpenGL\\planet\\planet.obj");
+	Model planet = rmanager.load_model(gpath("resources/Public/LearnOpenGL/planet/planet.obj"));
 	planet.set_size(10.f);
 	main_scene.push_generic_model(planet);
 	// Rock
-	Model rock = rmanager.load_model(L"assets\\Public\\LearnOpenGL\\rock\\rock.obj");
+	Model rock = rmanager.load_model(gpath("resources/Public/LearnOpenGL/rock/rock.obj"));
 	ModelInstanced cloud(rock);
 	Rand dice{};
 	float R = 200.f;

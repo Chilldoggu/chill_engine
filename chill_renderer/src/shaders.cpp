@@ -1,6 +1,7 @@
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <filesystem>
 
 #include "chill_renderer/shaders.hpp"
 #include "chill_renderer/assert.hpp"
@@ -38,12 +39,12 @@ ShaderSrc::ShaderSrc(ShaderType a_shader_type, const std::wstring& a_path)
 	case ShaderType::FRAGMENT: m_id = glCreateShader(GL_FRAGMENT_SHADER); break;
 	case ShaderType::GEOMETRY: m_id = glCreateShader(GL_GEOMETRY_SHADER); break;
 	default:
-		ERROR("[SHADERSRC::SHADERSRC] Shader type not compatible.", Error_action::throwing);
+		ERROR(std::format("[SHADERSRC::SHADERSRC] [{}] Shader type not compatible.", p.string()), Error_action::throwing);
 	}
 
 	// Load code
 	using std::ios;
-	std::ifstream shader_file{ m_path, ios::in | ios::binary };
+	std::ifstream shader_file( std::filesystem::path(m_path), ios::in | ios::binary );
 
 	if (!shader_file.is_open())
 		ERROR(std::format("[SHADERSRC::SHADERSRC] Shader source file {} couldn't be loaded.", wstos(m_path)), Error_action::throwing);
@@ -147,7 +148,7 @@ ShaderProgram::ShaderProgram(const ShaderSrc& a_vertex_shader, const ShaderSrc& 
 	if (!success) {
 		char infoLog[g_info_log_siz] = {};
 		glGetProgramInfoLog(m_id, g_info_log_siz, nullptr, infoLog);
-		ERROR(std::format("[SHADERPROGRAM::CHECK_LINKING] Shader linking error. GLSL error message:\n{}", infoLog), Error_action::throwing);
+		ERROR(std::format("[SHADERPROGRAM::CHECK_LINKING] [{}] [{}] Shader linking error. GLSL error message:\n{}", wstos(a_vertex_shader.get_path()), wstos(a_fragment_shader.get_path()), infoLog), Error_action::throwing);
 	}
 }
 

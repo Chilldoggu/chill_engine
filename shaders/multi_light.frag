@@ -1,7 +1,7 @@
 #version 420 core
 
 #define POINTLIGHT_NUM 25
-#define MAX_SAMPLER_SIZ 16
+#define MAX_SAMPLER_SIZ 4
 
 struct DirLight {
 	// General

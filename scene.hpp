@@ -1,5 +1,8 @@
 #pragma once
 
+#include <chrono>
+#include <random>
+
 #include "chill_renderer/buffers.hpp"
 #include "chill_renderer/model.hpp"
 #include "chill_renderer/light.hpp"
@@ -20,6 +23,34 @@ void imgui_pointlight(PointLight& pointlight_source);
 void imgui_model(Model& model); 
 void process_input(Scene& a_scene);
 void draw_gui(Scene& scene, Skybox& skybox1, Skybox& skybox2);
+ 
+class Rand {
+public: 
+	using EngType = std::default_random_engine;
+	using DistType = std::normal_distribution<>;
+	using sys_clck = std::chrono::system_clock;
+
+	Rand();
+	auto roll_vec3(float min, float max) -> glm::vec3;
+	auto roll_f(float min, float max) -> float;
+
+	struct DistStruct {
+		DistStruct(float a_min, float a_max);
+		float min{};
+		float max{};
+		DistType distribution{};
+	};
+
+private: 
+	DistType& find_dist(float min, float max);
+	template<typename T>
+	void seed(T&& s) { 
+		m_engine.seed(s); 
+	}
+
+	EngType m_engine{};
+	std::vector<DistStruct> m_distributions{};
+};
 
 template<typename T>
 struct LitModel {

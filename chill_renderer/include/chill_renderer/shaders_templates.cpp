@@ -1,7 +1,3 @@
-#include <type_traits>
-
-#include "shaders.hpp"
-
 template<typename T>
 Uniform& Uniform::operator=(const T& val) {
 	glUseProgram(m_shader_program);
@@ -54,3 +50,4 @@ Uniform& Uniform::operator=(const T& val) {
 
 	return *this;
 }
+
