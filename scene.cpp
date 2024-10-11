@@ -179,7 +179,7 @@ void Scene::draw() {
 		m_fb_post_process.bind();
 
 	// Clear buffers
-	glClearColor(0.1, 0.1, 0.1, 1.0);
+	glClearColor(0.05, 0.05, 0.05, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	set_uniforms(); 
@@ -752,7 +752,18 @@ void draw_gui(Scene& scene, Skybox& skybox1, Skybox& skybox2) {
 		if (ImGui::CollapsingHeader("Shaders")) { 
 			auto& shader_state = scene.get_shader_state();
 
-			static int e = 1;
+			int e{};
+			switch (scene.get_cur_shader()) {
+			case CurShaderType::POST_NONE:		e = 0; break;
+			case CurShaderType::MSAA_POST_NONE: e = 1; break;
+			case CurShaderType::POST_KERNEL:	e = 2; break;
+			case CurShaderType::POST_INV:		e = 3; break;
+			case CurShaderType::POST_GRAY_AVG:	e = 4; break;
+			case CurShaderType::POST_GRAY_WGT:	e = 5; break;
+			case CurShaderType::NORMAL_VIS:		e = 6; break;
+			case CurShaderType::POST_GAMMA:		e = 7; break;
+			};
+
 			int samples = scene.get_post_fb().get_samples();
 			float fog_dens = shader_state.m_fog_dens;
 			float normal_mag = shader_state.m_normal_mag;

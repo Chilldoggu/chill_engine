@@ -85,7 +85,7 @@ struct CurShaderState {
 	float m_kernel_offset = 1.f / 300.f;
 	float m_gamma = 2.2f;
 	int m_MSAA_samples = 4;
-	bool m_blinn_phong = false;
+	bool m_blinn_phong = true;
 };
 
 class Scene {

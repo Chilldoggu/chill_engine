@@ -9,6 +9,7 @@
 #include <chrono>
 #include <random>
 #include <filesystem>
+#include <print>
 
 #include "chill_renderer/meshes.hpp"
 #include "chill_renderer/light.hpp"
@@ -123,7 +124,7 @@ int main() {
 	dirlight_model.set_size(2.f);
 
 	DirLight dirl(glm::vec3(2, -1, -0.5));
-	dirl.set_color({0,0,0});
+	dirl.set_color({0.3,0.3,0.3});
 	main_scene.push_dirlight(LitModel{ .light = dirl, .model = dirlight_model });
 	main_scene.push_spotlight(LitModel{ .light = SpotLight(15, 22, main_scene.get_camera()->get_target(), 0, main_scene.get_camera()->get_position()), .model = light_obj });
 	main_scene.push_pointlight(LitModel{ .light = PointLight(50, main_scene.get_camera()->get_position()), .model = light_obj });
@@ -201,51 +202,8 @@ int main() {
 		process_input(main_scene); 
 
 		main_scene.draw(); 
-		main_scene.post_process();
-
+		main_scene.post_process(); 
 		draw_gui(main_scene, skybox_river, skybox_starmap);
-
 		glfwSwapBuffers(main_scene.get_window()->get_obj());
 	}
 }
-
-/* ========== REFERENCE ==========
-// Container
-Model container = rmanager.load_model(L"assets\\LearnOpenGL\\container\\container.obj");
-container.set_pos(glm::vec3(-8.0, 0.0, 0.0));
-main_scene.push_generic_model(container);
-
-// Bunny
-Model bunny = rmanager.load_model(L"assets\\Standford\\bunny\\stanford-bunny.obj");
-
-// Transparent Grass
-// Model grass_model = rmanager.create_model({ Mesh(presets::g_plane_data, MaterialMap({ { L"assets\\grass.png", TextureType::DIFFUSE, true } })) });
-// grass_model.set_pos(glm::vec3(-4.0, 0.0, 0.0));
-
-// Transparent Window
-// Model window_model = rmanager.create_model({ Mesh(presets::g_plane_data, MaterialMap({ { L"assets\\blending_transparent_window.png", TextureType::DIFFUSE, false } })) });
-// std::vector<Model> windows(2, window_model);
-// windows[0].set_pos(glm::vec3(4.0, 0.0, 0.0));
-// windows[1].set_pos(glm::vec3(4.0, 0.0, -2.0));
-
-// Gura
-// Model gura = rmanager.load_model(L"assets\\DinoGura\\DinoGura.obj");
-// gura.set_size(4);
-
-// Dragon
-// Model dragon = rmanager.load_model(L"assets\\xyz_dragon\\xyzrgb_dragon.obj");
-// dragon.set_size(1.f / 8.f);
-// dragon.set_pos({ 16.f, 0.f, 0.f });
-// dragon.rotate(90.f, Axis::Y);
-
-// Sphere
-// Model sphere1 = rmanager.load_model(L"assets\\MIT\\basic-shapes\\sphere\\sphere.obj");
-// sphere1.set_size(1.f / 3.f);
-// Model sphere2 = sphere1;
-// Model sphere3 = sphere1;
-// Model sphere4 = sphere1;
-// main_scene.push_generic_model(sphere1);
-// main_scene.push_generic_model(sphere2);
-// main_scene.push_generic_model(sphere3);
-// main_scene.push_generic_model(sphere4); 
-*/

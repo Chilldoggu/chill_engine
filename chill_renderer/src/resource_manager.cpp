@@ -7,7 +7,7 @@
 namespace chill_renderer {
 namespace fs = std::filesystem;
 
-// TODO: Make it more general or whatever.
+// TODO: Async file manager
 std::wstring ResourceManager::dialog_import_model() {
 	std::vector<std::pair<std::wstring, std::wstring>> filters{
 		{L"Wavefront (*.obj)", L"*.obj"},

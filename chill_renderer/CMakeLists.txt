@@ -29,7 +29,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 )
  
 # Create GLAD module
-add_library(glad STATIC "./src/glad.c")
+add_library(glad STATIC "${SRC}/glad.c")
 target_include_directories(glad PUBLIC "include")
 set_property(TARGET glad PROPERTY POSITION_INDEPENDENT_CODE ON)
 

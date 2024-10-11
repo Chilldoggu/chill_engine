@@ -335,9 +335,26 @@ void ShaderProgram::set_uniform(const std::string& a_spotlight_name, const SpotL
 }
 
 void ShaderProgram::set_uniform(const std::string& a_material_name, const MaterialMap& a_material) {
+	auto safe_uni = [m_sh_program = this](const auto& uni, int unit_id){
+		try {
+			m_sh_program->m_uniforms.at(uni) = unit_id; 
+		}
+		catch (std::out_of_range) {
+			m_sh_program->push_uniform(uni);
+		}
+		m_sh_program->m_uniforms[uni] = unit_id; 
+	};
+
 	auto diffuse_maps = a_material.get_diffuse_maps();
 	auto specular_maps = a_material.get_specular_maps();
 	auto emission_maps = a_material.get_emission_maps();
+
+	for (const auto& diffuse_map : diffuse_maps)
+		diffuse_map.activate();
+	for (const auto& specular_map : specular_maps)
+		specular_map.activate();
+	for (const auto& emission_map : emission_maps)
+		emission_map.activate();
 
 	auto it = m_uniforms.find(a_material_name + ".shininess");
 	if (it == m_uniforms.end()) {
@@ -350,25 +367,18 @@ void ShaderProgram::set_uniform(const std::string& a_material_name, const Materi
 			maps.push_back(std::format("emission_maps[{}]", i));
 		maps.push_back("shininess"); 
 		push_uniform_struct(a_material_name, maps); 
-	}
-		
+	} 
+
 	m_uniforms[a_material_name + ".shininess"] = a_material.get_shininess();
 	for (size_t i = 0; i < diffuse_maps.size(); ++i) {
-		m_uniforms[std::format("{}.diffuse_maps[{}]", a_material_name, i)] = diffuse_maps[i].get_unit_id(); 
+		safe_uni(std::format("{}.diffuse_maps[{}]", a_material_name, i), diffuse_maps[i].get_unit_id());
 	}
 	for (size_t i = 0; i < specular_maps.size(); ++i) {
-		m_uniforms[std::format("{}.specular_maps[{}]", a_material_name, i)] = specular_maps[i].get_unit_id(); 
+		safe_uni(std::format("{}.specular_maps[{}]", a_material_name, i), specular_maps[i].get_unit_id());
 	}
 	for (size_t i = 0; i < emission_maps.size(); ++i) {
-		m_uniforms[std::format("{}.emission_maps[{}]", a_material_name, i)] = emission_maps[i].get_unit_id(); 
+		safe_uni(std::format("{}.emission_maps[{}]", a_material_name, i), emission_maps[i].get_unit_id());
 	}
-
-	for (const auto& diffuse_map : diffuse_maps)
-		diffuse_map.activate();
-	for (const auto& specular_map : specular_maps)
-		specular_map.activate();
-	for (const auto& emission_map : emission_maps)
-		emission_map.activate();
 }
 
 bool ShaderProgram::is_state(ShaderState a_state) const noexcept {

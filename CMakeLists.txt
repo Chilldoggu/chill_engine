@@ -11,9 +11,8 @@ set(EXECUTABLE_OUTPUT_PATH "${PROJECT_SOURCE_DIR}/install")
 
 # g++ debug mode
 if (CMAKE_CXX_COMPILER_ID STREQUAL "g++")
-	target_compile_options(${PROJECT_NAME} PUBLIC "-g" "-fPIC")
+	target_compile_options(${PROJECT_NAME} PUBLIC "-g")
 endif ()
-
 
 # Libraries
 add_subdirectory("chill_renderer")
