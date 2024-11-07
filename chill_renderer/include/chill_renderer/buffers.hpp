@@ -36,6 +36,7 @@ enum class AttachmentType {
 	COLOR_3D,
 	DEPTH,
 	DEPTH_STENCIL,
+
 	NONE,
 };
 
@@ -57,13 +58,44 @@ enum class TextureType {
 	COLOR_2D,
 	COLOR_3D,
 	DEPTH,
-	DEPTH_STENCIL,
+	DEPTH_STENCIL, 
 
 	CUBEMAP,
 
 	NONE,
 };
-std::ostream& operator<<(std::ostream& os, const TextureType& a_type);
+
+enum class TextureWrap {
+	REPEAT,
+	CLAMP_EDGE,
+	CLAMP_BORDER,
+
+	MIRROR_REPEAT,
+
+	NONE,
+};
+
+enum class TextureFilter {
+	LINEAR,
+	NEAREST, 
+	MIPMAP_LINEAR,
+	MIPMAP_NEAREST,
+
+	NONE,
+};
+
+enum class TextureCompFunc {
+	LEQUAL,
+	GEQUAL,
+	LESS,
+	GREATER,
+	EQUAL,
+	NOTEQUAL,
+	ALWAYS,
+	NEVER,
+
+	NONE,
+};
 
 struct BufferObjects {
 	BufferObjects() = default;
@@ -97,8 +129,12 @@ public:
 	auto operator=(const Texture& a_texture) -> Texture&;
 	auto operator=(Texture&& a_texture) noexcept -> Texture&;
 
+	auto set_border_color(const glm::vec3& a_border_color) noexcept -> void;
 	auto set_unit_id(int a_unit_id) noexcept -> void;
 	auto set_type(TextureType a_type) noexcept -> void;
+	auto set_wrap(TextureWrap a_wrap) noexcept -> void;
+	auto set_filter(TextureFilter a_filter) noexcept -> void;
+	auto set_comp_func(TextureCompFunc a_comp_func) noexcept -> void;
 	auto activate() const noexcept -> void;
 
 	auto get_id() const noexcept -> GLuint;
@@ -106,6 +142,9 @@ public:
 	auto get_filename() const noexcept -> std::wstring;
 	auto get_filenames() const noexcept -> std::vector<std::wstring>;
 	auto get_type() const noexcept -> TextureType;
+	auto get_wrap() const noexcept -> TextureWrap;
+	auto get_comp_func() const noexcept -> TextureCompFunc;
+	auto get_filter() const noexcept -> TextureFilter;
 	auto get_unit_id() const noexcept -> int; 
 	auto is_flipped() const noexcept -> bool;
 	auto is_gamma_corr() const noexcept -> bool;
@@ -118,6 +157,9 @@ private:
 	std::wstring m_filename = L"";
 	std::vector<std::wstring> m_filenames{};
 	TextureType m_type = TextureType::NONE;
+	TextureWrap m_wrap = TextureWrap::NONE;
+	TextureFilter m_filter = TextureFilter::NONE;
+	TextureCompFunc m_comp = TextureCompFunc::NONE;
 	int m_unit_id = 0;
 	int m_samples = 1;
 	bool m_flipped = false;
@@ -155,7 +197,7 @@ public:
 	auto activate() const noexcept -> void;
 	auto get_type() const noexcept -> AttachmentType;
 	auto get_buf_type() const noexcept -> AttachmentBufferType;
-	auto get_attachment() const noexcept -> std::variant<Texture, RenderBuffer>;
+	auto get_attachment() noexcept -> std::variant<Texture, RenderBuffer>&;
 
 private:
 	std::variant<Texture, RenderBuffer> m_attachment;
@@ -178,8 +220,11 @@ public:
 
 	auto attach(AttachmentType a_attach_type, AttachmentBufferType a_buf_type, int a_samples = 1) -> void;
 	auto attach_cubemap_face(GLenum a_cubemap_face) -> void;
-	auto get_attachment_buffer(AttachmentType a_type) const noexcept -> AttachmentBuffer;
+	auto get_color_attachment_buffer() noexcept -> AttachmentBuffer&;
+	auto get_depth_attachment_buffer() noexcept -> AttachmentBuffer&;
+	auto get_depth_stencil_attachment_buffer() noexcept -> AttachmentBuffer&;
 	auto activate_color() const noexcept -> void;
+	auto activate_depth() const noexcept -> void;
 	auto get_id() const noexcept -> GLuint;
 	auto bind() const noexcept -> void;
 	auto unbind() const noexcept -> void;

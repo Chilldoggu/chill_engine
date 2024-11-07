@@ -1,7 +1,7 @@
 #version 420 core
 
 #define POINTLIGHT_NUM 25
-#define MAX_SAMPLER_SIZ 4
+#define MAX_SAMPLER_SIZ 3
 
 struct DirLight {
 	// General
@@ -68,6 +68,13 @@ uniform vec3 fog_color;
 uniform vec3 view_pos;
 uniform bool is_blinn_phong;
 
+uniform mat4 light_view;
+uniform mat4 light_projection;
+uniform sampler2DShadow shadow_map;
+
+// Globals
+vec3 g_LightFragPos;
+
 // Light calculations
 vec3 calc_dirlight(DirLight a_light, vec3 normal, vec3 view_dir);
 vec3 calc_pointlight(PointLight a_light, vec3 normal, vec3 frag_pos, vec3 view_dir);
@@ -77,9 +84,27 @@ vec3 calc_spotlight(SpotLight a_light, vec3 normal, vec3 frag_pos, vec3 view_dir
 float calc_lindepth(float a_depth_val, float a_near, float a_far);
 vec3 calc_fog(float a_density, float a_lindepth, vec3 a_frag_base_color, vec3 a_fog_color);
 
-void main() {
+// Biased shadows with simple PCF provided by sampler2DShadow type.
+float calc_shadow(vec3 a_light_frag_pos, vec3 a_normal, vec3 a_light_dir) {
+	// transform to range [0, 1]
+	a_light_frag_pos = a_light_frag_pos * 0.5 + 0.5;
+
+	// Decrease depth by bias to reduce shadow acne
+	float bias = max(0.05 * (1.0 - dot(a_normal, a_light_dir)), 0.005);
+	float current_depth = a_light_frag_pos.z - bias;
+	if (current_depth > 1.0) {
+		return 1.0;
+	} 
+	
+	return texture(shadow_map, vec3(a_light_frag_pos.xy, current_depth)).r;
+}
+
+void main() { 
+	vec4 temp_LightFragPos = light_projection * light_view * vec4(FragPos, 1.0);
+	g_LightFragPos = vec3(temp_LightFragPos.xyz / temp_LightFragPos.w); // Perspective division
+
 	vec3 view_dir = normalize(view_pos - FragPos); // TO observer
-	vec3 normal = Normal; 
+	vec3 normal = normalize(Normal); 
 
 	float alpha = texture(material.diffuse_maps[0], TexCoord).a;
 
@@ -123,7 +148,7 @@ vec3 calc_specular(vec3 spec_intens, sampler2D spec_map, vec3 normal, vec3 light
 	} else {
 		spec = phong_spec(view_dir, light_dir, normal, material.shininess);
 	} 
-	return spec_intens * spec * texture(material.specular_maps[0], TexCoord).rgb; 
+	return spec_intens * spec * texture(spec_map, TexCoord).rgb; 
 }
 
 vec3 calc_dirlight(DirLight a_light, vec3 normal, vec3 view_dir) {
@@ -134,7 +159,7 @@ vec3 calc_dirlight(DirLight a_light, vec3 normal, vec3 view_dir) {
 	vec3 diffuse  = calc_diffuse(a_light.diffuse_intens, material.diffuse_maps[0], normal, light_dir);
 	vec3 specular = calc_specular(a_light.specular_intens, material.specular_maps[0], normal, light_dir, view_dir); 
 
-	return a_light.color * (ambient + diffuse + specular);
+	return a_light.color * (ambient + calc_shadow(g_LightFragPos, normal, light_dir) * (diffuse + specular));
 }
 
 vec3 calc_pointlight(PointLight a_light, vec3 normal, vec3 frag_pos, vec3 view_dir) {
@@ -189,7 +214,7 @@ vec3 calc_spotlight(SpotLight a_light, vec3 normal, vec3 frag_pos, vec3 view_dir
 float calc_lindepth(float a_depth_val, float a_near, float a_far) {
 	float ndc = a_depth_val * 2 - 1;
 	float lindepth = (2.0 * a_near * a_far) / (a_far + a_near - ndc * (a_far - a_near));
-	return lindepth / far_plane;
+	return lindepth / a_far;
 }
 
 vec3 calc_fog(float a_density, float a_lindepth, vec3 a_frag_base_color, vec3 a_fog_color) {

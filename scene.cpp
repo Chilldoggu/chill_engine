@@ -68,7 +68,7 @@ void Scene::set_skybox(const Skybox& a_skybox) {
 }
 
 void Scene::set_cur_shader(CurShaderType a_type) {
-	m_cur_shader = a_type;
+	m_shader_state.m_type = a_type;
 }
 
 void Scene::set_shaders(const std::map<std::string, ShaderProgram>& a_shaders) {
@@ -103,8 +103,9 @@ void Scene::set_fb_reflection_cubemap(FrameBuffer&& a_fb_refl) {
 	m_fb_refl_cubemap = std::move(a_fb_refl);
 }
 
-void Scene::set_default_material(const std::wstring& a_diffuse_path) {
+void Scene::set_default_material(const std::wstring& a_diffuse_path, const std::wstring& a_specular_path) {
 	m_default_material.set_diffuse_maps({ {a_diffuse_path, false, false} });
+	m_default_material.set_specular_maps({ {a_specular_path, false, false} });
 }
 
 void Scene::set_uniforms() { 
@@ -113,6 +114,12 @@ void Scene::set_uniforms() {
 
 	m_ubo["view"] = view_mat;
 	m_ubo["projection"] = projection_mat;
+
+	m_shaders["multi"]["light_view"] = m_shadow_map.m_light_view;
+	m_shaders["multi"]["light_projection"] = m_shadow_map.m_light_proj;
+	m_shadow_map.m_fb.activate_depth();
+	// TODO: Think of how to fix this ungly line.
+	m_shaders["multi"]["shadow_map"] = std::get<Texture>(m_shadow_map.m_fb.get_depth_attachment_buffer().get_attachment()).get_unit_id();
 
 	m_shaders["multi"]["view_pos"] = m_camera->get_position();
 	m_shaders["multi"]["near_plane"] = m_camera->get_near_plane();
@@ -174,12 +181,36 @@ void Scene::push_frame_buffer_post(FrameBuffer&& a_fb) {
 	m_fb_post_process = std::move(a_fb);
 }
 
-void Scene::draw() {
-	if (m_fb_post_process.get_id() != EMPTY_VBO)
-		m_fb_post_process.bind();
+void Scene::push_shadow_map(float a_width, float a_height) {
+	FrameBuffer fb_shadow(a_width, a_height);
+	fb_shadow.attach(AttachmentType::COLOR_2D, AttachmentBufferType::NONE);
+	fb_shadow.attach(AttachmentType::DEPTH, AttachmentBufferType::TEXTURE);
 
-	// Clear buffers
-	glClearColor(0.05, 0.05, 0.05, 1.0);
+	auto& tex_depth_map = std::get<Texture>(fb_shadow.get_depth_attachment_buffer().get_attachment());
+	// Make sure that areas outside shadow map are lit by default.
+	tex_depth_map.set_wrap(TextureWrap::CLAMP_BORDER);
+	tex_depth_map.set_border_color(glm::vec3(1.f, 1.f, 1.f));
+	// Needed for use with sampler2DShadow type in frag shader.
+	tex_depth_map.set_comp_func(TextureCompFunc::LEQUAL);
+	// Set texture unit in order not to replace any used material maps in frag shader.
+	tex_depth_map.set_unit_id(g_max_sampler_siz * 3);
+
+	if (!fb_shadow.check_status()) {
+		ERROR("[MAIN] Framebuffer fb_shadow is not complete!", Error_action::throwing);
+	}
+
+	m_shadow_map.m_fb = std::move(fb_shadow);
+}
+
+void Scene::draw() {
+	// Shadow maps 
+	draw_shadow_map();
+
+	// Main render
+	if (m_fb_post_process.get_id() != EMPTY_VBO)
+		m_fb_post_process.bind(); 
+
+	glClearColor(0, 0, 0.1, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	set_uniforms(); 
@@ -207,7 +238,7 @@ void Scene::draw_lights() {
 	m_spotlight_sources[0].model.draw();
 
 	m_shaders["single"]["color"] = m_dirlight_sources[0].light.get_color();
-	 m_shaders["single"]["model"] = m_dirlight_sources[0].model.get_model_mat();
+	m_shaders["single"]["model"] = m_dirlight_sources[0].model.get_model_mat();
 	m_dirlight_sources[0].model.draw();
 
 	m_pointlight_sources[0].model.set_pos(cam_pos);
@@ -244,7 +275,7 @@ void Scene::draw_generic_models() {
 		}
 	} 
 
-	if (m_cur_shader == CurShaderType::NORMAL_VIS) {
+	if (m_shader_state.m_type == CurShaderType::NORMAL_VIS) {
 		m_shaders["normal_vis"].use();
 		for (auto& gen_obj : m_generic_models) { 
 			m_shaders["normal_vis"]["model"] = gen_obj.get_model_mat();
@@ -264,7 +295,6 @@ void Scene::draw_instanced_models() {
 		m_shaders["multi_instanced"].set_uniform("dirlight_source", m_dirlight_sources[0].light);
 		//m_shaders["multi_instanced"]["time"] = glfwGetTime(); 
 		inst_model.draw(m_shaders["multi_instanced"], "material"); 
-
 	} 
 }
 
@@ -388,6 +418,59 @@ void Scene::draw_transparent_models() {
 	m_shaders["multi"].set_state(ShaderState::FACE_CULLING, true); 
 }
 
+void Scene::draw_shadow_map() {
+	if (m_shadow_map.m_fb.get_id() == EMPTY_VBO)
+		push_shadow_map(1024.f, 1024.f);
+	m_shadow_map.m_fb.bind();
+	
+	m_shadow_map.m_near = 1.f;
+	m_shadow_map.m_far = 150.f;
+	m_shadow_map.m_light_proj = glm::ortho(-40.f, 40.f, -40.f, 40.f, m_shadow_map.m_near, m_shadow_map.m_far);
+	m_shadow_map.m_light_view = glm::lookAt(m_dirlight_sources[0].model.get_pos(),
+										    glm::vec3(0, 0, 0.1),
+										    glm::vec3(0.f, 1.f, 0.f));
+
+	glViewport(0, 0, 1024, 1024);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	
+	auto lamb_draw_models = [m_this = this](auto& objs) {
+			for (auto& obj : objs) {
+				m_this->m_shaders["shadow_map"]["model"] = obj.get_model_mat();
+				obj.draw();
+			}
+		};
+	auto lamb_draw_litmodels = [m_this = this](auto& litobjs) {
+			for (auto& litobj : litobjs) {
+				auto& obj = litobj.model;
+				m_this->m_shaders["shadow_map"]["model"] = obj.get_model_mat();
+				obj.draw();
+			}
+		};
+
+	// No need for fixing peter panning for now.
+	// glCullFace(GL_FRONT);
+	m_shaders["shadow_map"].use();
+	m_shaders["shadow_map"]["light_view"] = m_shadow_map.m_light_view;
+	m_shaders["shadow_map"]["light_projection"] = m_shadow_map.m_light_proj;
+	//lamb_draw_litmodels(m_pointlight_sources);
+	// lamb_draw_litmodels(m_dirlight_sources);
+	lamb_draw_litmodels(m_spotlight_sources);
+	lamb_draw_models(m_generic_models);
+	//lamb_draw_models(m_transparent_models);
+	//lamb_draw_models(m_reflective_models);
+
+	m_shaders["shadow_map_instanced"].use();
+	m_shaders["shadow_map_instanced"]["light_view"] = m_shadow_map.m_light_view;
+	m_shaders["shadow_map_instanced"]["light_projection"] = m_shadow_map.m_light_proj;
+	for (auto& instobj : m_instanced_models) {
+		instobj.draw();
+	}
+
+	// glCullFace(GL_BACK);
+	m_shadow_map.m_fb.unbind();
+	glViewport(0, 0, m_window->get_width(), m_window->get_height());
+}
+
 void Scene::transform_models() { 
 	for (auto& inst_model : m_instanced_models) {
 		auto positions = inst_model.get_positions();
@@ -428,7 +511,7 @@ Camera* Scene::get_camera() {
 }
 
 CurShaderType Scene::get_cur_shader() const {
-	return m_cur_shader;
+	return m_shader_state.m_type;
 }
 
 MaterialMap& Scene::get_default_material() {
@@ -519,7 +602,7 @@ void Scene::post_process() {
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	std::string shader_name = "";
-	switch (m_cur_shader) {
+	switch (m_shader_state.m_type) {
 	case CurShaderType::POST_NONE: 
 		shader_name = "post_none";
 		break;
@@ -552,7 +635,15 @@ void Scene::post_process() {
 	}
 
 	m_fb_post_process.activate_color();
+	m_shaders[shader_name]["fb_texture"] = 0;
 	draw_with_shader(m_basic_plane, m_shaders[shader_name]); 
+
+	m_shadow_map.m_fb.activate_depth();
+	m_shaders["post_gray_avg"]["fb_texture"] = std::get<Texture>(m_shadow_map.m_fb.get_depth_attachment_buffer().get_attachment()).get_unit_id();
+	auto basic_plane_cp = m_basic_plane;
+	basic_plane_cp.set_size(0.3);
+	basic_plane_cp.set_pos(glm::vec3(0.7, -0.7, 0));
+	draw_with_shader(basic_plane_cp, m_shaders["post_gray_avg"]);
 }
 
 void draw_gui(Scene& scene, Skybox& skybox1, Skybox& skybox2) {
@@ -572,7 +663,7 @@ void draw_gui(Scene& scene, Skybox& skybox1, Skybox& skybox2) {
 	{
 		static ImGuiIO* im_io = win.get_imgui_handle().get_io();
 
-		ImGui::ShowDemoWindow();
+		// ImGui::ShowDemoWindow();
 
 		ImGui::Begin("Config");
 		if (ImGui::CollapsingHeader("Camera")) {
@@ -764,7 +855,7 @@ void draw_gui(Scene& scene, Skybox& skybox1, Skybox& skybox2) {
 			case CurShaderType::POST_GAMMA:		e = 7; break;
 			};
 
-			int samples = scene.get_post_fb().get_samples();
+			int samples = shader_state.m_MSAA_samples;
 			float fog_dens = shader_state.m_fog_dens;
 			float normal_mag = shader_state.m_normal_mag;
 			float kernel_offset = shader_state.m_kernel_offset;
@@ -774,7 +865,6 @@ void draw_gui(Scene& scene, Skybox& skybox1, Skybox& skybox2) {
 			glm::vec3 normal_color = shader_state.m_normal_color;
 			glm::vec3 fog_color = shader_state.m_fog_color;
 			bool blinn_phong = shader_state.m_blinn_phong;
-			int tmp_sample = samples;
 
 			ImGui::RadioButton("None", &e, 0); 
 			ImGui::RadioButton("MSAA", &e, 1);
@@ -1103,29 +1193,4 @@ void imgui_model(Model& model) {
 
 /* 
 ================= GRAVEYARD =================
-{
-	Model copy_screen(basic_plane);
-	rear_window.activate_color();
-	copy_screen.set_size(basic_plane.get_size() * glm::vec3(0.3) * glm::vec3(1.5, 0.5, 1));
-	copy_screen.set_pos(basic_plane.get_pos() + (basic_plane.get_size() * glm::vec3(0, 0.85, 0)));
-	draw_with_shader(copy_screen, post_none_shader);
-
-	basic_plane.set_size(glm::vec3(0.5)); 
-
-	use_shader(post_grayscale_average_shader);
-	basic_plane.set_pos(glm::vec3(-0.5, 0.5, 0));
-	basic_plane.draw(); 
-
-	use_shader(post_inverse_shader);
-	basic_plane.set_pos(glm::vec3(0.5, 0.5, 0));
-	basic_plane.draw();
-
-	use_shader(post_grayscale_weighted_shader);
-	basic_plane.set_pos(glm::vec3(-0.5, -0.5, 0));
-	basic_plane.draw();
-
-	use_shader(post_sharpen_kernel);
-	basic_plane.set_pos(glm::vec3(0.5, -0.5, 0));
-	basic_plane.draw(); 
-}
 */

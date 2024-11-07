@@ -4,7 +4,7 @@ Uniform& Uniform::operator=(const T& val) {
 	if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
 		glUniform1f(m_uniform_location, static_cast<float>(val));
 	}
-	else if constexpr (std::is_same_v<T, int> || std::is_same_v<T, bool>) {
+	else if constexpr (std::is_same_v<T, int> || std::is_same_v<T, bool> || std::is_same_v<T, unsigned int>) {
 		glUniform1i(m_uniform_location, val);
 	}
 	else if constexpr (std::is_same_v<T, glm::vec1>) {

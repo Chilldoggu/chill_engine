@@ -103,23 +103,6 @@ void BufferObjects::refcnt_dec() {
 	}
 }
 
-std::ostream& operator<<(std::ostream& os, const TextureType& a_type) {
-	std::string str_type;
-	switch (a_type) {
-	case TextureType::COLOR_2D:      str_type = "COLOR_2D"; break;
-	case TextureType::COLOR_3D:      str_type = "COLOR_3D"; break;
-	case TextureType::DEPTH:         str_type = "DEPTH"; break;
-	case TextureType::DIFFUSE:       str_type = "DIFFUSE"; break;
-	case TextureType::SPECULAR:      str_type = "SPECULAR"; break;
-	case TextureType::EMISSION:      str_type = "EMISSION"; break;
-	case TextureType::DEPTH_STENCIL: str_type = "DEPTH_STENCIL"; break;
-	case TextureType::NONE:          str_type = "NONE"; break;
-	default: str_type = "UNKNOWN"; break;
-	}
-	os << str_type;
-	return os;
-}
-
 Texture::Texture(std::wstring a_path, TextureType a_type, int a_unit_id, bool a_flip_image, bool a_gamma_corr)
 	:m_type{ a_type }, m_unit_id{ a_unit_id }, m_flipped{ a_flip_image }, m_gamma_corr{ a_gamma_corr }
 {
@@ -147,25 +130,16 @@ Texture::Texture(std::wstring a_path, TextureType a_type, int a_unit_id, bool a_
 	unsigned ex_format = GL_NONE;
 	if (nrChannels == 1) {
 		in_format = ex_format = GL_RED;
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	}
 	else if (nrChannels == 3) {
 		auto cond = a_gamma_corr && (a_type == TextureType::DIFFUSE || a_type == TextureType::EMISSION);
 		in_format = cond ? GL_SRGB : GL_RGB;
 		ex_format = GL_RGB;
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	}
 	else if (nrChannels == 4) {
 		auto cond = a_gamma_corr && (a_type == TextureType::DIFFUSE || a_type == TextureType::EMISSION);
 		in_format = cond ? GL_SRGB_ALPHA : GL_RGBA;
 		ex_format = GL_RGBA;
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -181,10 +155,9 @@ Texture::Texture(std::wstring a_path, TextureType a_type, int a_unit_id, bool a_
 	else {
 		ERROR(std::format("[TEXTURE::TEXTURE] Couldn't load texture data at path {}", wstos(m_path)), Error_action::throwing);
 	} 
-	
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // GL_NEAREST variations available
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // GL_NEAREST available
-	glGenerateMipmap(GL_TEXTURE_2D);
+
+	set_wrap(TextureWrap::CLAMP_EDGE);
+	set_filter(TextureFilter::MIPMAP_LINEAR);
 }
 
 // Cubemaps
@@ -225,10 +198,6 @@ Texture::Texture(std::vector<std::wstring> a_paths, int texture_unit, bool a_fli
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id);
 
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
 	stbi_set_flip_vertically_on_load(a_flip_images);
 	for (size_t i = 0; i < m_filenames.size(); ++i) {
 		int nrChannels{};
@@ -263,48 +232,39 @@ Texture::Texture(std::vector<std::wstring> a_paths, int texture_unit, bool a_fli
 		}
 	}
 
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glGenerateMipmap(GL_TEXTURE_CUBE_MAP); 
+	set_wrap(TextureWrap::CLAMP_EDGE);
+	set_filter(TextureFilter::LINEAR);
 }
 
 Texture::Texture(int a_width, int a_height, TextureType a_type) 
 	:m_type{ a_type } 
 {
-	if (a_type != TextureType::COLOR_2D && a_type != TextureType::COLOR_3D && a_type != TextureType::DEPTH && a_type != TextureType::DEPTH_STENCIL)
+	if (a_type != TextureType::COLOR_2D && a_type != TextureType::COLOR_3D && a_type != TextureType::CUBEMAP && a_type != TextureType::DEPTH && a_type != TextureType::DEPTH_STENCIL)
 		ERROR("[TEXTURE::TEXTURE] Bad texture type", Error_action::throwing);
 
 	glGenTextures(1, &m_id);
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id);
-	if (a_type == TextureType::COLOR_3D) {
+	if (a_type == TextureType::COLOR_3D || a_type == TextureType::CUBEMAP) {
 		glBindTexture(GL_TEXTURE_CUBE_MAP, m_id); 
-
-		glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 	else {
-		glBindTexture(GL_TEXTURE_2D, m_id);
-
-		if (a_type == TextureType::COLOR_2D) {
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
-		}
-	} 
+		glBindTexture(GL_TEXTURE_2D, m_id); 
+	}
 
 	switch (a_type) {
 	case TextureType::COLOR_2D:      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, a_width, a_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL); break;
-	case TextureType::DEPTH:         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, a_width, a_height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL); break;
+	case TextureType::DEPTH:         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, a_width, a_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL); break;
 	case TextureType::DEPTH_STENCIL: glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, a_width, a_height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL); break;
+	case TextureType::CUBEMAP:
 	case TextureType::COLOR_3D:
 		for (int i = 0; i < 6; ++i) {
 			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, a_width, a_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL); 
 		}
 		break;
-	} 
+	}
+
+	set_wrap(TextureWrap::CLAMP_EDGE);
+	set_filter(TextureFilter::LINEAR);
 }
 
 Texture::Texture(int a_width, int a_height, int a_samples, TextureType a_type)
@@ -322,6 +282,9 @@ Texture::Texture(int a_width, int a_height, int a_samples, TextureType a_type)
 	case TextureType::DEPTH:         glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, a_samples, GL_DEPTH_COMPONENT, a_width, a_height, GL_TRUE); break;
 	case TextureType::DEPTH_STENCIL: glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, a_samples, GL_DEPTH24_STENCIL8, a_width, a_height, GL_TRUE); break;
 	}
+
+	set_wrap(TextureWrap::CLAMP_EDGE);
+	set_filter(TextureFilter::LINEAR);
 }
 
 Texture::Texture(const Texture& a_texture) {
@@ -330,6 +293,9 @@ Texture::Texture(const Texture& a_texture) {
 	m_id = a_texture.m_id;
 	m_path = a_texture.m_path;
 	m_type = a_texture.m_type;
+	m_wrap = a_texture.m_wrap;
+	m_filter = a_texture.m_filter;
+	m_comp = a_texture.m_comp;
 	m_unit_id = a_texture.m_unit_id;
 	m_filename = a_texture.m_filename;
 	m_filenames = a_texture.m_filenames;
@@ -342,6 +308,9 @@ Texture::Texture(Texture&& a_texture) noexcept {
 	m_id = a_texture.m_id;
 	m_path = std::move(a_texture.m_path);
 	m_type = a_texture.m_type;
+	m_wrap = a_texture.m_wrap;
+	m_filter = a_texture.m_filter;
+	m_comp = a_texture.m_comp;
 	m_unit_id = a_texture.m_unit_id;
 	m_filename = std::move(a_texture.m_filename);
 	m_filenames = std::move(a_texture.m_filenames);
@@ -360,6 +329,9 @@ Texture& Texture::operator=(const Texture& a_texture) {
 	m_id = a_texture.m_id;
 	m_path = a_texture.m_path;
 	m_type = a_texture.m_type;
+	m_wrap = a_texture.m_wrap;
+	m_filter = a_texture.m_filter;
+	m_comp = a_texture.m_comp;
 	m_unit_id = a_texture.m_unit_id;
 	m_filename = a_texture.m_filename;
 	m_filenames = a_texture.m_filenames;
@@ -377,6 +349,9 @@ Texture& Texture::operator=(Texture&& a_texture) noexcept {
 	m_id = a_texture.m_id;
 	m_path = std::move(a_texture.m_path);
 	m_type = a_texture.m_type;
+	m_wrap = a_texture.m_wrap;
+	m_filter = a_texture.m_filter;
+	m_comp = a_texture.m_comp;
 	m_unit_id = a_texture.m_unit_id;
 	m_filename = std::move(a_texture.m_filename);
 	m_filenames = std::move(a_texture.m_filenames);
@@ -402,12 +377,116 @@ void Texture::refcnt_dec() {
 	} 
 }
 
+void Texture::set_border_color(const glm::vec3& a_border_color) noexcept {
+	float arr_border_color[] = { a_border_color.x, a_border_color.y, a_border_color.z, 1.f };
+	GLuint tex_type = (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D; 
+	glBindTexture(tex_type, m_id); 
+	glTexParameterfv(tex_type, GL_TEXTURE_BORDER_COLOR, arr_border_color);
+}
+
 void Texture::set_unit_id(int a_unit_id) noexcept {
 	m_unit_id = a_unit_id;
 }
 
 void Texture::set_type(TextureType a_type) noexcept {
 	m_type = a_type;
+}
+
+void Texture::set_wrap(TextureWrap a_wrap) noexcept {
+	m_wrap = a_wrap;
+
+	GLuint tex_type = (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
+	GLuint tex_wrap = 0; 
+	switch (m_wrap) {
+	case TextureWrap::REPEAT: tex_wrap = GL_REPEAT; break;
+	case TextureWrap::CLAMP_EDGE: tex_wrap = GL_CLAMP_TO_EDGE; break;
+	case TextureWrap::CLAMP_BORDER: tex_wrap = GL_CLAMP_TO_BORDER; break;
+	case TextureWrap::MIRROR_REPEAT: tex_wrap = GL_MIRRORED_REPEAT; break;
+	default: ERROR("[TEXTURE::SET_WRAP] Wrong wrap type.", Error_action::throwing);
+	}
+
+	glBindTexture(tex_type, m_id); 
+	glTexParameterf(tex_type, GL_TEXTURE_WRAP_S, tex_wrap);
+	glTexParameterf(tex_type, GL_TEXTURE_WRAP_T, tex_wrap);
+	if (tex_type == GL_TEXTURE_CUBE_MAP) { 
+		glTexParameterf(tex_type, GL_TEXTURE_WRAP_R, tex_wrap); 
+	}
+}
+
+void Texture::set_filter(TextureFilter a_filter) noexcept {
+	m_filter = a_filter;
+
+	GLuint tex_type = (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
+	GLuint tex_min = 0;
+	GLuint tex_mag = 0;
+	switch (a_filter) {
+	case TextureFilter::LINEAR: 
+		tex_min = GL_LINEAR;
+		tex_mag = GL_LINEAR; 
+		break;
+	case TextureFilter::NEAREST: 
+		tex_min = GL_NEAREST;
+		tex_mag = GL_NEAREST; 
+		break;
+	case TextureFilter::MIPMAP_LINEAR: 
+		tex_min = GL_LINEAR_MIPMAP_LINEAR; 
+		tex_mag = GL_LINEAR; 
+		break;
+	case TextureFilter::MIPMAP_NEAREST: 
+		tex_min = GL_NEAREST_MIPMAP_NEAREST; 
+		tex_mag = GL_NEAREST; 
+		break;
+	default: ERROR("[TEXTURE::SET_FILTER] Wrong filter type.", Error_action::throwing);
+	}
+
+	glBindTexture(tex_type, m_id); 
+	glTexParameteri(tex_type, GL_TEXTURE_MIN_FILTER, tex_min);
+	glTexParameteri(tex_type, GL_TEXTURE_MAG_FILTER, tex_mag);
+	if (a_filter == TextureFilter::MIPMAP_LINEAR || a_filter == TextureFilter::MIPMAP_NEAREST) {
+		glGenerateMipmap(tex_type);
+	}
+}
+
+void Texture::set_comp_func(TextureCompFunc a_comp_func) noexcept { 
+	m_comp = a_comp_func;
+
+	GLuint tex_type = (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
+	GLuint tex_comp = 0; 
+	switch (a_comp_func) {
+	case TextureCompFunc::LEQUAL: 
+		tex_comp = GL_LEQUAL;
+		break;
+	case TextureCompFunc::GEQUAL: 
+		tex_comp = GL_GEQUAL;
+		break;
+	case TextureCompFunc::LESS: 
+		tex_comp = GL_LESS;
+		break;
+	case TextureCompFunc::GREATER: 
+		tex_comp = GL_GREATER;
+		break;
+	case TextureCompFunc::EQUAL: 
+		tex_comp = GL_EQUAL;
+		break;
+	case TextureCompFunc::NOTEQUAL: 
+		tex_comp = GL_NOTEQUAL;
+		break;
+	case TextureCompFunc::ALWAYS: 
+		tex_comp = GL_ALWAYS;
+		break;
+	case TextureCompFunc::NEVER: 
+		tex_comp = GL_NEVER;
+		break;
+	case TextureCompFunc::NONE:
+		glBindTexture(tex_type, m_id);
+		glTexParameteri(tex_type, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+		return;
+	default: ERROR("[TEXTURE::SET_COMP_FUNC] Wrong comparison function type.", Error_action::throwing);
+	}
+
+	glBindTexture(tex_type, m_id);
+	glTexParameteri(tex_type, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	glTexParameteri(tex_type, GL_TEXTURE_COMPARE_FUNC, tex_comp);
 }
 
 void Texture::activate() const noexcept {
@@ -424,6 +503,18 @@ void Texture::activate() const noexcept {
 
 TextureType Texture::get_type() const noexcept {
 	return m_type;
+}
+
+TextureWrap Texture::get_wrap() const noexcept {
+	return m_wrap;
+}
+
+TextureCompFunc Texture::get_comp_func() const noexcept {
+	return m_comp;
+}
+
+TextureFilter Texture::get_filter() const noexcept {
+	return m_filter;
 }
 
 std::wstring Texture::get_path() const noexcept {
@@ -590,6 +681,9 @@ AttachmentBuffer::AttachmentBuffer(int a_width, int a_height, AttachmentType a_a
 			break;
 		}
 	}
+	else if (a_buf_type == AttachmentBufferType::NONE) {
+		return;
+	}
 	else {
 		ERROR("[ATTACHMENTBUFFER::ATTACHMENTBUFFER] Bad attachment buffer type.", Error_action::throwing);
 	}
@@ -613,7 +707,7 @@ AttachmentBufferType AttachmentBuffer::get_buf_type() const noexcept {
 	return m_buf_type;
 }
 
-std::variant<Texture, RenderBuffer> AttachmentBuffer::get_attachment() const noexcept {
+std::variant<Texture, RenderBuffer>& AttachmentBuffer::get_attachment() noexcept {
 	return m_attachment;
 }
 
@@ -665,7 +759,7 @@ void FrameBuffer::refcnt_dec() {
 }
 
 void FrameBuffer::attach(AttachmentType a_attach_type, AttachmentBufferType a_buf_type, int a_samples) {
-	if (a_attach_type == AttachmentType::NONE || a_buf_type == AttachmentBufferType::NONE || a_samples <= 0 ||
+	if (a_attach_type == AttachmentType::NONE || a_samples <= 0 ||
 		((a_buf_type == AttachmentBufferType::TEXTURE || a_buf_type == AttachmentBufferType::RENDER_BUFFER) && a_samples > 1)) {
 		return; 
 	} 
@@ -684,7 +778,7 @@ void FrameBuffer::attach(AttachmentType a_attach_type, AttachmentBufferType a_bu
 	}
 
 	if (a_buf_type == AttachmentBufferType::TEXTURE) {
-		Texture tex = std::get<Texture>(new_attachment.get_attachment());
+		Texture& tex = std::get<Texture>(new_attachment.get_attachment());
 		switch (a_attach_type) {
 		case AttachmentType::COLOR_2D:      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex.get_id(), 0); break;
 		case AttachmentType::COLOR_3D:      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X, tex.get_id(), 0); break;
@@ -695,7 +789,7 @@ void FrameBuffer::attach(AttachmentType a_attach_type, AttachmentBufferType a_bu
 		}
 	}
 	else if (a_buf_type == AttachmentBufferType::MSAA_TEXTURE) {
-		Texture tex = std::get<Texture>(new_attachment.get_attachment());
+		Texture& tex = std::get<Texture>(new_attachment.get_attachment());
 		switch (a_attach_type) {
 		case AttachmentType::COLOR_2D:      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, tex.get_id(), 0); break;
 		case AttachmentType::DEPTH:         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D_MULTISAMPLE, tex.get_id(), 0); break;
@@ -705,13 +799,24 @@ void FrameBuffer::attach(AttachmentType a_attach_type, AttachmentBufferType a_bu
 		} 
 	}
 	else if (a_buf_type == AttachmentBufferType::RENDER_BUFFER || a_buf_type == AttachmentBufferType::MSAA_RENDER_BUFFER) {
-		RenderBuffer ren_buf = std::get<RenderBuffer>(new_attachment.get_attachment());
+		RenderBuffer& ren_buf = std::get<RenderBuffer>(new_attachment.get_attachment());
 		switch (a_attach_type) {
 		case AttachmentType::COLOR_2D:      glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, ren_buf.get_id()); break;
 		case AttachmentType::DEPTH:         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, ren_buf.get_id()); break;
 		case AttachmentType::DEPTH_STENCIL: glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, ren_buf.get_id()); break;
 		default:
 			ERROR("[FRAMEBUFFER::ATTACH] Wrong attachment type.", Error_action::throwing);
+		}
+	}
+	else if (a_buf_type == AttachmentBufferType::NONE) {
+		switch (a_attach_type) {
+		case AttachmentType::COLOR_2D:
+		case AttachmentType::COLOR_3D:
+			glDrawBuffer(GL_NONE);
+			glReadBuffer(GL_NONE);
+			break;
+		default:
+			ERROR("[FRAMEBUFFER::ATTACH] None depth/stencil buffers not handled.", Error_action::throwing);
 		}
 	}
 
@@ -726,27 +831,30 @@ void FrameBuffer::attach_cubemap_face(GLenum a_cubemap_face) {
 		attach(AttachmentType::COLOR_3D, AttachmentBufferType::TEXTURE); 
 	}
 
-	Texture attached_color_cubemap = std::get<Texture>(m_color_attachment.get_attachment());
+	Texture& attached_color_cubemap = std::get<Texture>(m_color_attachment.get_attachment());
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, a_cubemap_face, attached_color_cubemap.get_id(), 0); 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); 
 }
 
-AttachmentBuffer FrameBuffer::get_attachment_buffer(AttachmentType a_type) const noexcept {
-	if (a_type == AttachmentType::COLOR_2D || a_type == AttachmentType::COLOR_3D) {
-			return m_color_attachment;
-	}
-	else if (a_type == AttachmentType::DEPTH_STENCIL) {
-			return m_depth_stencil_attachment; 
-	}
-	else if (a_type == AttachmentType::DEPTH) {
-			return m_depth_attachment; 
-	}
-	return AttachmentBuffer();
+AttachmentBuffer& FrameBuffer::get_color_attachment_buffer() noexcept {
+	return m_color_attachment;
+}
+
+AttachmentBuffer& FrameBuffer::get_depth_attachment_buffer() noexcept {
+	return m_depth_attachment;
+}
+
+AttachmentBuffer& FrameBuffer::get_depth_stencil_attachment_buffer() noexcept {
+	return m_depth_stencil_attachment;
 }
 
 void FrameBuffer::activate_color() const noexcept {
 	m_color_attachment.activate(); 
+}
+
+void FrameBuffer::activate_depth() const noexcept {
+	m_depth_attachment.activate();
 }
 
 GLuint FrameBuffer::get_id() const noexcept {
@@ -795,7 +903,7 @@ bool FrameBuffer::set_samples(int a_samples) {
 		case AttachmentBufferType::RENDER_BUFFER:	   return AttachmentBufferType::MSAA_RENDER_BUFFER; 
 		}
 		return AttachmentBufferType::NONE;
-		};
+	};
 
 	if (a_samples == 1 && m_samples > 1 || a_samples > 1 && m_samples == 1) { 
 		m_samples = a_samples;

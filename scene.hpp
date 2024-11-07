@@ -62,31 +62,51 @@ struct Skybox {
 	Texture cubemap{};
 	Model cube{};
 }; 
-
-enum class CurShaderType { 
-	POST_NONE, 
-	MSAA_POST_NONE, 
-	POST_KERNEL,  
-	POST_INV, 
-	POST_GRAY_AVG, 
-	POST_GRAY_WGT, 
+ 
+enum class CurShaderType {
+	POST_NONE,
+	MSAA_POST_NONE,
+	POST_KERNEL,
+	POST_INV,
+	POST_GRAY_AVG,
+	POST_GRAY_WGT,
 	POST_GAMMA,
 	NORMAL_VIS,
 };
 
 struct CurShaderState {
 	CurShaderState();
+
+	CurShaderType m_type{ CurShaderType::POST_NONE };
 	glm::mat3 m_kernel{};
 	glm::vec3 m_inv_color{ 1, 0.411, 0.705 };
 	glm::vec3 m_normal_color{ 0, 1, 1 };
 	glm::vec3 m_fog_color{ 1, 1, 1 };
-	float m_fog_dens = 1.8f;
-	float m_normal_mag = 0.2f;
+	float m_fog_dens = 0.f;
+	float m_normal_mag = 2.0f;
 	float m_kernel_offset = 1.f / 300.f;
 	float m_gamma = 2.2f;
 	int m_MSAA_samples = 4;
 	bool m_blinn_phong = true;
 };
+
+struct ShadowMapState {
+	FrameBuffer m_fb{};
+	glm::mat4 m_light_view{};
+	glm::mat4 m_light_proj{};
+	float m_near{};
+	float m_far{};
+};
+
+// TODO: DELETE
+namespace DEBUG {
+struct Test {
+	GLuint fb_shadow_id;
+	GLuint depth_tex;
+	glm::mat4 light_view{};
+	glm::mat4 light_proj{};
+}; 
+}
 
 class Scene {
 public:
@@ -104,7 +124,7 @@ public:
 	void set_transparent_models(const std::vector<Model>& a_transparent_models);
 	void set_reflective_models(const std::vector<Model>& a_reflective_models);
 	void set_fb_reflection_cubemap(FrameBuffer&& a_fb_refl);
-	void set_default_material(const std::wstring& a_diffuse_path);
+	void set_default_material(const std::wstring& a_diffuse_path, const std::wstring& a_specular_path);
 
 	void push_shader(const std::string& a_name, const ShaderProgram& a_shader); 
 	void push_dirlight(const LitModel<DirLight>& a_light);
@@ -116,6 +136,7 @@ public:
 	void push_model_instanced(const ModelInstanced& a_mod_inst);
 	void push_uniform_buffer(const UniformBuffer& a_ubo);
 	void push_frame_buffer_post(FrameBuffer&& a_fb);
+	void push_shadow_map(float a_width, float a_height);
 
 	void set_uniforms();
 
@@ -126,6 +147,7 @@ public:
 	void draw_instanced_models();
 	void draw_reflective_models(const FrameBuffer& a_fb_last);
 	void draw_transparent_models();
+	void draw_shadow_map();
 	void transform_models();
 	void post_process();
 
@@ -152,10 +174,12 @@ private:
 	Camera* m_camera = nullptr;
 	Model m_basic_plane = Application::get_instance().get_rmanager().create_model({ Mesh(presets::g_plane_data, MaterialMap()) });
 	Skybox m_skybox{};
-	CurShaderType m_cur_shader{ CurShaderType::MSAA_POST_NONE };
 	CurShaderState m_shader_state{};
 	MaterialMap m_default_material{};
 	UniformBuffer m_ubo{};
+	ShadowMapState m_shadow_map{};
+	// TODO: DEBUG - Delete this later!
+	// DEBUG::Test m_shadow_map_test{};
 	FrameBuffer m_fb_refl_cubemap{};
 	FrameBuffer m_fb_post_process{};
 	std::map<std::string, ShaderProgram> m_shaders{};

@@ -3,7 +3,7 @@
 in vec2 TexCoords;
 out vec4 FragColor;
 
-uniform sampler2D framebuffer_texture;
+uniform sampler2D fb_texture;
 
 uniform mat3 kernel;
 uniform float offset;
@@ -24,7 +24,7 @@ void main() {
 	vec3 ret = vec3(0);
 	for (int i = 0; i < 3; ++i) {
 		for (int j = 0; j < 3; ++j) {
-			vec3 sampled_val = texture(framebuffer_texture, TexCoords + sampled_pos[i*3+j]).rgb;
+			vec3 sampled_val = texture(fb_texture, TexCoords + sampled_pos[i*3+j]).rgb;
 			// Sample kernel from row major because of sampled_pos layout
 			ret += sampled_val * kernel[j][i];
 		}
