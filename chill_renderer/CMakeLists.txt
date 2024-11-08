@@ -27,6 +27,8 @@ target_sources(${PROJECT_NAME} PUBLIC
 	"${SRC}/resource_manager.cpp" 
 	"${SRC}/presets.cpp" 
 )
+# Create OpenGL debug context to handle errors.
+target_compile_definitions(${PROJECT_NAME} PUBLIC DEBUG_CONTEXT_ENABLE)
  
 # Create GLAD module
 add_library(glad STATIC "${SRC}/glad.c")

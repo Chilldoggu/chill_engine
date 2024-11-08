@@ -1,4 +1,4 @@
-#version 420 core
+#version 430 core
 
 #define POINTLIGHT_NUM 25
 #define MAX_SAMPLER_SIZ 3
@@ -84,20 +84,8 @@ vec3 calc_spotlight(SpotLight a_light, vec3 normal, vec3 frag_pos, vec3 view_dir
 float calc_lindepth(float a_depth_val, float a_near, float a_far);
 vec3 calc_fog(float a_density, float a_lindepth, vec3 a_frag_base_color, vec3 a_fog_color);
 
-// Biased shadows with simple PCF provided by sampler2DShadow type.
-float calc_shadow(vec3 a_light_frag_pos, vec3 a_normal, vec3 a_light_dir) {
-	// transform to range [0, 1]
-	a_light_frag_pos = a_light_frag_pos * 0.5 + 0.5;
-
-	// Decrease depth by bias to reduce shadow acne
-	float bias = max(0.05 * (1.0 - dot(a_normal, a_light_dir)), 0.005);
-	float current_depth = a_light_frag_pos.z - bias;
-	if (current_depth > 1.0) {
-		return 1.0;
-	} 
-	
-	return texture(shadow_map, vec3(a_light_frag_pos.xy, current_depth)).r;
-}
+// Biased shadows with simple PCF provided by sampler2DShadow type and poisson sampling.
+float calc_shadow(vec3 a_light_frag_pos, vec3 a_normal, vec3 a_light_dir);
 
 void main() { 
 	vec4 temp_LightFragPos = light_projection * light_view * vec4(FragPos, 1.0);
@@ -220,4 +208,33 @@ float calc_lindepth(float a_depth_val, float a_near, float a_far) {
 vec3 calc_fog(float a_density, float a_lindepth, vec3 a_frag_base_color, vec3 a_fog_color) {
 	vec3 depth_vec = vec3(exp(-pow(a_lindepth * a_density, 2.0)));
 	return mix(a_fog_color, a_frag_base_color, depth_vec);
+}
+
+float calc_shadow(vec3 a_light_frag_pos, vec3 a_normal, vec3 a_light_dir) {
+	vec2 poisson_disk[4] = vec2[](
+		vec2(-0.94201624,  -0.39906216),
+		vec2( 0.94558609,  -0.76890725),
+		vec2(-0.094184101, -0.92938870),
+		vec2( 0.34495938,   0.29387760)
+	);
+
+	// transform to range [0, 1]
+	a_light_frag_pos = a_light_frag_pos * 0.5 + 0.5;
+
+	// Decrease depth by bias to reduce shadow acne
+	float bias = max(0.05 * (1.0 - dot(a_normal, a_light_dir)), 0.005);
+	float current_depth = a_light_frag_pos.z - bias;
+	// If we are outside the shadow map in depth then lit the surface.
+	if (current_depth > 1.0) {
+		return 1.0;
+	}
+
+	float shadow_val = 0.0;
+	int poisson_samples = 4;
+	float frac = 1.0 / poisson_samples;
+	for (int i = 0; i < poisson_samples; ++i) {
+		shadow_val += frac * texture(shadow_map, vec3(a_light_frag_pos.xy + poisson_disk[i]/700.0, current_depth)).r;
+	}
+	
+	return shadow_val;
 }

@@ -1,4 +1,4 @@
-#version 420 core
+#version 430 core
 
 #define MAX_SAMPLER_SIZ 4
 

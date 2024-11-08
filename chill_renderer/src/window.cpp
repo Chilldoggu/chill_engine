@@ -40,7 +40,7 @@ ImGuiHandler::ImGuiHandler(GLFWwindow* a_window) :m_window{ a_window } {
 	ImGui::StyleColorsDark();
 	set_imgui_dracula_style();
 
-	ImGui_ImplOpenGL3_Init("#version 330 core");
+	ImGui_ImplOpenGL3_Init("#version 430 core");
 
 	ImGui_ImplGlfw_InitForOpenGL(a_window, true);
 }
@@ -53,8 +53,12 @@ Window::Window(int a_width, int a_height, const std::string& a_title, CursorMode
 		ERROR("[WINDOW::WINDOW] Couldn't initialise glfw.", Error_action::throwing);
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	#ifdef DEBUG_CONTEXT_ENABLE
+		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true); 
+	#endif
+
 	m_window = glfwCreateWindow(m_width, m_height, m_title.c_str(), nullptr, nullptr);
 	if (m_window == nullptr) {
 		ERROR("[WINDOW::WINDOW] Couldn't create a window.", Error_action::throwing);
@@ -68,6 +72,18 @@ Window::Window(int a_width, int a_height, const std::string& a_title, CursorMode
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 		ERROR("[WINDOW:WINDOW] Couldn't load glad function pointers.", Error_action::throwing);
 	}
+
+	// Enable OpenGL debug context.
+	int context_flag = 0;
+	glGetIntegerv(GL_CONTEXT_FLAGS, &context_flag);
+	if (context_flag & GL_CONTEXT_FLAG_DEBUG_BIT) {
+		glEnable(GL_DEBUG_OUTPUT);
+		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+		glDebugMessageCallback(gl_debug_out, NULL);
+		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE,
+		                      0, NULL, GL_TRUE);
+	}
+
 	glViewport(0, 0, m_width, m_height);
 
 	// After having window correctly initialised, setup callbacks and imgui
