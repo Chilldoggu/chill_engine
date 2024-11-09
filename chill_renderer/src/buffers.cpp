@@ -297,6 +297,7 @@ Texture::Texture(const Texture& a_texture) {
 	m_filter = a_texture.m_filter;
 	m_comp = a_texture.m_comp;
 	m_unit_id = a_texture.m_unit_id;
+	m_samples = a_texture.m_samples;
 	m_filename = a_texture.m_filename;
 	m_filenames = a_texture.m_filenames;
 	m_flipped = a_texture.m_flipped;
@@ -312,6 +313,7 @@ Texture::Texture(Texture&& a_texture) noexcept {
 	m_filter = a_texture.m_filter;
 	m_comp = a_texture.m_comp;
 	m_unit_id = a_texture.m_unit_id;
+	m_samples = a_texture.m_samples;
 	m_filename = std::move(a_texture.m_filename);
 	m_filenames = std::move(a_texture.m_filenames);
 	m_flipped = a_texture.m_flipped;
@@ -333,6 +335,7 @@ Texture& Texture::operator=(const Texture& a_texture) {
 	m_filter = a_texture.m_filter;
 	m_comp = a_texture.m_comp;
 	m_unit_id = a_texture.m_unit_id;
+	m_samples = a_texture.m_samples;
 	m_filename = a_texture.m_filename;
 	m_filenames = a_texture.m_filenames;
 	m_flipped = a_texture.m_flipped;
@@ -353,6 +356,7 @@ Texture& Texture::operator=(Texture&& a_texture) noexcept {
 	m_filter = a_texture.m_filter;
 	m_comp = a_texture.m_comp;
 	m_unit_id = a_texture.m_unit_id;
+	m_samples = a_texture.m_samples;
 	m_filename = std::move(a_texture.m_filename);
 	m_filenames = std::move(a_texture.m_filenames);
 	m_flipped = a_texture.m_flipped;
@@ -395,8 +399,20 @@ void Texture::set_type(TextureType a_type) noexcept {
 void Texture::set_wrap(TextureWrap a_wrap) noexcept {
 	m_wrap = a_wrap;
 
-	GLuint tex_type = (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
+	GLuint tex_type = 0;
 	GLuint tex_wrap = 0; 
+
+	if (m_samples > 1) {
+		// Error(1280): Multisample texture targets don't support sampler state.
+		return;
+	}
+	else if (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) {
+		tex_type = GL_TEXTURE_CUBE_MAP;
+	}
+	else {
+		tex_type = GL_TEXTURE_2D;
+	}
+
 	switch (m_wrap) {
 	case TextureWrap::REPEAT: tex_wrap = GL_REPEAT; break;
 	case TextureWrap::CLAMP_EDGE: tex_wrap = GL_CLAMP_TO_EDGE; break;
@@ -416,9 +432,21 @@ void Texture::set_wrap(TextureWrap a_wrap) noexcept {
 void Texture::set_filter(TextureFilter a_filter) noexcept {
 	m_filter = a_filter;
 
-	GLuint tex_type = (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
 	GLuint tex_min = 0;
 	GLuint tex_mag = 0;
+	GLuint tex_type = 0;
+
+	if (m_samples > 1) {
+		// Error(1280): Multisample texture targets don't support sampler state.
+		return;
+	}
+	else if (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) {
+		tex_type = GL_TEXTURE_CUBE_MAP;
+	}
+	else {
+		tex_type = GL_TEXTURE_2D;
+	}
+
 	switch (a_filter) {
 	case TextureFilter::LINEAR: 
 		tex_min = GL_LINEAR;
@@ -453,33 +481,18 @@ void Texture::set_comp_func(TextureCompFunc a_comp_func) noexcept {
 	GLuint tex_type = (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
 	GLuint tex_comp = 0; 
 	switch (a_comp_func) {
-	case TextureCompFunc::LEQUAL: 
-		tex_comp = GL_LEQUAL;
-		break;
-	case TextureCompFunc::GEQUAL: 
-		tex_comp = GL_GEQUAL;
-		break;
-	case TextureCompFunc::LESS: 
-		tex_comp = GL_LESS;
-		break;
-	case TextureCompFunc::GREATER: 
-		tex_comp = GL_GREATER;
-		break;
-	case TextureCompFunc::EQUAL: 
-		tex_comp = GL_EQUAL;
-		break;
-	case TextureCompFunc::NOTEQUAL: 
-		tex_comp = GL_NOTEQUAL;
-		break;
-	case TextureCompFunc::ALWAYS: 
-		tex_comp = GL_ALWAYS;
-		break;
-	case TextureCompFunc::NEVER: 
-		tex_comp = GL_NEVER;
-		break;
+	case TextureCompFunc::LESS:     tex_comp = GL_LESS; break;
+	case TextureCompFunc::EQUAL:    tex_comp = GL_EQUAL; break;
+	case TextureCompFunc::NEVER:    tex_comp = GL_NEVER; break;
+	case TextureCompFunc::ALWAYS:   tex_comp = GL_ALWAYS; break;
+	case TextureCompFunc::LEQUAL:   tex_comp = GL_LEQUAL; break;
+	case TextureCompFunc::GEQUAL:   tex_comp = GL_GEQUAL; break;
+	case TextureCompFunc::GREATER:  tex_comp = GL_GREATER; break;
+	case TextureCompFunc::NOTEQUAL: tex_comp = GL_NOTEQUAL; break;
 	case TextureCompFunc::NONE:
 		glBindTexture(tex_type, m_id);
 		glTexParameteri(tex_type, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+		glTexParameteri(tex_type, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
 		return;
 	default: ERROR("[TEXTURE::SET_COMP_FUNC] Wrong comparison function type.", Error_action::throwing);
 	}
@@ -492,7 +505,10 @@ void Texture::set_comp_func(TextureCompFunc a_comp_func) noexcept {
 void Texture::activate() const noexcept {
 	if (m_type != TextureType::NONE) {
 		glActiveTexture(GL_TEXTURE0 + m_unit_id);
-		if (m_type == TextureType::CUBEMAP || m_type == TextureType::COLOR_3D) { 
+		if (m_samples > 1) {
+			glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, m_id);
+		}
+		else if (m_type == TextureType::CUBEMAP || m_type == TextureType::COLOR_3D) { 
 			glBindTexture(GL_TEXTURE_CUBE_MAP, m_id); 
 		}
 		else {

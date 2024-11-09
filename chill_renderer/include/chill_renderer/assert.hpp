@@ -8,6 +8,11 @@
 #define ERROR(MESSAGE, ACTION) my_error_handler(__FILE__, __LINE__, MESSAGE, ACTION);
 
 namespace chill_renderer {
+namespace SPOOKY_FLAG {
+	/* Don't ignore problems, fix them! */
+	inline bool g_IGNORE_THROW = 0; 
+}
+
 enum class Error_action { 
 	ignore,
 	throwing,

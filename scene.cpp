@@ -118,7 +118,6 @@ void Scene::set_uniforms() {
 	m_shaders["multi"]["light_view"] = m_shadow_map.m_light_view;
 	m_shaders["multi"]["light_projection"] = m_shadow_map.m_light_proj;
 	m_shadow_map.m_fb.activate_depth();
-	// TODO: Think of how to fix this ungly line.
 	m_shaders["multi"]["shadow_map"] = std::get<Texture>(m_shadow_map.m_fb.get_depth_attachment_buffer().get_attachment()).get_unit_id();
 
 	m_shaders["multi"]["view_pos"] = m_camera->get_position();
@@ -423,16 +422,13 @@ void Scene::draw_shadow_map() {
 		push_shadow_map(1024.f, 1024.f);
 	m_shadow_map.m_fb.bind();
 	
-	m_shadow_map.m_near = 1.f;
+	m_shadow_map.m_near = 10.f;
 	m_shadow_map.m_far = 150.f;
 	m_shadow_map.m_light_proj = glm::ortho(-40.f, 40.f, -40.f, 40.f, m_shadow_map.m_near, m_shadow_map.m_far);
 	m_shadow_map.m_light_view = glm::lookAt(m_dirlight_sources[0].model.get_pos(),
 										    glm::vec3(0, 0, 0.1),
-										    glm::vec3(0.f, 1.f, 0.f));
+										    glm::vec3(0.f, 1.f, 0.f)); 
 
-	glViewport(0, 0, 1024, 1024);
-	glClear(GL_DEPTH_BUFFER_BIT);
-	
 	auto lamb_draw_models = [m_this = this](auto& objs) {
 			for (auto& obj : objs) {
 				m_this->m_shaders["shadow_map"]["model"] = obj.get_model_mat();
@@ -447,17 +443,23 @@ void Scene::draw_shadow_map() {
 			}
 		};
 
+	// Make sure to clear depth buffer only after using correct shader program to avoid id:131222 warning.
+	glUseProgram(0);
+	glViewport(0, 0, 1024, 1024);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
 	// No need for fixing peter panning for now.
 	// glCullFace(GL_FRONT);
 	m_shaders["shadow_map"].use();
 	m_shaders["shadow_map"]["light_view"] = m_shadow_map.m_light_view;
 	m_shaders["shadow_map"]["light_projection"] = m_shadow_map.m_light_proj;
-	//lamb_draw_litmodels(m_pointlight_sources);
-	// lamb_draw_litmodels(m_dirlight_sources);
+
+	lamb_draw_litmodels(m_pointlight_sources);
+	lamb_draw_litmodels(m_dirlight_sources);
 	lamb_draw_litmodels(m_spotlight_sources);
 	lamb_draw_models(m_generic_models);
-	//lamb_draw_models(m_transparent_models);
-	//lamb_draw_models(m_reflective_models);
+	lamb_draw_models(m_transparent_models);
+	lamb_draw_models(m_reflective_models);
 
 	m_shaders["shadow_map_instanced"].use();
 	m_shaders["shadow_map_instanced"]["light_view"] = m_shadow_map.m_light_view;
@@ -598,6 +600,8 @@ void Scene::post_process() {
 		};
 
 	m_fb_post_process.unbind();
+
+	glUseProgram(0);
 	glClearColor(0.1, 0.1, 0.1, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -638,12 +642,17 @@ void Scene::post_process() {
 	m_shaders[shader_name]["fb_texture"] = 0;
 	draw_with_shader(m_basic_plane, m_shaders[shader_name]); 
 
-	m_shadow_map.m_fb.activate_depth();
-	m_shaders["post_gray_avg"]["fb_texture"] = std::get<Texture>(m_shadow_map.m_fb.get_depth_attachment_buffer().get_attachment()).get_unit_id();
-	auto basic_plane_cp = m_basic_plane;
-	basic_plane_cp.set_size(0.3);
-	basic_plane_cp.set_pos(glm::vec3(0.7, -0.7, 0));
-	draw_with_shader(basic_plane_cp, m_shaders["post_gray_avg"]);
+	{
+		SPOOKY_FLAG::g_IGNORE_THROW = true;
+		auto& depth_tex = std::get<Texture>(m_shadow_map.m_fb.get_depth_attachment_buffer().get_attachment());
+		depth_tex.activate();
+		m_shaders["post_gray_avg"]["fb_texture"] = depth_tex.get_unit_id();
+		auto basic_plane_cp = m_basic_plane;
+		basic_plane_cp.set_size(0.3);
+		basic_plane_cp.set_pos(glm::vec3(0.7, -0.7, 0));
+		draw_with_shader(basic_plane_cp, m_shaders["post_gray_avg"]);
+		SPOOKY_FLAG::g_IGNORE_THROW = false;
+	}
 }
 
 void draw_gui(Scene& scene, Skybox& skybox1, Skybox& skybox2) {

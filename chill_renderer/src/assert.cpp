@@ -11,7 +11,7 @@ void gl_debug_out(GLenum a_source, GLenum a_type, GLuint a_id, GLenum a_severity
                   GLsizei a_length, const GLchar* a_message, const void* a_userParam)
 {
 	// Ignoring not significant error/warning codes.
-	if (a_id == 131169 || a_id == 131185) return; 
+	if (SPOOKY_FLAG::g_IGNORE_THROW || a_id == 131169 || a_id == 131185) return; 
 
 	bool throw_flag = false;
 
@@ -55,7 +55,7 @@ void gl_debug_out(GLenum a_source, GLenum a_type, GLuint a_id, GLenum a_severity
 
 	std::cerr << full_msg.str();
 	if (throw_flag) {
-		throw GenericException("Generating exception...");
+		throw GenericException("[GL_DEBUG_OUT] Generating exception...");
 	}
 }
 
