@@ -115,10 +115,10 @@ void Scene::set_uniforms() {
 	m_ubo["view"] = view_mat;
 	m_ubo["projection"] = projection_mat;
 
-	m_shaders["multi"]["light_view"] = m_shadow_map.m_light_view;
-	m_shaders["multi"]["light_projection"] = m_shadow_map.m_light_proj;
-	m_shadow_map.m_fb.activate_depth();
-	m_shaders["multi"]["shadow_map"] = std::get<Texture>(m_shadow_map.m_fb.get_depth_attachment_buffer().get_attachment()).get_unit_id();
+	m_shaders["multi"]["light_view"] = m_shadow_map.get_view_mat();
+	m_shaders["multi"]["light_projection"] = m_shadow_map.get_proj_mat();
+	m_shadow_map.activate();
+	m_shaders["multi"]["shadow_map"] = m_shadow_map.get_unit_id();
 
 	m_shaders["multi"]["view_pos"] = m_camera->get_position();
 	m_shaders["multi"]["near_plane"] = m_camera->get_near_plane();
@@ -178,27 +178,6 @@ void Scene::push_uniform_buffer(const UniformBuffer& a_ubo) {
 
 void Scene::push_frame_buffer_post(FrameBuffer&& a_fb) {
 	m_fb_post_process = std::move(a_fb);
-}
-
-void Scene::push_shadow_map(float a_width, float a_height) {
-	FrameBuffer fb_shadow(a_width, a_height);
-	fb_shadow.attach(AttachmentType::COLOR_2D, AttachmentBufferType::NONE);
-	fb_shadow.attach(AttachmentType::DEPTH, AttachmentBufferType::TEXTURE);
-
-	auto& tex_depth_map = std::get<Texture>(fb_shadow.get_depth_attachment_buffer().get_attachment());
-	// Make sure that areas outside shadow map are lit by default.
-	tex_depth_map.set_wrap(TextureWrap::CLAMP_BORDER);
-	tex_depth_map.set_border_color(glm::vec3(1.f, 1.f, 1.f));
-	// Needed for use with sampler2DShadow type in frag shader.
-	tex_depth_map.set_comp_func(TextureCompFunc::LEQUAL);
-	// Set texture unit in order not to replace any used material maps in frag shader.
-	tex_depth_map.set_unit_id(g_max_sampler_siz * 3);
-
-	if (!fb_shadow.check_status()) {
-		ERROR("[MAIN] Framebuffer fb_shadow is not complete!", Error_action::throwing);
-	}
-
-	m_shadow_map.m_fb = std::move(fb_shadow);
 }
 
 void Scene::draw() {
@@ -418,16 +397,13 @@ void Scene::draw_transparent_models() {
 }
 
 void Scene::draw_shadow_map() {
-	if (m_shadow_map.m_fb.get_id() == EMPTY_VBO)
-		push_shadow_map(1024.f, 1024.f);
-	m_shadow_map.m_fb.bind();
-	
-	m_shadow_map.m_near = 10.f;
-	m_shadow_map.m_far = 150.f;
-	m_shadow_map.m_light_proj = glm::ortho(-40.f, 40.f, -40.f, 40.f, m_shadow_map.m_near, m_shadow_map.m_far);
-	m_shadow_map.m_light_view = glm::lookAt(m_dirlight_sources[0].model.get_pos(),
-										    glm::vec3(0, 0, 0.1),
-										    glm::vec3(0.f, 1.f, 0.f)); 
+	if (!m_shadow_map.check_status())
+		m_shadow_map.set_resolution(1024, 1024);
+
+	m_shadow_map.set_unit_id(g_shadow_sampler_id);
+	m_shadow_map.set_proj(ProjectionType::ORTOGHRAPHIC, 10.f, 150.f);
+	m_shadow_map.set_view(m_dirlight_sources[0].model.get_pos(), glm::vec3(0.f, 0.f, 0.1f));
+	m_shadow_map.bind();
 
 	auto lamb_draw_models = [m_this = this](auto& objs) {
 			for (auto& obj : objs) {
@@ -443,16 +419,16 @@ void Scene::draw_shadow_map() {
 			}
 		};
 
-	// Make sure to clear depth buffer only after using correct shader program to avoid id:131222 warning.
+	glViewport(0, 0, m_shadow_map.get_width(), m_shadow_map.get_height());
+	// Make sure to clear depth buffer only after unbinding any shader programs to avoid warning(131222).
 	glUseProgram(0);
-	glViewport(0, 0, 1024, 1024);
 	glClear(GL_DEPTH_BUFFER_BIT);
 
 	// No need for fixing peter panning for now.
 	// glCullFace(GL_FRONT);
 	m_shaders["shadow_map"].use();
-	m_shaders["shadow_map"]["light_view"] = m_shadow_map.m_light_view;
-	m_shaders["shadow_map"]["light_projection"] = m_shadow_map.m_light_proj;
+	m_shaders["shadow_map"]["light_view"] = m_shadow_map.get_view_mat();
+	m_shaders["shadow_map"]["light_projection"] = m_shadow_map.get_proj_mat();
 
 	lamb_draw_litmodels(m_pointlight_sources);
 	lamb_draw_litmodels(m_dirlight_sources);
@@ -462,14 +438,14 @@ void Scene::draw_shadow_map() {
 	lamb_draw_models(m_reflective_models);
 
 	m_shaders["shadow_map_instanced"].use();
-	m_shaders["shadow_map_instanced"]["light_view"] = m_shadow_map.m_light_view;
-	m_shaders["shadow_map_instanced"]["light_projection"] = m_shadow_map.m_light_proj;
+	m_shaders["shadow_map_instanced"]["light_view"] = m_shadow_map.get_view_mat();
+	m_shaders["shadow_map_instanced"]["light_projection"] = m_shadow_map.get_proj_mat();
 	for (auto& instobj : m_instanced_models) {
 		instobj.draw();
 	}
 
 	// glCullFace(GL_BACK);
-	m_shadow_map.m_fb.unbind();
+	m_shadow_map.unbind();
 	glViewport(0, 0, m_window->get_width(), m_window->get_height());
 }
 
@@ -644,9 +620,12 @@ void Scene::post_process() {
 
 	{
 		SPOOKY_FLAG::g_IGNORE_THROW = true;
-		auto& depth_tex = std::get<Texture>(m_shadow_map.m_fb.get_depth_attachment_buffer().get_attachment());
-		depth_tex.activate();
-		m_shaders["post_gray_avg"]["fb_texture"] = depth_tex.get_unit_id();
+		//auto& depth_tex = std::get<Texture>(m_shadow_map.m_fb.get_depth_attachment_buffer().get_attachment());
+		//depth_tex.activate();
+		//m_shaders["post_gray_avg"]["fb_texture"] = depth_tex.get_unit_id();
+
+		m_shadow_map.activate();
+		m_shaders["post_gray_avg"]["fb_texture"] = m_shadow_map.get_unit_id();
 		auto basic_plane_cp = m_basic_plane;
 		basic_plane_cp.set_size(0.3);
 		basic_plane_cp.set_pos(glm::vec3(0.7, -0.7, 0));

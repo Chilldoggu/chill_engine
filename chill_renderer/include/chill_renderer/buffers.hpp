@@ -1,9 +1,8 @@
 #pragma once
 
-
 #include "glad/glad.h"
-#include "glm/glm.hpp" // template definitions
-#include "glm/gtc/type_ptr.hpp"  // template definitions
+#include "glm/glm.hpp"
+#include "glm/gtc/type_ptr.hpp"
 
 #include <variant>
 #include <vector>
@@ -11,7 +10,7 @@
 #include <map>
 #include <type_traits>
 
-#include "chill_renderer/assert.hpp" // template definitions
+#include "chill_renderer/assert.hpp"
 
 
 namespace chill_renderer { 
@@ -129,13 +128,14 @@ public:
 	auto operator=(const Texture& a_texture) -> Texture&;
 	auto operator=(Texture&& a_texture) noexcept -> Texture&;
 
+	auto activate() const noexcept -> void;
+
 	auto set_border_color(const glm::vec3& a_border_color) noexcept -> void;
 	auto set_unit_id(int a_unit_id) noexcept -> void;
 	auto set_type(TextureType a_type) noexcept -> void;
 	auto set_wrap(TextureWrap a_wrap) noexcept -> void;
 	auto set_filter(TextureFilter a_filter) noexcept -> void;
 	auto set_comp_func(TextureCompFunc a_comp_func) noexcept -> void;
-	auto activate() const noexcept -> void;
 
 	auto get_id() const noexcept -> GLuint;
 	auto get_path() const noexcept -> std::wstring;
@@ -218,23 +218,24 @@ public:
 	auto operator=(FrameBuffer&& a_frame_buf) noexcept -> FrameBuffer&; 
 	auto operator=(const FrameBuffer& a_frame_buf) -> FrameBuffer& = delete;
 
-	auto attach(AttachmentType a_attach_type, AttachmentBufferType a_buf_type, int a_samples = 1) -> void;
-	auto attach_cubemap_face(GLenum a_cubemap_face) -> void;
-	auto get_color_attachment_buffer() noexcept -> AttachmentBuffer&;
-	auto get_depth_attachment_buffer() noexcept -> AttachmentBuffer&;
-	auto get_depth_stencil_attachment_buffer() noexcept -> AttachmentBuffer&;
-	auto activate_color() const noexcept -> void;
-	auto activate_depth() const noexcept -> void;
-	auto get_id() const noexcept -> GLuint;
 	auto bind() const noexcept -> void;
 	auto unbind() const noexcept -> void;
+	auto attach(AttachmentType a_attach_type, AttachmentBufferType a_buf_type, int a_samples = 1) -> void;
+	auto attach_cubemap_face(GLenum a_cubemap_face) -> void;
+	auto activate_color() const noexcept -> void;
+	auto activate_depth() const noexcept -> void;
 	auto check_status() const noexcept -> bool;
-	auto set_width(int a_width) noexcept -> void;
-	auto set_height(int a_height) noexcept -> void;
+
 	auto set_samples(int a_samples) -> bool;
+	auto set_resolution(int a_width, int a_height) -> void;
+
+	auto get_id() const noexcept -> GLuint;
 	auto get_width() const noexcept -> int;
 	auto get_height() const noexcept -> int;
 	auto get_samples() const noexcept -> int;
+	auto get_color_attachment_buffer() noexcept -> AttachmentBuffer&;
+	auto get_depth_attachment_buffer() noexcept -> AttachmentBuffer&;
+	auto get_depth_stencil_attachment_buffer() noexcept -> AttachmentBuffer&;
 
 private:
 	auto refcnt_dec() -> void;
@@ -283,8 +284,9 @@ public:
 	void push_elements(const std::vector<std::string>& a_uniform_names);
 	auto check_status() const noexcept -> bool; 
 	auto create_buffer() noexcept -> void; 
-	auto set_binding_point(int a_binding_point) noexcept -> void;
 	auto clear() -> void;
+
+	auto set_binding_point(int a_binding_point) noexcept -> void;
 
 	NameUniMap get_elements() const noexcept; 
 

@@ -11,17 +11,17 @@ MaterialMap::MaterialMap(const std::initializer_list<std::tuple<std::wstring,Tex
 		std::wstring texture_path = std::get<0>(a_texture_map);
 		TextureType texture_type = std::get<1>(a_texture_map);
 		bool texture_flip = std::get<2>(a_texture_map);
-		bool gamme_correction = std::get<3>(a_texture_map);
+		bool gamma_correction = std::get<3>(a_texture_map);
 
 		switch (texture_type) {
 		case TextureType::DIFFUSE:
-			m_diffuse_maps.push_back(rman.load_texture(texture_path, texture_type, m_cur_diffuse_unit_id++, texture_flip, gamme_correction));
+			m_diffuse_maps.push_back(rman.load_texture(texture_path, texture_type, m_cur_diffuse_unit_id++, texture_flip, gamma_correction));
 			break;
 		case TextureType::SPECULAR:
-			m_specular_maps.push_back(rman.load_texture(texture_path, texture_type, m_cur_specular_unit_id++, texture_flip, gamme_correction));
+			m_specular_maps.push_back(rman.load_texture(texture_path, texture_type, m_cur_specular_unit_id++, texture_flip, gamma_correction));
 			break;
 		case TextureType::EMISSION:
-			m_emission_maps.push_back(rman.load_texture(texture_path, texture_type, m_cur_emission_unit_id++, texture_flip, gamme_correction));
+			m_emission_maps.push_back(rman.load_texture(texture_path, texture_type, m_cur_emission_unit_id++, texture_flip, gamma_correction));
 			break;
 		case TextureType::NONE:
 			ERROR(std::format("[MATERIALMAP::MATERIALMAP] Bad texture type for {}", wstos(texture_path)), Error_action::throwing);
@@ -82,6 +82,8 @@ void MaterialMap::set_diffuse_maps(const std::vector<std::tuple<std::wstring,boo
 		auto& gamma_correction = std::get<2>(diffuse_map);
 		m_diffuse_maps.push_back(rman.load_texture(path, TextureType::DIFFUSE, m_cur_diffuse_unit_id++, texture_flip, gamma_correction));
 	}
+	m_cur_diffuse_unit_id--;
+
 	check_unit_id_limits();
 }
 
@@ -97,6 +99,8 @@ void MaterialMap::set_specular_maps(const std::vector<std::tuple<std::wstring,bo
 		auto& gamma_correction = std::get<2>(specular_map);
 		m_specular_maps.push_back(rman.load_texture(path, TextureType::SPECULAR, m_cur_specular_unit_id++, texture_flip, gamma_correction));
 	}
+	m_cur_specular_unit_id--;
+
 	check_unit_id_limits();
 }
 
@@ -112,6 +116,8 @@ void MaterialMap::set_emission_maps(const std::vector<std::tuple<std::wstring,bo
 		auto& gamma_correction = std::get<2>(emission_map);
 		m_emission_maps.push_back(rman.load_texture(path, TextureType::EMISSION, m_cur_emission_unit_id++, texture_flip, gamma_correction));
 	}
+	m_cur_emission_unit_id--;
+
 	check_unit_id_limits();
 }
 
@@ -136,12 +142,11 @@ float MaterialMap::get_shininess() const noexcept {
 }
 
 void MaterialMap::check_unit_id_limits() const {
-	auto dif_siz = g_diffuse_unit_id - m_cur_diffuse_unit_id;
-	auto spec_siz = g_specular_unit_id - m_cur_specular_unit_id;
-	auto em_siz = g_emission_unit_id - m_cur_emission_unit_id;
-
-	if (dif_siz >= g_max_sampler_siz || spec_siz >= g_max_sampler_siz || em_siz >= g_max_sampler_siz) {
-		ERROR(std::format("[MATERIALMAP::CHECK_UNIT_ID_LIMITS] Unit ids exceeded limit of sampler size {}. DIFFUSE: {}, SPECULAR: {}, EMISSION: {}\n", g_max_sampler_siz, dif_siz, spec_siz, em_siz), Error_action::throwing);
+	if (m_cur_diffuse_unit_id >= g_diffuse_unit_id + g_diffuse_sampler_siz    ||
+		m_cur_specular_unit_id >= g_specular_unit_id + g_specular_sampler_siz ||
+		m_cur_emission_unit_id >= g_emission_unit_id + g_specular_sampler_siz)
+	{
+		ERROR(std::format("[MATERIALMAP::CHECK_UNIT_ID_LIMITS] Unit ids exceeded limit of sampler size. DIFFUSE: {}, SPECULAR: {}, EMISSION: {}\n", m_cur_diffuse_unit_id, m_cur_specular_unit_id, m_cur_emission_unit_id), Error_action::throwing);
 	}
 }
 

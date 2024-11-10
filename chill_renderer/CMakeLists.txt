@@ -26,7 +26,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 	"${SRC}/buffers.cpp"
 	"${SRC}/resource_manager.cpp" 
 	"${SRC}/presets.cpp" 
-)
+	"${SRC}/shadows.cpp")
 # Create OpenGL debug context to handle errors.
 target_compile_definitions(${PROJECT_NAME} PUBLIC DEBUG_CONTEXT_ENABLE)
  

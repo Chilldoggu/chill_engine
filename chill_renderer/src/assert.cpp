@@ -6,7 +6,6 @@
 #include "chill_renderer/assert.hpp"
 
 namespace chill_renderer {
-
 void gl_debug_out(GLenum a_source, GLenum a_type, GLuint a_id, GLenum a_severity,
                   GLsizei a_length, const GLchar* a_message, const void* a_userParam)
 {

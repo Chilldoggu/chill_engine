@@ -49,15 +49,16 @@ public:
 	auto framebuffer_size_callback(int width, int height) noexcept -> void;
 
 	auto closed() -> bool;
+	auto title_change() -> void;
+	auto title_lshift(int n) -> void;
+	auto title_rshift(int n) -> void;
+	auto calculate_delta() noexcept -> float;
+	
 	auto set_width(float width) noexcept -> void;
 	auto set_height(float height) noexcept -> void;
 	auto set_mouse_x(float x_pos) noexcept -> void;
 	auto set_mouse_y(float y_pos) noexcept -> void;
 	auto set_cursor_mode(CursorMode a_mode) noexcept -> void;
-	auto title_change() -> void;
-	auto title_lshift(int n) -> void;
-	auto title_rshift(int n) -> void;
-	auto calculate_delta() noexcept -> float;
 
 	auto get_obj() const noexcept -> GLFWwindow*;
 	auto get_delta() const noexcept -> float;

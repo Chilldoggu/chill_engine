@@ -1,7 +1,10 @@
 #version 430 core
 
 #define POINTLIGHT_NUM 25
-#define MAX_SAMPLER_SIZ 3
+#define MAX_DIFF_SAMPLER_SIZ 2
+#define MAX_SPEC_SAMPLER_SIZ 1
+#define MAX_EMI_SAMPLER_SIZ 1
+#define MAX_SHADOW_SAMPLER_SIZ 4
 
 struct DirLight {
 	// General
@@ -46,9 +49,9 @@ struct SpotLight {
 };
 
 struct Material {
-	sampler2D diffuse_maps[MAX_SAMPLER_SIZ];
-	sampler2D specular_maps[MAX_SAMPLER_SIZ];
-	sampler2D emission_maps[MAX_SAMPLER_SIZ];
+	sampler2D diffuse_maps[MAX_DIFF_SAMPLER_SIZ];
+	sampler2D specular_maps[MAX_SPEC_SAMPLER_SIZ];
+	sampler2D emission_maps[MAX_EMI_SAMPLER_SIZ];
 	float shininess;
 };
 

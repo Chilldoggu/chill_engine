@@ -214,8 +214,10 @@ bool ResourceManager::chk_ref_count(ResourceType a_res_type, GLuint a_id) {
 				return false;
 			}
 		}
-		// TODO: Deleting cached model is a bit performance heavy. Can be optimized by counting Model references and
-		// implementing some id generation system. As long as lag is not visible it's good enough.
+		/*
+		TODO: Deleting cached model is a bit performance heavy. Can be optimized by counting Model references and
+		implementing some id generation system. As long as lag is not visible it's good enough.
+		*/
 		// Find if there's a cached model that has this Mesh. If so delete whole Model.
 		else if (a_res_type == ResourceType::MESHES) {
 			unsigned mesh_id = a_id;

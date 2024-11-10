@@ -98,6 +98,9 @@ public:
 	ModelInstanced& operator=(ModelInstanced&& a_obj) noexcept;
 
 	auto set_model(const Model& a_model) -> void; 
+
+	auto draw() -> void;
+	auto draw(ShaderProgram& a_shader, const std::string& a_material_map_uniform_name) -> void;
 	auto push_position(const glm::vec3& a_position) noexcept -> void;
 	auto push_rotation(const glm::vec3& a_rotation) noexcept -> void;
 	auto push_size(const glm::vec3& a_size) noexcept -> void; 
@@ -108,12 +111,8 @@ public:
 	auto insert_position(std::size_t idx, const glm::vec3& a_position) -> bool;
 	auto insert_rotation(std::size_t idx, const glm::vec3& a_rotation) -> bool;
 	auto insert_size(std::size_t idx, const glm::vec3& a_size) -> bool; 
-
 	auto populate_model_mat_buffer() -> void;
 	auto populate_normal_mat_buffer() -> void;
-
-	auto draw() -> void;
-	auto draw(ShaderProgram& a_shader, const std::string& a_material_map_uniform_name) -> void;
 
 	auto get_model_base() noexcept -> Model&;
 	auto get_positions() noexcept -> std::vector<glm::vec3>&;

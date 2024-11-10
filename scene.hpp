@@ -11,6 +11,8 @@
 #include "chill_renderer/shaders.hpp"
 #include "chill_renderer/presets.hpp"
 #include "chill_renderer/application.hpp"
+#include "chill_renderer/shaders.hpp"
+#include "chill_renderer/shadows.hpp"
 
 using namespace chill_renderer;
 
@@ -90,27 +92,20 @@ struct CurShaderState {
 	bool m_blinn_phong = true;
 };
 
-struct ShadowMapState {
-	FrameBuffer m_fb{};
-	glm::mat4 m_light_view{};
-	glm::mat4 m_light_proj{};
-	float m_near{};
-	float m_far{};
-};
-
-// TODO: DELETE
-namespace DEBUG {
-struct Test {
-	GLuint fb_shadow_id;
-	GLuint depth_tex;
-	glm::mat4 light_view{};
-	glm::mat4 light_proj{};
-}; 
-}
-
 class Scene {
 public:
 	Scene() = default;
+
+	void draw();
+	void draw_lights();
+	void draw_skybox();
+	void draw_generic_models();
+	void draw_instanced_models();
+	void draw_reflective_models(const FrameBuffer& a_fb_last);
+	void draw_transparent_models();
+	void draw_shadow_map();
+	void transform_models();
+	void post_process();
 
 	void set_window(Window* a_window);
 	void set_camera(Camera* a_camera);
@@ -124,7 +119,8 @@ public:
 	void set_transparent_models(const std::vector<Model>& a_transparent_models);
 	void set_reflective_models(const std::vector<Model>& a_reflective_models);
 	void set_fb_reflection_cubemap(FrameBuffer&& a_fb_refl);
-	void set_default_material(const std::wstring& a_diffuse_path, const std::wstring& a_specular_path);
+	void set_default_material(const std::wstring& a_diffuse_path, const std::wstring& a_specular_path); 
+	void set_uniforms();
 
 	void push_shader(const std::string& a_name, const ShaderProgram& a_shader); 
 	void push_dirlight(const LitModel<DirLight>& a_light);
@@ -136,20 +132,6 @@ public:
 	void push_model_instanced(const ModelInstanced& a_mod_inst);
 	void push_uniform_buffer(const UniformBuffer& a_ubo);
 	void push_frame_buffer_post(FrameBuffer&& a_fb);
-	void push_shadow_map(float a_width, float a_height);
-
-	void set_uniforms();
-
-	void draw();
-	void draw_lights();
-	void draw_skybox();
-	void draw_generic_models();
-	void draw_instanced_models();
-	void draw_reflective_models(const FrameBuffer& a_fb_last);
-	void draw_transparent_models();
-	void draw_shadow_map();
-	void transform_models();
-	void post_process();
 
 	Window* get_window();
 	Camera* get_camera();
@@ -177,9 +159,7 @@ private:
 	CurShaderState m_shader_state{};
 	MaterialMap m_default_material{};
 	UniformBuffer m_ubo{};
-	ShadowMapState m_shadow_map{};
-	// TODO: DEBUG - Delete this later!
-	// DEBUG::Test m_shadow_map_test{};
+	ShadowMap m_shadow_map{};
 	FrameBuffer m_fb_refl_cubemap{};
 	FrameBuffer m_fb_post_process{};
 	std::map<std::string, ShaderProgram> m_shaders{};

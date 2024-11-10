@@ -12,10 +12,15 @@ inline constexpr int g_attrib_tex_location = 1;
 inline constexpr int g_attrib_normal_location = 2;
 inline constexpr int g_attrib_color_location = 3;
 
-inline constexpr int g_max_sampler_siz  = 3;
-inline constexpr int g_diffuse_unit_id  = 0 * g_max_sampler_siz;
-inline constexpr int g_specular_unit_id = 1 * g_max_sampler_siz;
-inline constexpr int g_emission_unit_id = 2 * g_max_sampler_siz;
+inline constexpr int g_diffuse_sampler_siz  = 2;
+inline constexpr int g_specular_sampler_siz  = 1;
+inline constexpr int g_emission_sampler_siz  = 1;
+inline constexpr int g_shadow_sampler_siz  = 4;
+
+inline constexpr int g_diffuse_unit_id  = 0;
+inline constexpr int g_specular_unit_id = g_diffuse_unit_id + g_diffuse_sampler_siz;
+inline constexpr int g_emission_unit_id = g_specular_unit_id + g_specular_sampler_siz;
+inline constexpr int g_shadow_sampler_id = g_emission_unit_id + g_emission_sampler_siz;
 
 class MaterialMap {
 public:

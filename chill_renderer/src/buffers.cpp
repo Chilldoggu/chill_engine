@@ -164,7 +164,7 @@ Texture::Texture(std::wstring a_path, TextureType a_type, int a_unit_id, bool a_
 Texture::Texture(std::vector<std::wstring> a_paths, int texture_unit, bool a_flip_images, bool a_gamma_corr)
 	:m_type{ TextureType::CUBEMAP }, m_unit_id{ texture_unit }, m_flipped{ a_flip_images }, m_gamma_corr{ a_gamma_corr }
 {
-	// Each cubemap face has to be single texture
+	// Each cubemap face has to be a single texture
 	if (a_paths.size() != 6)
 		ERROR("[TEXTURE::TEXTURE] Wrong amount of textures to create a cubemap.", Error_action::throwing); 
 
@@ -402,10 +402,8 @@ void Texture::set_wrap(TextureWrap a_wrap) noexcept {
 	GLuint tex_type = 0;
 	GLuint tex_wrap = 0; 
 
-	if (m_samples > 1) {
-		// Error(1280): Multisample texture targets don't support sampler state.
-		return;
-	}
+	// Error(1280): Multisample texture targets don't support sampler state.
+	if (m_samples > 1) return;
 	else if (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) {
 		tex_type = GL_TEXTURE_CUBE_MAP;
 	}
@@ -436,10 +434,8 @@ void Texture::set_filter(TextureFilter a_filter) noexcept {
 	GLuint tex_mag = 0;
 	GLuint tex_type = 0;
 
-	if (m_samples > 1) {
-		// Error(1280): Multisample texture targets don't support sampler state.
-		return;
-	}
+	// Error(1280): Multisample texture targets don't support sampler state.
+	if (m_samples > 1) return;
 	else if (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) {
 		tex_type = GL_TEXTURE_CUBE_MAP;
 	}
@@ -478,8 +474,18 @@ void Texture::set_filter(TextureFilter a_filter) noexcept {
 void Texture::set_comp_func(TextureCompFunc a_comp_func) noexcept { 
 	m_comp = a_comp_func;
 
-	GLuint tex_type = (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
+	GLuint tex_type = 0;
 	GLuint tex_comp = 0; 
+
+	// TODO: Might be wrong. Check. Error(1280): Multisample texture targets don't support sampler state.
+	if (m_samples > 1) return;
+	else if (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) {
+		tex_type = GL_TEXTURE_CUBE_MAP;
+	}
+	else {
+		tex_type = GL_TEXTURE_2D;
+	}
+
 	switch (a_comp_func) {
 	case TextureCompFunc::LESS:     tex_comp = GL_LESS; break;
 	case TextureCompFunc::EQUAL:    tex_comp = GL_EQUAL; break;
@@ -492,7 +498,6 @@ void Texture::set_comp_func(TextureCompFunc a_comp_func) noexcept {
 	case TextureCompFunc::NONE:
 		glBindTexture(tex_type, m_id);
 		glTexParameteri(tex_type, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-		glTexParameteri(tex_type, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
 		return;
 	default: ERROR("[TEXTURE::SET_COMP_FUNC] Wrong comparison function type.", Error_action::throwing);
 	}
@@ -780,6 +785,11 @@ void FrameBuffer::attach(AttachmentType a_attach_type, AttachmentBufferType a_bu
 		return; 
 	} 
 
+	if (m_fbo == EMPTY_VBO) {
+		glGenFramebuffers(1, &m_fbo);
+		Application::get_instance().get_rmanager().inc_ref_count(ResourceType::FRAME_BUFFERS, m_fbo);
+	}
+
 	m_samples = a_samples; 
 	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo); 
 	AttachmentBuffer new_attachment(m_width, m_height, a_attach_type, a_buf_type, m_samples); 
@@ -840,6 +850,11 @@ void FrameBuffer::attach(AttachmentType a_attach_type, AttachmentBufferType a_bu
 }
 
 void FrameBuffer::attach_cubemap_face(GLenum a_cubemap_face) { 
+	if (m_fbo == EMPTY_VBO) {
+		glGenFramebuffers(1, &m_fbo);
+		Application::get_instance().get_rmanager().inc_ref_count(ResourceType::FRAME_BUFFERS, m_fbo);
+	}
+
 	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 
 	// Ensure that attached color buffer is a cubemap
@@ -898,12 +913,24 @@ bool FrameBuffer::check_status() const noexcept {
 	return true;
 }
 
-void FrameBuffer::set_width(int a_width) noexcept {
-	m_width = a_width;
-}
+void FrameBuffer::set_resolution(int a_width, int a_height) {
+	if (m_width == a_width && m_height == a_height) return;
 
-void FrameBuffer::set_height(int a_height) noexcept {
+	m_width = a_width;
 	m_height = a_height;
+
+	if (auto att_type = m_color_attachment.get_type(); att_type != AttachmentType::NONE) {
+		auto buf_type = m_color_attachment.get_buf_type();
+		attach(att_type, buf_type, m_samples);
+	}
+	if (auto att_type = m_depth_attachment.get_type(); att_type != AttachmentType::NONE) {
+		auto buf_type = m_depth_attachment.get_buf_type();
+		attach(att_type, buf_type, m_samples);
+	}
+	if (auto att_type = m_depth_stencil_attachment.get_type(); att_type != AttachmentType::NONE) {
+		auto buf_type = m_depth_stencil_attachment.get_buf_type();
+		attach(att_type, buf_type, m_samples);
+	}
 }
 
 bool FrameBuffer::set_samples(int a_samples) {
