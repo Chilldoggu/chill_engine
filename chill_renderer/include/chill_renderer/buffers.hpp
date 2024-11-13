@@ -6,6 +6,7 @@
 
 #include <variant>
 #include <vector>
+#include <array>
 #include <filesystem>
 #include <map>
 #include <type_traits>
@@ -18,6 +19,7 @@ namespace fs = std::filesystem;
 
 inline constexpr int EMPTY_VBO = 0;
 inline constexpr GLenum DEFAULT_TYPE = 0;
+struct nulldata_t;
 
 template<typename T>
 constexpr decltype(auto) to_enum_elem_type(T enumerator) noexcept;
@@ -137,14 +139,15 @@ public:
 	auto get_unit_id() const noexcept -> int; 
 
 protected:
+	auto refcnt_dec() -> void;
+	auto refcnt_inc() -> void;
+
 	GLuint m_id = EMPTY_VBO;
 	TextureWrap m_wrap = TextureWrap::NONE;
 	TextureFilter m_filter = TextureFilter::NONE;
 	TextureCmpFunc m_cmp = TextureCmpFunc::NONE;
 
 private:
-	auto refcnt_dec() -> void;
-
 	TextureType m_type = TextureType::NONE;
 	int m_unit_id = 0;
 };
@@ -153,7 +156,8 @@ class Texture2D : public Texture {
 public:
 	Texture2D() = default;
 	Texture2D(TextureType a_type, std::wstring a_path, bool a_flip_image, bool a_gamma_correction, GLenum a_data_type = GL_NONE);
-	Texture2D(TextureType a_type, int width, int height, GLenum a_data_type = DEFAULT_TYPE);
+	template<typename T = nulldata_t>
+	Texture2D(TextureType a_type, int width, int height, GLenum a_data_type = DEFAULT_TYPE, T* a_data = nullptr);
 
 	auto activate() const noexcept -> void;
 	auto set_border_color(const glm::vec3& a_border_color) -> void;
@@ -192,7 +196,8 @@ class TextureCubemap : public Texture {
 public:
 	TextureCubemap() = default;
 	TextureCubemap(TextureType a_type, std::vector<std::wstring> a_paths, bool a_flip_images, bool a_gamma_correction, GLenum a_data_type = DEFAULT_TYPE);
-	TextureCubemap(TextureType a_type, int a_width, int a_height, GLenum a_data_type = DEFAULT_TYPE);
+	template<typename T = nulldata_t>
+	TextureCubemap(TextureType a_type, int a_width, int a_height, GLenum a_data_type = DEFAULT_TYPE, const std::array<T*, 6>& a_data = std::array<nulldata_t*, 6>{});
 
 	auto activate() const noexcept -> void;
 	auto set_border_color(const glm::vec3& a_border_color) -> void;

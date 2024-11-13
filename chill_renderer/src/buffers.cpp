@@ -212,6 +212,10 @@ Texture& Texture::operator=(Texture&& a_texture) noexcept {
 	return *this;
 }
 
+void Texture::refcnt_inc() {
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id);
+}
+
 void Texture::refcnt_dec() {
 	if (m_id != EMPTY_VBO && m_type != TextureType::NONE) {
 		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::TEXTURES, m_id);
@@ -306,31 +310,6 @@ Texture2D::Texture2D(TextureType a_type, std::wstring a_path, bool a_flip_image,
 
 	set_wrap(TextureWrap::CLAMP_EDGE);
 	set_filter(TextureFilter::MIPMAP_LINEAR);
-}
-
-Texture2D::Texture2D(TextureType a_type, int a_width, int a_height, GLenum a_data_type) 
-{
-	set_type(a_type);
-
-	glGenTextures(1, &m_id);
-	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id);
-	glBindTexture(GL_TEXTURE_2D, m_id); 
-
-	if (a_type == TextureType::GENERIC || a_type == TextureType::DIFFUSE || a_type == TextureType::SPECULAR || a_type == TextureType::EMISSION) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, a_width, a_height, 0, GL_RGB, a_data_type == DEFAULT_TYPE ? GL_UNSIGNED_BYTE : a_data_type, NULL);
-	}
-	else if (a_type == TextureType::DEPTH) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, a_width, a_height, 0, GL_DEPTH_COMPONENT, a_data_type == DEFAULT_TYPE ? GL_UNSIGNED_BYTE : a_data_type, NULL);
-	}
-	else if (a_type == TextureType::DEPTH_STENCIL) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, a_width, a_height, 0, GL_DEPTH_STENCIL, a_data_type == DEFAULT_TYPE ? GL_UNSIGNED_INT_24_8 : a_data_type, NULL);
-	}
-	else {
-		ERROR("[TEXTURE2D::TEXTURE2D] Wrong TextureType.", Error_action::throwing);
-	}
-
-	set_wrap(TextureWrap::CLAMP_EDGE);
-	set_filter(TextureFilter::LINEAR);
 }
 
 void Texture2D::activate() const noexcept {
@@ -470,43 +449,6 @@ TextureCubemap::TextureCubemap(TextureType a_type, std::vector<std::wstring> a_p
 		else {
 			ERROR(std::format("[TEXTURECUBEMAP::TEXTURECUBEMAP] Couldn't load texture data at path {}", wstos(m_paths[i])), Error_action::throwing);
 		}
-	}
-
-	set_wrap(TextureWrap::CLAMP_EDGE);
-	set_filter(TextureFilter::LINEAR);
-}
-
-TextureCubemap::TextureCubemap(TextureType a_type, int a_width, int a_height, GLenum a_data_type) {
-	set_type(a_type);
-
-	glGenTextures(1, &m_id);
-	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id); 
-
-	GLenum type{};
-	GLint internalformat{};
-	GLenum format{};
-	if (a_type == TextureType::GENERIC || a_type == TextureType::DIFFUSE || a_type == TextureType::SPECULAR || a_type == TextureType::EMISSION) {
-		type = (a_data_type == DEFAULT_TYPE) ? GL_UNSIGNED_BYTE : a_data_type;
-		internalformat = GL_RGB;
-		format = GL_RGB;
-	}
-	else if (a_type == TextureType::DEPTH) {
-		type = (a_data_type == DEFAULT_TYPE) ? GL_UNSIGNED_BYTE : a_data_type;
-		internalformat = GL_DEPTH_COMPONENT;
-		format = GL_DEPTH_COMPONENT;
-	}
-	else if (a_type == TextureType::DEPTH_STENCIL) {
-		type = (a_data_type == DEFAULT_TYPE) ? GL_UNSIGNED_INT_24_8 : a_data_type;
-		internalformat = GL_DEPTH24_STENCIL8;
-		format = GL_DEPTH_STENCIL;
-	} 
-	else {
-		ERROR("[TEXTURECUBEMAP::TEXTURECUBEMAP] Wrong TextureType.", Error_action::throwing);
-	}
-
-	for (int i = 0; i < 6; ++i) {
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalformat, a_width, a_height, 0, format, type, NULL); 
 	}
 
 	set_wrap(TextureWrap::CLAMP_EDGE);

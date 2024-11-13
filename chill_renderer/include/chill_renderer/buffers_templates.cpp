@@ -1,6 +1,114 @@
+using namespace chill_renderer;
+
 template<typename T>
 constexpr decltype(auto) to_enum_elem_type(T enumerator) noexcept {
 	return static_cast<std::underlying_type_t<T>>(enumerator);
+}
+
+template<typename T>
+bool cmp_types(GLenum a_data_type) noexcept {
+	if (
+		(a_data_type == GL_INT            && !std::is_same_v<T, int>)           ||
+		(a_data_type == GL_BYTE           && !std::is_same_v<T, char>)          ||
+		(a_data_type == GL_SHORT          && !std::is_same_v<T, short>)         ||
+		(a_data_type == GL_FLOAT          && !std::is_same_v<T, float>)         ||
+		(a_data_type == GL_UNSIGNED_INT   && !std::is_same_v<T, unsigned int>)  ||
+		(a_data_type == GL_UNSIGNED_BYTE  && !std::is_same_v<T, unsigned char>) ||
+		(a_data_type == GL_UNSIGNED_SHORT && !std::is_same_v<T, unsigned short>)
+		) {
+		return false;
+	}
+	return true;
+}
+
+template<typename T>
+Texture2D::Texture2D(TextureType a_type, int a_width, int a_height, GLenum a_data_type, T* a_data) 
+{
+	set_type(a_type);
+
+	glGenTextures(1, &m_id);
+	refcnt_inc();
+	glBindTexture(GL_TEXTURE_2D, m_id); 
+
+	GLint in_format{};
+	GLenum format{}; 
+	if (a_type == TextureType::GENERIC || a_type == TextureType::DIFFUSE || a_type == TextureType::SPECULAR || a_type == TextureType::EMISSION) {
+		in_format = format = GL_RGB;
+		a_data_type = (a_data_type == DEFAULT_TYPE) ? GL_UNSIGNED_BYTE : a_data_type;
+	}
+	else if (a_type == TextureType::DEPTH) {
+		in_format = format = GL_DEPTH_COMPONENT;
+		a_data_type = (a_data_type == DEFAULT_TYPE) ? GL_UNSIGNED_BYTE : a_data_type;
+	}
+	else if (a_type == TextureType::DEPTH_STENCIL) {
+		in_format = GL_DEPTH24_STENCIL8;
+		format = GL_DEPTH_STENCIL;
+		a_data_type = (a_data_type == DEFAULT_TYPE) ? GL_UNSIGNED_INT_24_8 : a_data_type;
+	}
+	else {
+		ERROR("[TEXTURE2D::TEXTURE2D] Wrong TextureType.", Error_action::throwing);
+	}
+
+	if (std::is_same_v<T, nulldata_t>) {
+		glTexImage2D(GL_TEXTURE_2D, 0, in_format, a_width, a_height, 0, format, a_data_type, NULL);
+	}
+	else if (cmp_types<T>(a_data_type)){
+		glTexImage2D(GL_TEXTURE_2D, 0, in_format, a_width, a_height, 0, format, a_data_type, a_data);
+	}
+	else {
+		ERROR("[TEXTURE2D::TEXTURE2D] Data pointer doesn't match selected data_type.", Error_action::throwing);
+	}
+
+	set_wrap(TextureWrap::CLAMP_EDGE);
+	set_filter(TextureFilter::LINEAR);
+}
+
+template<typename T>
+TextureCubemap::TextureCubemap(TextureType a_type, int a_width, int a_height, GLenum a_data_type, const std::array<T*, 6>& a_data) {
+	set_type(a_type);
+
+	glGenTextures(1, &m_id);
+	refcnt_inc();
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id); 
+
+	GLint in_format{};
+	GLenum format{};
+	if (a_type == TextureType::GENERIC || a_type == TextureType::DIFFUSE || a_type == TextureType::SPECULAR || a_type == TextureType::EMISSION) {
+		a_data_type = (a_data_type == DEFAULT_TYPE) ? GL_UNSIGNED_BYTE : a_data_type;
+		in_format = GL_RGB;
+		format = GL_RGB;
+	}
+	else if (a_type == TextureType::DEPTH) {
+		a_data_type = (a_data_type == DEFAULT_TYPE) ? GL_UNSIGNED_BYTE : a_data_type;
+		in_format = GL_DEPTH_COMPONENT;
+		format = GL_DEPTH_COMPONENT;
+	}
+	else if (a_type == TextureType::DEPTH_STENCIL) {
+		a_data_type = (a_data_type == DEFAULT_TYPE) ? GL_UNSIGNED_INT_24_8 : a_data_type;
+		in_format = GL_DEPTH24_STENCIL8;
+		format = GL_DEPTH_STENCIL;
+	} 
+	else {
+		ERROR("[TEXTURECUBEMAP::TEXTURECUBEMAP] Wrong TextureType.", Error_action::throwing);
+	}
+
+	if (std::is_same_v<T, nulldata_t>) {
+		for (int i = 0; i < 6; ++i) {
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, in_format, a_width, a_height, 0, format, a_data_type, a_data[i]);
+		}
+	}
+	else if(cmp_types<T>(a_data_type)) {
+		for (int i = 0; i < 6; ++i) {
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, in_format, a_width, a_height, 0, format, a_data_type, a_data[i]);
+		}
+	}
+	else {
+		ERROR("[TEXTURECUBEMAP::TEXTURECUBEMAP] Data pointer doesn't match selected data_type.", Error_action::throwing);
+	}
+
+
+	set_wrap(TextureWrap::CLAMP_EDGE);
+	set_filter(TextureFilter::LINEAR);
 }
 
 template<typename T>
