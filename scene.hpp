@@ -61,7 +61,7 @@ struct LitModel {
 };
 
 struct Skybox {
-	Texture cubemap{};
+	TextureCubemap cubemap{};
 	Model cube{};
 }; 
  

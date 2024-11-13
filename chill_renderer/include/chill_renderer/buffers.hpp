@@ -17,11 +17,11 @@ namespace chill_renderer {
 namespace fs = std::filesystem;
 
 inline constexpr int EMPTY_VBO = 0;
-
-fs::path guess_path(const std::wstring& a_path);
+inline constexpr GLenum DEFAULT_TYPE = 0;
 
 template<typename T>
 constexpr decltype(auto) to_enum_elem_type(T enumerator) noexcept;
+fs::path guess_path(const std::wstring& a_path);
 
 enum class RenderBufferType {
 	COLOR,
@@ -48,19 +48,12 @@ enum class AttachmentBufferType {
 };
 
 enum class TextureType {
-	// Textures for MaterialMap
+	GENERIC,
 	DIFFUSE,
 	SPECULAR,
 	EMISSION,
-
-	// Textures for AttachmentBuffer
-	COLOR_2D,
-	COLOR_3D,
 	DEPTH,
-	DEPTH_STENCIL, 
-
-	CUBEMAP,
-
+	DEPTH_STENCIL,
 	NONE,
 };
 
@@ -73,6 +66,7 @@ enum class TextureWrap {
 
 	NONE,
 };
+auto conv_wrap(TextureWrap a_wrap) noexcept -> GLenum;
 
 enum class TextureFilter {
 	LINEAR,
@@ -82,8 +76,9 @@ enum class TextureFilter {
 
 	NONE,
 };
+auto conv_filter(TextureFilter a_filter, GLuint& tex_min, GLuint& tex_mag) noexcept -> void;
 
-enum class TextureCompFunc {
+enum class TextureCmpFunc {
 	LEQUAL,
 	GEQUAL,
 	LESS,
@@ -95,6 +90,7 @@ enum class TextureCompFunc {
 
 	NONE,
 };
+auto conv_cmp_func(TextureCmpFunc a_cmp) noexcept -> GLuint;
 
 struct BufferObjects {
 	BufferObjects() = default;
@@ -117,10 +113,6 @@ private:
 class Texture {
 public:
 	Texture() = default;
-	Texture(std::wstring a_path, TextureType a_type, int texture_unit, bool a_flip_image, bool a_gamma_correction);
-	Texture(std::vector<std::wstring> a_paths, int texture_unit, bool a_flip_images, bool a_gamma_correction);
-	Texture(int a_width, int a_height, TextureType a_type);
-	Texture(int a_width, int a_height, int a_samples, TextureType a_type);
 	Texture(const Texture& a_texture);
 	Texture(Texture&& a_texture) noexcept;
 	~Texture();
@@ -128,42 +120,110 @@ public:
 	auto operator=(const Texture& a_texture) -> Texture&;
 	auto operator=(Texture&& a_texture) noexcept -> Texture&;
 
-	auto activate() const noexcept -> void;
+	virtual auto activate() const noexcept -> void = 0;
+	virtual auto set_border_color(const glm::vec3& a_border_color) -> void = 0;
+	virtual auto set_wrap(TextureWrap a_wrap) -> void = 0;
+	virtual auto set_filter(TextureFilter a_filter) -> void = 0;
+	virtual auto set_cmp_func(TextureCmpFunc a_cmp_func) -> void = 0;
 
-	auto set_border_color(const glm::vec3& a_border_color) noexcept -> void;
 	auto set_unit_id(int a_unit_id) noexcept -> void;
 	auto set_type(TextureType a_type) noexcept -> void;
-	auto set_wrap(TextureWrap a_wrap) noexcept -> void;
-	auto set_filter(TextureFilter a_filter) noexcept -> void;
-	auto set_comp_func(TextureCompFunc a_comp_func) noexcept -> void;
 
 	auto get_id() const noexcept -> GLuint;
-	auto get_path() const noexcept -> std::wstring;
-	auto get_filename() const noexcept -> std::wstring;
-	auto get_filenames() const noexcept -> std::vector<std::wstring>;
 	auto get_type() const noexcept -> TextureType;
 	auto get_wrap() const noexcept -> TextureWrap;
-	auto get_comp_func() const noexcept -> TextureCompFunc;
+	auto get_cmp_func() const noexcept -> TextureCmpFunc;
 	auto get_filter() const noexcept -> TextureFilter;
 	auto get_unit_id() const noexcept -> int; 
-	auto is_flipped() const noexcept -> bool;
-	auto is_gamma_corr() const noexcept -> bool;
+
+protected:
+	GLuint m_id = EMPTY_VBO;
+	TextureWrap m_wrap = TextureWrap::NONE;
+	TextureFilter m_filter = TextureFilter::NONE;
+	TextureCmpFunc m_cmp = TextureCmpFunc::NONE;
 
 private:
 	auto refcnt_dec() -> void;
 
-	GLuint m_id = EMPTY_VBO;
-	std::wstring m_path = L"";
-	std::wstring m_filename = L"";
-	std::vector<std::wstring> m_filenames{};
 	TextureType m_type = TextureType::NONE;
-	TextureWrap m_wrap = TextureWrap::NONE;
-	TextureFilter m_filter = TextureFilter::NONE;
-	TextureCompFunc m_comp = TextureCompFunc::NONE;
 	int m_unit_id = 0;
-	int m_samples = 1;
+};
+
+class Texture2D : public Texture {
+public:
+	Texture2D() = default;
+	Texture2D(TextureType a_type, std::wstring a_path, bool a_flip_image, bool a_gamma_correction, GLenum a_data_type = GL_NONE);
+	Texture2D(TextureType a_type, int width, int height, GLenum a_data_type = DEFAULT_TYPE);
+
+	auto activate() const noexcept -> void;
+	auto set_border_color(const glm::vec3& a_border_color) -> void;
+	auto set_wrap(TextureWrap a_wrap) -> void;
+	auto set_filter(TextureFilter a_filter) -> void;
+	auto set_cmp_func(TextureCmpFunc a_cmp_func) -> void;
+
+	auto get_filename() const noexcept -> std::wstring;
+	auto get_path() const noexcept -> std::wstring;
+	auto is_flipped() const noexcept -> bool;
+	auto is_gamma_corr() const noexcept -> bool;
+
+private:
+	std::wstring m_path = L"";
+	// TODO: int width{};
+	// TODO: int height{};
 	bool m_flipped = false;
 	bool m_gamma_corr = true;
+};
+
+class Texture3D : public Texture {
+public:
+	Texture3D() = default;
+
+	auto activate() const noexcept -> void;
+	auto set_border_color(const glm::vec3& a_border_color) -> void;
+	auto set_wrap(TextureWrap a_wrap) -> void;
+	auto set_filter(TextureFilter a_filter) -> void;
+	auto set_cmp_func(TextureCmpFunc a_cmp_func) -> void;
+
+private:
+};
+
+// TODO: 6 Texture2D?
+class TextureCubemap : public Texture {
+public:
+	TextureCubemap() = default;
+	TextureCubemap(TextureType a_type, std::vector<std::wstring> a_paths, bool a_flip_images, bool a_gamma_correction, GLenum a_data_type = DEFAULT_TYPE);
+	TextureCubemap(TextureType a_type, int a_width, int a_height, GLenum a_data_type = DEFAULT_TYPE);
+
+	auto activate() const noexcept -> void;
+	auto set_border_color(const glm::vec3& a_border_color) -> void;
+	auto set_wrap(TextureWrap a_wrap) -> void;
+	auto set_filter(TextureFilter a_filter) -> void;
+	auto set_cmp_func(TextureCmpFunc a_cmp_func) -> void;
+
+	auto get_paths() const noexcept -> std::vector<std::wstring>;
+	auto get_filenames() const noexcept -> std::vector<std::wstring>;
+
+private:
+	std::vector<std::wstring> m_paths{};
+	bool m_flipped = false;
+	bool m_gamma_corr = true;
+};
+
+class TextureMSAA : public Texture {
+public:
+	TextureMSAA() = default;
+	TextureMSAA(TextureType a_type, int a_width, int a_height, int a_samples);
+
+	auto activate() const noexcept -> void;
+	auto set_border_color(const glm::vec3& a_border_color) -> void;
+	auto set_wrap(TextureWrap a_wrap) -> void;
+	auto set_filter(TextureFilter a_filter) -> void;
+	auto set_cmp_func(TextureCmpFunc a_cmp_func) -> void;
+
+	auto get_samples() const noexcept -> int;
+
+private:
+	int m_samples = 0;
 };
 
 class RenderBuffer {
@@ -189,6 +249,9 @@ private:
 	int m_samples = 1;
 };
 
+using uPtrTex = std::unique_ptr<Texture>;
+using uPtrRen = std::unique_ptr<RenderBuffer>;
+
 class AttachmentBuffer {
 public:
 	AttachmentBuffer() = default;
@@ -197,10 +260,10 @@ public:
 	auto activate() const noexcept -> void;
 	auto get_type() const noexcept -> AttachmentType;
 	auto get_buf_type() const noexcept -> AttachmentBufferType;
-	auto get_attachment() noexcept -> std::variant<Texture, RenderBuffer>&;
+	auto get_attachment() noexcept -> std::variant<uPtrTex, uPtrRen>&;
 
 private:
-	std::variant<Texture, RenderBuffer> m_attachment;
+	std::variant<uPtrTex, uPtrRen> m_attachment;
 	AttachmentType m_type = AttachmentType::NONE;
 	AttachmentBufferType m_buf_type = AttachmentBufferType::NONE;
 };

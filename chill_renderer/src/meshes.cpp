@@ -13,15 +13,19 @@ MaterialMap::MaterialMap(const std::initializer_list<std::tuple<std::wstring,Tex
 		bool texture_flip = std::get<2>(a_texture_map);
 		bool gamma_correction = std::get<3>(a_texture_map);
 
+		auto tex_obj = rman.load_texture(texture_type, texture_path, texture_flip, gamma_correction);
 		switch (texture_type) {
 		case TextureType::DIFFUSE:
-			m_diffuse_maps.push_back(rman.load_texture(texture_path, texture_type, m_cur_diffuse_unit_id++, texture_flip, gamma_correction));
+			tex_obj.set_unit_id(m_cur_diffuse_unit_id++);
+			m_diffuse_maps.push_back(tex_obj);
 			break;
 		case TextureType::SPECULAR:
-			m_specular_maps.push_back(rman.load_texture(texture_path, texture_type, m_cur_specular_unit_id++, texture_flip, gamma_correction));
+			tex_obj.set_unit_id(m_cur_specular_unit_id++);
+			m_specular_maps.push_back(tex_obj);
 			break;
 		case TextureType::EMISSION:
-			m_emission_maps.push_back(rman.load_texture(texture_path, texture_type, m_cur_emission_unit_id++, texture_flip, gamma_correction));
+			tex_obj.set_unit_id(m_cur_emission_unit_id++);
+			m_emission_maps.push_back(tex_obj);
 			break;
 		case TextureType::NONE:
 			ERROR(std::format("[MATERIALMAP::MATERIALMAP] Bad texture type for {}", wstos(texture_path)), Error_action::throwing);
@@ -30,7 +34,7 @@ MaterialMap::MaterialMap(const std::initializer_list<std::tuple<std::wstring,Tex
 	check_unit_id_limits();
 }
 
-void MaterialMap::set_textures(const std::vector<Texture>& a_textures) { 
+void MaterialMap::set_textures(const std::vector<Texture2D>& a_textures) { 
 	m_diffuse_maps.clear();
 	m_specular_maps.clear();
 	m_emission_maps.clear();
@@ -80,7 +84,9 @@ void MaterialMap::set_diffuse_maps(const std::vector<std::tuple<std::wstring,boo
 		auto& path = std::get<0>(diffuse_map);
 		auto& texture_flip = std::get<1>(diffuse_map);
 		auto& gamma_correction = std::get<2>(diffuse_map);
-		m_diffuse_maps.push_back(rman.load_texture(path, TextureType::DIFFUSE, m_cur_diffuse_unit_id++, texture_flip, gamma_correction));
+		auto tex = rman.load_texture(TextureType::DIFFUSE, path, texture_flip, gamma_correction);
+		tex.set_unit_id(m_cur_diffuse_unit_id++);
+		m_diffuse_maps.push_back(tex);
 	}
 	m_cur_diffuse_unit_id--;
 
@@ -97,7 +103,9 @@ void MaterialMap::set_specular_maps(const std::vector<std::tuple<std::wstring,bo
 		auto& path = std::get<0>(specular_map);
 		auto& texture_flip = std::get<1>(specular_map);
 		auto& gamma_correction = std::get<2>(specular_map);
-		m_specular_maps.push_back(rman.load_texture(path, TextureType::SPECULAR, m_cur_specular_unit_id++, texture_flip, gamma_correction));
+		auto tex = rman.load_texture(TextureType::SPECULAR, path, texture_flip, gamma_correction);
+		tex.set_unit_id(m_cur_specular_unit_id++);
+		m_specular_maps.push_back(tex);
 	}
 	m_cur_specular_unit_id--;
 
@@ -114,7 +122,9 @@ void MaterialMap::set_emission_maps(const std::vector<std::tuple<std::wstring,bo
 		auto& path = std::get<0>(emission_map);
 		auto& texture_flip = std::get<1>(emission_map);
 		auto& gamma_correction = std::get<2>(emission_map);
-		m_emission_maps.push_back(rman.load_texture(path, TextureType::EMISSION, m_cur_emission_unit_id++, texture_flip, gamma_correction));
+		auto tex = rman.load_texture(TextureType::EMISSION, path, texture_flip, gamma_correction);
+		tex.set_unit_id(m_cur_emission_unit_id++);
+		m_emission_maps.push_back(tex);
 	}
 	m_cur_emission_unit_id--;
 
@@ -125,15 +135,15 @@ void MaterialMap::set_shininess(float a_shininess) noexcept {
 	m_shininess = a_shininess;
 }
 
-std::vector<Texture> MaterialMap::get_diffuse_maps() const noexcept {
+std::vector<Texture2D> MaterialMap::get_diffuse_maps() const noexcept {
 	return m_diffuse_maps;
 }
 
-std::vector<Texture> MaterialMap::get_specular_maps() const noexcept {
+std::vector<Texture2D> MaterialMap::get_specular_maps() const noexcept {
 	return m_specular_maps;
 }
 
-std::vector<Texture> MaterialMap::get_emission_maps() const noexcept {
+std::vector<Texture2D> MaterialMap::get_emission_maps() const noexcept {
 	return m_emission_maps;
 }
 

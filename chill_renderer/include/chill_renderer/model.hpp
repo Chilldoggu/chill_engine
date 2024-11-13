@@ -57,15 +57,10 @@ public:
 private:
 	auto process_node(aiNode* a_node, const aiScene* a_scene) -> void;
 	auto process_mesh(aiMesh* a_mesh, const aiScene* a_scene) -> Mesh;
-	auto process_texture(std::vector<Texture>& a_textures, aiMaterial* a_mat, aiTextureType a_ai_texture_type) -> void;
+	auto process_texture(std::vector<Texture2D>& a_textures, aiMaterial* a_mat, aiTextureType a_ai_texture_type) -> void;
 
 	bool m_flipped_UVs = false;
 	bool m_gamma_corr = false;
-	struct Outline {
-		bool enabled = false;
-		float thickness = 1.1f; 
-		glm::vec3 color = glm::vec3(0, 1, 0);
-	} m_outline;
 	glm::vec3 m_pos = glm::vec3(0.0f);
 	glm::vec3 m_size = glm::vec3(1.0f);
 	glm::vec3 m_rotation = glm::vec3(0.0f);
@@ -76,6 +71,12 @@ private:
 	std::wstring m_path = L"";
 	std::wstring m_dir = L"";
 	std::wstring m_filename = L"";
+
+	struct Outline {
+		bool enabled = false;
+		float thickness = 1.1f; 
+		glm::vec3 color = glm::vec3(0, 1, 0);
+	} m_outline;
 }; 
 
 enum class ModelInstancedVecs {

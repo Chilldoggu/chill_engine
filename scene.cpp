@@ -401,7 +401,7 @@ void Scene::draw_shadow_map() {
 		m_shadow_map.set_resolution(1024, 1024);
 
 	m_shadow_map.set_unit_id(g_shadow_sampler_id);
-	m_shadow_map.set_proj(ProjectionType::ORTOGHRAPHIC, 10.f, 150.f);
+	m_shadow_map.set_proj(ProjectionType::ORTOGHRAPHIC, 10.f, 200.f);
 	m_shadow_map.set_view(m_dirlight_sources[0].model.get_pos(), glm::vec3(0.f, 0.f, 0.1f));
 	m_shadow_map.bind();
 
@@ -743,7 +743,7 @@ void draw_gui(Scene& scene, Skybox& skybox1, Skybox& skybox2) {
 					if (choice) {
 						path = ResourceManager::dialog_import_model();
 						if (path != L"") {
-							Model new_model = Application::get_instance().get_rmanager().load_model(path, invert_UVs);
+							Model new_model = Application::get_instance().get_rmanager().load_model(path, invert_UVs, true);
 							new_model.set_pos(cam.get_position() + cam.get_target() * glm::vec3(2.5));
 							generic_models.push_back(new_model);
 						}
@@ -788,7 +788,7 @@ void draw_gui(Scene& scene, Skybox& skybox1, Skybox& skybox2) {
 					if (choice) {
 						path = ResourceManager::dialog_import_model();
 						if (path != L"") {
-							Model new_model = Application::get_instance().get_rmanager().load_model(path, invert_UVs);
+							Model new_model = Application::get_instance().get_rmanager().load_model(path, invert_UVs, true);
 							new_model.set_pos(cam.get_position() + cam.get_target() * glm::vec3(2.5));
 							transparent_models.push_back(new_model);
 						}
@@ -816,7 +816,7 @@ void draw_gui(Scene& scene, Skybox& skybox1, Skybox& skybox2) {
 				if (ImGui::Button("Create model")) {
 					auto path = ResourceManager::dialog_import_model();
 					if (path != L"") {
-						Model new_model = Application::get_instance().get_rmanager().load_model(path, false);
+						Model new_model = Application::get_instance().get_rmanager().load_model(path, false, true);
 						new_model.set_pos(cam.get_position() + cam.get_target() * glm::vec3(2.5));
 						reflective_models.push_back(new_model);
 					}

@@ -26,15 +26,15 @@ class MaterialMap {
 public:
 	MaterialMap(const std::initializer_list<std::tuple<std::wstring, TextureType, bool, bool>>& a_texture_maps = {});
 
-	auto set_textures(const std::vector<Texture>& a_textures) -> void;
+	auto set_textures(const std::vector<Texture2D>& a_textures) -> void;
 	auto set_diffuse_maps(const std::vector<std::tuple<std::wstring,bool,bool>>& a_diffuse_maps_names) -> void;
 	auto set_specular_maps(const std::vector<std::tuple<std::wstring,bool,bool>>& a_specular_maps_names) -> void;
 	auto set_emission_maps(const std::vector<std::tuple<std::wstring,bool,bool>>& a_emission_maps_names) -> void;
 	auto set_shininess(float a_shininess) noexcept -> void;
 
-	auto get_diffuse_maps() const noexcept -> std::vector<Texture>;
-	auto get_specular_maps() const noexcept -> std::vector<Texture>;
-	auto get_emission_maps() const noexcept -> std::vector<Texture>;
+	auto get_diffuse_maps() const noexcept -> std::vector<Texture2D>;
+	auto get_specular_maps() const noexcept -> std::vector<Texture2D>;
+	auto get_emission_maps() const noexcept -> std::vector<Texture2D>;
 	auto get_shininess() const noexcept -> float;
 
 private:
@@ -44,9 +44,9 @@ private:
 	int m_cur_diffuse_unit_id{ g_diffuse_unit_id };
 	int m_cur_specular_unit_id{ g_specular_unit_id };
 	int m_cur_emission_unit_id{ g_emission_unit_id };
-	std::vector<Texture> m_diffuse_maps;
-	std::vector<Texture> m_specular_maps;
-	std::vector<Texture> m_emission_maps;
+	std::vector<Texture2D> m_diffuse_maps;
+	std::vector<Texture2D> m_specular_maps;
+	std::vector<Texture2D> m_emission_maps;
 };
 
 enum class BufferDataType {

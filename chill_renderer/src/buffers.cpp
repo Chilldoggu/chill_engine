@@ -28,6 +28,55 @@ fs::path guess_path(const std::wstring& a_path) {
 	return fs::canonical(ret_path);
 }
 
+GLenum conv_wrap(TextureWrap a_wrap) noexcept {
+	switch (a_wrap) {
+	case TextureWrap::REPEAT: return GL_REPEAT;
+	case TextureWrap::CLAMP_EDGE: return GL_CLAMP_TO_EDGE;
+	case TextureWrap::CLAMP_BORDER: return GL_CLAMP_TO_BORDER;
+	case TextureWrap::MIRROR_REPEAT: return GL_MIRRORED_REPEAT;
+	}
+	return GL_NONE;
+}
+
+void conv_filter(TextureFilter a_filter, GLuint& tex_min, GLuint& tex_mag) noexcept {
+	switch (a_filter) {
+	case TextureFilter::LINEAR: 
+		tex_min = GL_LINEAR;
+		tex_mag = GL_LINEAR; 
+		break;
+	case TextureFilter::NEAREST: 
+		tex_min = GL_NEAREST;
+		tex_mag = GL_NEAREST; 
+		break;
+	case TextureFilter::MIPMAP_LINEAR: 
+		tex_min = GL_LINEAR_MIPMAP_LINEAR; 
+		tex_mag = GL_LINEAR; 
+		break;
+	case TextureFilter::MIPMAP_NEAREST: 
+		tex_min = GL_NEAREST_MIPMAP_NEAREST; 
+		tex_mag = GL_NEAREST; 
+		break;
+	default: 
+		tex_min = GL_NONE;
+		tex_mag = GL_NONE;
+		break;
+	}
+}
+
+GLuint conv_cmp_func(TextureCmpFunc a_cmp) noexcept {
+	switch (a_cmp) {
+	case TextureCmpFunc::LESS:     return GL_LESS;
+	case TextureCmpFunc::EQUAL:    return GL_EQUAL;
+	case TextureCmpFunc::NEVER:    return GL_NEVER;
+	case TextureCmpFunc::ALWAYS:   return GL_ALWAYS;
+	case TextureCmpFunc::LEQUAL:   return GL_LEQUAL;
+	case TextureCmpFunc::GEQUAL:   return GL_GEQUAL;
+	case TextureCmpFunc::GREATER:  return GL_GREATER;
+	case TextureCmpFunc::NOTEQUAL: return GL_NOTEQUAL;
+	}
+	return GL_NONE;
+}
+
 BufferObjects::BufferObjects(const BufferObjects& a_obj) {
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::MESHES, a_obj.VAO);
 
@@ -103,26 +152,127 @@ void BufferObjects::refcnt_dec() {
 	}
 }
 
-Texture::Texture(std::wstring a_path, TextureType a_type, int a_unit_id, bool a_flip_image, bool a_gamma_corr)
-	:m_type{ a_type }, m_unit_id{ a_unit_id }, m_flipped{ a_flip_image }, m_gamma_corr{ a_gamma_corr }
+Texture::~Texture() {
+	refcnt_dec();
+}
+
+Texture::Texture(const Texture& a_texture) {
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, a_texture.m_id);
+
+	m_id = a_texture.m_id;
+	m_type = a_texture.m_type;
+	m_wrap = a_texture.m_wrap;
+	m_filter = a_texture.m_filter;
+	m_cmp = a_texture.m_cmp;
+	m_unit_id = a_texture.m_unit_id;
+}
+
+// When moving an object, reference count shouldn't increment.
+Texture::Texture(Texture&& a_texture) noexcept {
+	m_id = a_texture.m_id;
+	m_type = a_texture.m_type;
+	m_wrap = a_texture.m_wrap;
+	m_filter = a_texture.m_filter;
+	m_cmp = a_texture.m_cmp;
+	m_unit_id = a_texture.m_unit_id;
+
+	a_texture.m_id = EMPTY_VBO;
+}
+
+Texture& Texture::operator=(const Texture& a_texture) {
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, a_texture.m_id);
+
+	if (m_id != a_texture.m_id) {
+		refcnt_dec();
+	}
+	m_id = a_texture.m_id;
+	m_type = a_texture.m_type;
+	m_wrap = a_texture.m_wrap;
+	m_filter = a_texture.m_filter;
+	m_cmp = a_texture.m_cmp;
+	m_unit_id = a_texture.m_unit_id;
+
+	return *this;
+}
+
+// When moving an object, reference count shouldn't increment.
+Texture& Texture::operator=(Texture&& a_texture) noexcept {
+	if (m_id != a_texture.m_id) {
+		refcnt_dec();
+	}
+	m_id = a_texture.m_id;
+	m_type = a_texture.m_type;
+	m_wrap = a_texture.m_wrap;
+	m_filter = a_texture.m_filter;
+	m_cmp = a_texture.m_cmp;
+	m_unit_id = a_texture.m_unit_id;
+
+	a_texture.m_id = EMPTY_VBO;
+
+	return *this;
+}
+
+void Texture::refcnt_dec() {
+	if (m_id != EMPTY_VBO && m_type != TextureType::NONE) {
+		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::TEXTURES, m_id);
+		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::TEXTURES, m_id)) {
+			std::cout << "DELETING: ID: " << m_id << std::endl;
+			glDeleteTextures(1, &m_id);
+		}
+	} 
+}
+
+void Texture::set_unit_id(int a_unit_id) noexcept {
+	m_unit_id = a_unit_id;
+}
+
+void Texture::set_type(TextureType a_type) noexcept {
+	m_type = a_type;
+}
+
+GLuint Texture::get_id() const noexcept {
+	return m_id;
+}
+
+int Texture::get_unit_id() const noexcept {
+	return m_unit_id;
+}
+
+TextureType Texture::get_type() const noexcept {
+	return m_type;
+}
+
+TextureWrap Texture::get_wrap() const noexcept {
+	return m_wrap;
+}
+
+TextureCmpFunc Texture::get_cmp_func() const noexcept {
+	return m_cmp;
+}
+
+TextureFilter Texture::get_filter() const noexcept {
+	return m_filter;
+}
+
+Texture2D::Texture2D(TextureType a_type, std::wstring a_path, bool a_flip_image, bool a_gamma_corr, GLenum a_data_type)
+	:m_flipped{ a_flip_image }, m_gamma_corr{ a_gamma_corr }
 {
-	if (a_type != TextureType::DIFFUSE && a_type != TextureType::SPECULAR && a_type != TextureType::EMISSION)
-		ERROR("[TEXTURE::TEXTURE] Bad texture type", Error_action::throwing);
+	set_type(a_type);
 
 	fs::path p = guess_path(a_path);
-	if (p == fs::path())
+	if (p == fs::path()) {
 		ERROR(std::format("[TEXTURE::TEXTURE] Bad texture path: {}", wstos(a_path)), Error_action::throwing);
+	}
 
 	m_path = p.wstring();
-	m_filename = p.filename().wstring();
 
 	glGenTextures(1, &m_id);
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id);
 	glBindTexture(GL_TEXTURE_2D, m_id);
 
-	int nrChannels{ };
-	int width{ };
-	int height{ };
+	int nrChannels{};
+	int width{};
+	int height{};
 	stbi_set_flip_vertically_on_load(a_flip_image);
 	unsigned char* data = stbi_load(wstos(m_path).c_str(), &width, &height, &nrChannels, 0);
 
@@ -132,13 +282,11 @@ Texture::Texture(std::wstring a_path, TextureType a_type, int a_unit_id, bool a_
 		in_format = ex_format = GL_RED;
 	}
 	else if (nrChannels == 3) {
-		auto cond = a_gamma_corr && (a_type == TextureType::DIFFUSE || a_type == TextureType::EMISSION);
-		in_format = cond ? GL_SRGB : GL_RGB;
+		in_format = (a_gamma_corr) ? GL_SRGB : GL_RGB;
 		ex_format = GL_RGB;
 	}
 	else if (nrChannels == 4) {
-		auto cond = a_gamma_corr && (a_type == TextureType::DIFFUSE || a_type == TextureType::EMISSION);
-		in_format = cond ? GL_SRGB_ALPHA : GL_RGBA;
+		in_format = (a_gamma_corr) ? GL_SRGB_ALPHA : GL_RGBA;
 		ex_format = GL_RGBA;
 
 		glEnable(GL_BLEND);
@@ -149,7 +297,7 @@ Texture::Texture(std::wstring a_path, TextureType a_type, int a_unit_id, bool a_
 	}
 
 	if (data) {
-		glTexImage2D(GL_TEXTURE_2D, 0, in_format, width, height, 0, ex_format, GL_UNSIGNED_BYTE, data);
+		glTexImage2D(GL_TEXTURE_2D, 0, in_format, width, height, 0, ex_format, (a_data_type == DEFAULT_TYPE) ? GL_UNSIGNED_BYTE : a_data_type, data);
 		stbi_image_free(data);
 	}
 	else {
@@ -160,51 +308,143 @@ Texture::Texture(std::wstring a_path, TextureType a_type, int a_unit_id, bool a_
 	set_filter(TextureFilter::MIPMAP_LINEAR);
 }
 
-// Cubemaps
-Texture::Texture(std::vector<std::wstring> a_paths, int texture_unit, bool a_flip_images, bool a_gamma_corr)
-	:m_type{ TextureType::CUBEMAP }, m_unit_id{ texture_unit }, m_flipped{ a_flip_images }, m_gamma_corr{ a_gamma_corr }
+Texture2D::Texture2D(TextureType a_type, int a_width, int a_height, GLenum a_data_type) 
+{
+	set_type(a_type);
+
+	glGenTextures(1, &m_id);
+	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id);
+	glBindTexture(GL_TEXTURE_2D, m_id); 
+
+	if (a_type == TextureType::GENERIC || a_type == TextureType::DIFFUSE || a_type == TextureType::SPECULAR || a_type == TextureType::EMISSION) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, a_width, a_height, 0, GL_RGB, a_data_type == DEFAULT_TYPE ? GL_UNSIGNED_BYTE : a_data_type, NULL);
+	}
+	else if (a_type == TextureType::DEPTH) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, a_width, a_height, 0, GL_DEPTH_COMPONENT, a_data_type == DEFAULT_TYPE ? GL_UNSIGNED_BYTE : a_data_type, NULL);
+	}
+	else if (a_type == TextureType::DEPTH_STENCIL) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, a_width, a_height, 0, GL_DEPTH_STENCIL, a_data_type == DEFAULT_TYPE ? GL_UNSIGNED_INT_24_8 : a_data_type, NULL);
+	}
+	else {
+		ERROR("[TEXTURE2D::TEXTURE2D] Wrong TextureType.", Error_action::throwing);
+	}
+
+	set_wrap(TextureWrap::CLAMP_EDGE);
+	set_filter(TextureFilter::LINEAR);
+}
+
+void Texture2D::activate() const noexcept {
+	if (get_type() != TextureType::NONE) {
+		glActiveTexture(GL_TEXTURE0 + get_unit_id());
+		glBindTexture(GL_TEXTURE_2D, m_id); 
+	}
+}
+
+void Texture2D::set_border_color(const glm::vec3& a_border_color) {
+	float arr_border_color[] = { a_border_color.x, a_border_color.y, a_border_color.z, 1.f };
+	glBindTexture(GL_TEXTURE_2D, m_id); 
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, arr_border_color);
+}
+
+void Texture2D::set_wrap(TextureWrap a_wrap) {
+	m_wrap = a_wrap;
+	GLuint tex_wrap = conv_wrap(a_wrap);
+	if (tex_wrap == GL_NONE) {
+		ERROR("[TEXTURE2D::SET_WRAP] Wrong wrap type.", Error_action::throwing);
+	}
+
+	glBindTexture(GL_TEXTURE_2D, m_id); 
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, tex_wrap);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tex_wrap);
+}
+
+void Texture2D::set_filter(TextureFilter a_filter) {
+	m_filter = a_filter;
+	GLuint tex_min, tex_mag;
+	conv_filter(a_filter, tex_min, tex_mag);
+	if (tex_min == GL_NONE && tex_mag == GL_NONE) {
+		ERROR("[TEXTURE2D::SET_FILTER] Wrong filter type.", Error_action::throwing);
+	}
+
+	glBindTexture(GL_TEXTURE_2D, m_id); 
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, tex_min);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, tex_mag);
+	if (a_filter == TextureFilter::MIPMAP_LINEAR || a_filter == TextureFilter::MIPMAP_NEAREST) {
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+}
+
+void Texture2D::set_cmp_func(TextureCmpFunc a_cmp_func) { 
+	m_cmp = a_cmp_func;
+	GLuint tex_cmp = conv_cmp_func(a_cmp_func); 
+	if (tex_cmp == GL_NONE) { 
+		glBindTexture(GL_TEXTURE_2D, m_id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+		return;
+	}
+
+	glBindTexture(GL_TEXTURE_2D, m_id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, tex_cmp);
+}
+
+std::wstring Texture2D::get_filename() const noexcept {
+	return fs::path(m_path).filename().wstring();
+}
+
+std::wstring Texture2D::get_path() const noexcept {
+	return m_path;
+}
+
+bool Texture2D::is_flipped() const noexcept {
+	return m_flipped;
+}
+
+bool Texture2D::is_gamma_corr() const noexcept {
+	return m_gamma_corr;
+}
+
+TextureCubemap::TextureCubemap(TextureType a_type, std::vector<std::wstring> a_paths, bool a_flipped, bool a_gamma_corr, GLenum a_data_type)
+	:m_flipped{ a_flipped }, m_gamma_corr{ a_gamma_corr }
 {
 	// Each cubemap face has to be a single texture
 	if (a_paths.size() != 6)
-		ERROR("[TEXTURE::TEXTURE] Wrong amount of textures to create a cubemap.", Error_action::throwing); 
+		ERROR("[TEXTURECUBEMAP::TEXTURECUBEMAP] Wrong amount of textures to create a cubemap.", Error_action::throwing); 
 
-	m_path = L"";
+	set_type(a_type);
+
+	fs::path parent_path{};
 	for (const auto& path : a_paths) {
 		fs::path p = guess_path(path);
+		if (parent_path.empty()) {
+			parent_path = p.parent_path();
+		}
 
 		// Couldn't find texture path
 		if (p == fs::path()) {
-			m_path = L"";
-			m_filename = L"";
-			m_filenames.clear();
-			ERROR(std::format("[TEXTURE::TEXTURE] Bad texture path: {}", wstos(path)), Error_action::throwing);
+			m_paths.clear();
+			ERROR(std::format("[TEXTURECUBEMAP::TEXTURECUBEMAP] Bad texture path: {}", wstos(path)), Error_action::throwing);
 		}
-
-		if (m_path == L"")
-			m_path = p.parent_path().wstring();
 
 		// Put your cubemap textures into same directory.  
-		if (m_path != p.parent_path().wstring()) {
-			m_path = L"";
-			m_filename = L"";
-			m_filenames.clear();
-			ERROR("[TEXTURE::TEXTURE] Cubemap textures are not in the same directory. Move them to a single directory in order to create a cubemap.", Error_action::throwing);
+		if (parent_path != p.parent_path()) {
+			m_paths.clear();
+			ERROR("[TEXTURECUBEMAP::TEXTURECUBEMAP] Cubemap textures are not in the same directory.", Error_action::throwing);
 		}
 
-		m_filenames.push_back(p.filename().wstring());
+		m_paths.push_back(p.wstring());
 	}
 
 	glGenTextures(1, &m_id);
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id);
 
-	stbi_set_flip_vertically_on_load(a_flip_images);
-	for (size_t i = 0; i < m_filenames.size(); ++i) {
+	stbi_set_flip_vertically_on_load(a_flipped);
+	for (size_t i = 0; i < 6; ++i) {
 		int nrChannels{};
 		int width{};
 		int height{};
-		std::string full_path = (fs::path(m_path) / fs::path(m_filenames[i])).string();
-		unsigned char* data = stbi_load(full_path.c_str(), &width, &height, &nrChannels, 0);
+		unsigned char* data = stbi_load(wstos(m_paths[i]).c_str(), &width, &height, &nrChannels, 0);
 
 		unsigned in_format = GL_NONE;
 		unsigned ex_format = GL_NONE;
@@ -220,15 +460,15 @@ Texture::Texture(std::vector<std::wstring> a_paths, int texture_unit, bool a_fli
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		}
 		else {
-			ERROR(std::format("[TEXTURE::TEXTURE] Unsupported texture format {} with {} number of channels.", full_path, nrChannels), Error_action::throwing);
+			ERROR(std::format("[TEXTURECUBEMAP::TEXTURECUBEMAP] Unsupported texture format {} with {} number of channels.", wstos(m_paths[i]), nrChannels), Error_action::throwing);
 		}
 
 		if (data) {
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, in_format, width, height, 0, ex_format, GL_UNSIGNED_BYTE, data);
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, in_format, width, height, 0, ex_format, a_data_type == DEFAULT_TYPE ? GL_UNSIGNED_BYTE : a_data_type, data);
 			stbi_image_free(data); 
 		}
 		else {
-			ERROR(std::format("[TEXTURE::TEXTURE] Couldn't load texture data at path {}", full_path), Error_action::throwing);
+			ERROR(std::format("[TEXTURECUBEMAP::TEXTURECUBEMAP] Couldn't load texture data at path {}", wstos(m_paths[i])), Error_action::throwing);
 		}
 	}
 
@@ -236,334 +476,169 @@ Texture::Texture(std::vector<std::wstring> a_paths, int texture_unit, bool a_fli
 	set_filter(TextureFilter::LINEAR);
 }
 
-Texture::Texture(int a_width, int a_height, TextureType a_type) 
-	:m_type{ a_type } 
-{
-	if (a_type != TextureType::COLOR_2D && a_type != TextureType::COLOR_3D && a_type != TextureType::CUBEMAP && a_type != TextureType::DEPTH && a_type != TextureType::DEPTH_STENCIL)
-		ERROR("[TEXTURE::TEXTURE] Bad texture type", Error_action::throwing);
+TextureCubemap::TextureCubemap(TextureType a_type, int a_width, int a_height, GLenum a_data_type) {
+	set_type(a_type);
 
 	glGenTextures(1, &m_id);
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id);
-	if (a_type == TextureType::COLOR_3D || a_type == TextureType::CUBEMAP) {
-		glBindTexture(GL_TEXTURE_CUBE_MAP, m_id); 
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id); 
+
+	GLenum type{};
+	GLint internalformat{};
+	GLenum format{};
+	if (a_type == TextureType::GENERIC || a_type == TextureType::DIFFUSE || a_type == TextureType::SPECULAR || a_type == TextureType::EMISSION) {
+		type = (a_data_type == DEFAULT_TYPE) ? GL_UNSIGNED_BYTE : a_data_type;
+		internalformat = GL_RGB;
+		format = GL_RGB;
 	}
+	else if (a_type == TextureType::DEPTH) {
+		type = (a_data_type == DEFAULT_TYPE) ? GL_UNSIGNED_BYTE : a_data_type;
+		internalformat = GL_DEPTH_COMPONENT;
+		format = GL_DEPTH_COMPONENT;
+	}
+	else if (a_type == TextureType::DEPTH_STENCIL) {
+		type = (a_data_type == DEFAULT_TYPE) ? GL_UNSIGNED_INT_24_8 : a_data_type;
+		internalformat = GL_DEPTH24_STENCIL8;
+		format = GL_DEPTH_STENCIL;
+	} 
 	else {
-		glBindTexture(GL_TEXTURE_2D, m_id); 
+		ERROR("[TEXTURECUBEMAP::TEXTURECUBEMAP] Wrong TextureType.", Error_action::throwing);
 	}
 
-	switch (a_type) {
-	case TextureType::COLOR_2D:      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, a_width, a_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL); break;
-	case TextureType::DEPTH:         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, a_width, a_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL); break;
-	case TextureType::DEPTH_STENCIL: glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, a_width, a_height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL); break;
-	case TextureType::CUBEMAP:
-	case TextureType::COLOR_3D:
-		for (int i = 0; i < 6; ++i) {
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, a_width, a_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL); 
-		}
-		break;
+	for (int i = 0; i < 6; ++i) {
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalformat, a_width, a_height, 0, format, type, NULL); 
 	}
 
 	set_wrap(TextureWrap::CLAMP_EDGE);
 	set_filter(TextureFilter::LINEAR);
 }
 
-Texture::Texture(int a_width, int a_height, int a_samples, TextureType a_type)
-	:m_samples{ a_samples }, m_type{ a_type }
+void TextureCubemap::activate() const noexcept {
+	if (get_type() != TextureType::NONE) {
+		glActiveTexture(GL_TEXTURE0 + get_unit_id());
+		glBindTexture(GL_TEXTURE_CUBE_MAP, m_id); 
+	}
+}
+
+void TextureCubemap::set_border_color(const glm::vec3& a_border_color) {
+	float arr_border_color[] = { a_border_color.x, a_border_color.y, a_border_color.z, 1.f };
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id); 
+	glTexParameterfv(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BORDER_COLOR, arr_border_color);
+}
+
+void TextureCubemap::set_wrap(TextureWrap a_wrap) {
+	m_wrap = a_wrap;
+	GLuint tex_wrap = conv_wrap(a_wrap); 
+	if (tex_wrap == GL_NONE) {
+		ERROR("[TEXTURE::SET_WRAP] Wrong wrap type.", Error_action::throwing);
+	}
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id); 
+	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, tex_wrap);
+	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, tex_wrap);
+	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, tex_wrap); 
+}
+
+void TextureCubemap::set_filter(TextureFilter a_filter) {
+	m_filter = a_filter;
+	GLuint tex_min, tex_mag;
+	conv_filter(a_filter, tex_min, tex_mag);
+	if (tex_min == GL_NONE && tex_mag == GL_NONE) {
+		ERROR("[TEXTURE::SET_FILTER] Wrong filter type.", Error_action::throwing);
+	}
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id); 
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, tex_min);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, tex_mag);
+	if (a_filter == TextureFilter::MIPMAP_LINEAR || a_filter == TextureFilter::MIPMAP_NEAREST) {
+		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+	}
+}
+
+void TextureCubemap::set_cmp_func(TextureCmpFunc a_cmp_func) {
+	m_cmp = a_cmp_func;
+
+	GLuint tex_cmp = conv_cmp_func(a_cmp_func); 
+	if (tex_cmp == GL_NONE) { 
+		glBindTexture(GL_TEXTURE_2D, m_id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+		return;
+	}
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, tex_cmp);
+}
+
+std::vector<std::wstring> TextureCubemap::get_paths() const noexcept {
+	return m_paths;
+}
+
+std::vector<std::wstring> TextureCubemap::get_filenames() const noexcept {
+	std::vector<std::wstring> ret(m_paths.size());
+	for (size_t i = 0; i < m_paths.size(); ++i) {
+		ret[i] = fs::path(m_paths[i]).filename().wstring();
+	}
+
+	return ret;
+}
+
+TextureMSAA::TextureMSAA(TextureType a_type, int a_width, int a_height, int a_samples)
+	:m_samples{ a_samples }
 {
-	if (a_type != TextureType::COLOR_2D && a_type != TextureType::DEPTH && a_type != TextureType::DEPTH_STENCIL)
-		ERROR("[TEXTURE::TEXTURE] Bad MSAA texture type.", Error_action::throwing);
+	set_type(a_type);
 
 	glGenTextures(1, &m_id);
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id); 
 	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, m_id); 
 
-	switch (a_type) {
-	case TextureType::COLOR_2D:      glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, a_samples, GL_RGB, a_width, a_height, GL_TRUE); break;
-	case TextureType::DEPTH:         glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, a_samples, GL_DEPTH_COMPONENT, a_width, a_height, GL_TRUE); break;
-	case TextureType::DEPTH_STENCIL: glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, a_samples, GL_DEPTH24_STENCIL8, a_width, a_height, GL_TRUE); break;
+	if (a_type == TextureType::GENERIC || a_type == TextureType::DIFFUSE || a_type == TextureType::SPECULAR || a_type == TextureType::EMISSION) {
+		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, a_samples, GL_RGB, a_width, a_height, GL_TRUE);
+	}
+	else if (a_type == TextureType::DEPTH) {
+		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, a_samples, GL_DEPTH_COMPONENT, a_width, a_height, GL_TRUE);
+	}
+	else if (a_type == TextureType::DEPTH_STENCIL) {
+		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, a_samples, GL_DEPTH24_STENCIL8, a_width, a_height, GL_TRUE);
+	} 
+	else {
+		ERROR("[TEXTUREMSAA::TEXTUREMSAA] Wrong TextureType.", Error_action::throwing);
 	}
 
 	set_wrap(TextureWrap::CLAMP_EDGE);
 	set_filter(TextureFilter::LINEAR);
 }
 
-Texture::Texture(const Texture& a_texture) {
-	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, a_texture.m_id);
-
-	m_id = a_texture.m_id;
-	m_path = a_texture.m_path;
-	m_type = a_texture.m_type;
-	m_wrap = a_texture.m_wrap;
-	m_filter = a_texture.m_filter;
-	m_comp = a_texture.m_comp;
-	m_unit_id = a_texture.m_unit_id;
-	m_samples = a_texture.m_samples;
-	m_filename = a_texture.m_filename;
-	m_filenames = a_texture.m_filenames;
-	m_flipped = a_texture.m_flipped;
-	m_gamma_corr = a_texture.m_gamma_corr;
-}
-
-// When moving an object, reference count shouldn't increment.
-Texture::Texture(Texture&& a_texture) noexcept {
-	m_id = a_texture.m_id;
-	m_path = std::move(a_texture.m_path);
-	m_type = a_texture.m_type;
-	m_wrap = a_texture.m_wrap;
-	m_filter = a_texture.m_filter;
-	m_comp = a_texture.m_comp;
-	m_unit_id = a_texture.m_unit_id;
-	m_samples = a_texture.m_samples;
-	m_filename = std::move(a_texture.m_filename);
-	m_filenames = std::move(a_texture.m_filenames);
-	m_flipped = a_texture.m_flipped;
-	m_gamma_corr = a_texture.m_gamma_corr;
-
-	a_texture.m_id = EMPTY_VBO;
-}
-
-Texture& Texture::operator=(const Texture& a_texture) {
-	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, a_texture.m_id);
-
-	if (m_id != a_texture.m_id) {
-		refcnt_dec();
+void TextureMSAA::activate() const noexcept {
+	if (get_type() != TextureType::NONE) {
+		glActiveTexture(GL_TEXTURE0 + get_unit_id());
+		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, m_id); 
 	}
-	m_id = a_texture.m_id;
-	m_path = a_texture.m_path;
-	m_type = a_texture.m_type;
-	m_wrap = a_texture.m_wrap;
-	m_filter = a_texture.m_filter;
-	m_comp = a_texture.m_comp;
-	m_unit_id = a_texture.m_unit_id;
-	m_samples = a_texture.m_samples;
-	m_filename = a_texture.m_filename;
-	m_filenames = a_texture.m_filenames;
-	m_flipped = a_texture.m_flipped;
-	m_gamma_corr = a_texture.m_gamma_corr;
-
-	return *this;
 }
 
-// When moving an object, reference count shouldn't increment.
-Texture& Texture::operator=(Texture&& a_texture) noexcept {
-	if (m_id != a_texture.m_id) {
-		refcnt_dec();
-	}
-	m_id = a_texture.m_id;
-	m_path = std::move(a_texture.m_path);
-	m_type = a_texture.m_type;
-	m_wrap = a_texture.m_wrap;
-	m_filter = a_texture.m_filter;
-	m_comp = a_texture.m_comp;
-	m_unit_id = a_texture.m_unit_id;
-	m_samples = a_texture.m_samples;
-	m_filename = std::move(a_texture.m_filename);
-	m_filenames = std::move(a_texture.m_filenames);
-	m_flipped = a_texture.m_flipped;
-	m_gamma_corr = a_texture.m_gamma_corr;
-
-	a_texture.m_id = EMPTY_VBO;
-
-	return *this;
-}
-
-Texture::~Texture() {
-	refcnt_dec();
-}
-
-void Texture::refcnt_dec() {
-	if (m_id != EMPTY_VBO && m_type != TextureType::NONE) {
-		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::TEXTURES, m_id);
-		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::TEXTURES, m_id)) {
-			std::cout << "DELETING: ID: " << m_id << ", PATH: [" << wstos(m_path) << "]" << std::endl;
-			glDeleteTextures(1, &m_id);
-		}
-	} 
-}
-
-void Texture::set_border_color(const glm::vec3& a_border_color) noexcept {
+void TextureMSAA::set_border_color(const glm::vec3& a_border_color) {
 	float arr_border_color[] = { a_border_color.x, a_border_color.y, a_border_color.z, 1.f };
-	GLuint tex_type = (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D; 
-	glBindTexture(tex_type, m_id); 
-	glTexParameterfv(tex_type, GL_TEXTURE_BORDER_COLOR, arr_border_color);
+	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, m_id); 
+	glTexParameterfv(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_BORDER_COLOR, arr_border_color);
 }
 
-void Texture::set_unit_id(int a_unit_id) noexcept {
-	m_unit_id = a_unit_id;
-}
-
-void Texture::set_type(TextureType a_type) noexcept {
-	m_type = a_type;
-}
-
-void Texture::set_wrap(TextureWrap a_wrap) noexcept {
-	m_wrap = a_wrap;
-
-	GLuint tex_type = 0;
-	GLuint tex_wrap = 0; 
-
+void TextureMSAA::set_wrap(TextureWrap a_wrap) {
 	// Error(1280): Multisample texture targets don't support sampler state.
-	if (m_samples > 1) return;
-	else if (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) {
-		tex_type = GL_TEXTURE_CUBE_MAP;
-	}
-	else {
-		tex_type = GL_TEXTURE_2D;
-	}
-
-	switch (m_wrap) {
-	case TextureWrap::REPEAT: tex_wrap = GL_REPEAT; break;
-	case TextureWrap::CLAMP_EDGE: tex_wrap = GL_CLAMP_TO_EDGE; break;
-	case TextureWrap::CLAMP_BORDER: tex_wrap = GL_CLAMP_TO_BORDER; break;
-	case TextureWrap::MIRROR_REPEAT: tex_wrap = GL_MIRRORED_REPEAT; break;
-	default: ERROR("[TEXTURE::SET_WRAP] Wrong wrap type.", Error_action::throwing);
-	}
-
-	glBindTexture(tex_type, m_id); 
-	glTexParameterf(tex_type, GL_TEXTURE_WRAP_S, tex_wrap);
-	glTexParameterf(tex_type, GL_TEXTURE_WRAP_T, tex_wrap);
-	if (tex_type == GL_TEXTURE_CUBE_MAP) { 
-		glTexParameterf(tex_type, GL_TEXTURE_WRAP_R, tex_wrap); 
-	}
+	return;
 }
 
-void Texture::set_filter(TextureFilter a_filter) noexcept {
-	m_filter = a_filter;
-
-	GLuint tex_min = 0;
-	GLuint tex_mag = 0;
-	GLuint tex_type = 0;
-
+void TextureMSAA::set_filter(TextureFilter a_filter) {
 	// Error(1280): Multisample texture targets don't support sampler state.
-	if (m_samples > 1) return;
-	else if (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) {
-		tex_type = GL_TEXTURE_CUBE_MAP;
-	}
-	else {
-		tex_type = GL_TEXTURE_2D;
-	}
-
-	switch (a_filter) {
-	case TextureFilter::LINEAR: 
-		tex_min = GL_LINEAR;
-		tex_mag = GL_LINEAR; 
-		break;
-	case TextureFilter::NEAREST: 
-		tex_min = GL_NEAREST;
-		tex_mag = GL_NEAREST; 
-		break;
-	case TextureFilter::MIPMAP_LINEAR: 
-		tex_min = GL_LINEAR_MIPMAP_LINEAR; 
-		tex_mag = GL_LINEAR; 
-		break;
-	case TextureFilter::MIPMAP_NEAREST: 
-		tex_min = GL_NEAREST_MIPMAP_NEAREST; 
-		tex_mag = GL_NEAREST; 
-		break;
-	default: ERROR("[TEXTURE::SET_FILTER] Wrong filter type.", Error_action::throwing);
-	}
-
-	glBindTexture(tex_type, m_id); 
-	glTexParameteri(tex_type, GL_TEXTURE_MIN_FILTER, tex_min);
-	glTexParameteri(tex_type, GL_TEXTURE_MAG_FILTER, tex_mag);
-	if (a_filter == TextureFilter::MIPMAP_LINEAR || a_filter == TextureFilter::MIPMAP_NEAREST) {
-		glGenerateMipmap(tex_type);
-	}
+	return;
 }
 
-void Texture::set_comp_func(TextureCompFunc a_comp_func) noexcept { 
-	m_comp = a_comp_func;
-
-	GLuint tex_type = 0;
-	GLuint tex_comp = 0; 
-
-	// TODO: Might be wrong. Check. Error(1280): Multisample texture targets don't support sampler state.
-	if (m_samples > 1) return;
-	else if (m_type == TextureType::COLOR_3D || m_type == TextureType::CUBEMAP) {
-		tex_type = GL_TEXTURE_CUBE_MAP;
-	}
-	else {
-		tex_type = GL_TEXTURE_2D;
-	}
-
-	switch (a_comp_func) {
-	case TextureCompFunc::LESS:     tex_comp = GL_LESS; break;
-	case TextureCompFunc::EQUAL:    tex_comp = GL_EQUAL; break;
-	case TextureCompFunc::NEVER:    tex_comp = GL_NEVER; break;
-	case TextureCompFunc::ALWAYS:   tex_comp = GL_ALWAYS; break;
-	case TextureCompFunc::LEQUAL:   tex_comp = GL_LEQUAL; break;
-	case TextureCompFunc::GEQUAL:   tex_comp = GL_GEQUAL; break;
-	case TextureCompFunc::GREATER:  tex_comp = GL_GREATER; break;
-	case TextureCompFunc::NOTEQUAL: tex_comp = GL_NOTEQUAL; break;
-	case TextureCompFunc::NONE:
-		glBindTexture(tex_type, m_id);
-		glTexParameteri(tex_type, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-		return;
-	default: ERROR("[TEXTURE::SET_COMP_FUNC] Wrong comparison function type.", Error_action::throwing);
-	}
-
-	glBindTexture(tex_type, m_id);
-	glTexParameteri(tex_type, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-	glTexParameteri(tex_type, GL_TEXTURE_COMPARE_FUNC, tex_comp);
+void TextureMSAA::set_cmp_func(TextureCmpFunc a_cmp_func) { 
+	// TODO: Might be wrong. Check if Error(1280): Multisample texture targets don't support sampler state.
+	return;
 }
 
-void Texture::activate() const noexcept {
-	if (m_type != TextureType::NONE) {
-		glActiveTexture(GL_TEXTURE0 + m_unit_id);
-		if (m_samples > 1) {
-			glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, m_id);
-		}
-		else if (m_type == TextureType::CUBEMAP || m_type == TextureType::COLOR_3D) { 
-			glBindTexture(GL_TEXTURE_CUBE_MAP, m_id); 
-		}
-		else {
-			glBindTexture(GL_TEXTURE_2D, m_id); 
-		}
-	}
-}
-
-TextureType Texture::get_type() const noexcept {
-	return m_type;
-}
-
-TextureWrap Texture::get_wrap() const noexcept {
-	return m_wrap;
-}
-
-TextureCompFunc Texture::get_comp_func() const noexcept {
-	return m_comp;
-}
-
-TextureFilter Texture::get_filter() const noexcept {
-	return m_filter;
-}
-
-std::wstring Texture::get_path() const noexcept {
-	return m_path;
-}
-
-std::wstring Texture::get_filename() const noexcept {
-	return m_filename;
-}
-
-std::vector<std::wstring> Texture::get_filenames() const noexcept {
-	return m_filenames;
-}
-
-GLuint Texture::get_id() const noexcept {
-	return m_id;
-}
-
-int Texture::get_unit_id() const noexcept {
-	return m_unit_id;
-}
-
-bool Texture::is_flipped() const noexcept {
-	return m_flipped;
-}
-
-bool Texture::is_gamma_corr() const noexcept {
-	return m_gamma_corr;
+int TextureMSAA::get_samples() const noexcept {
+	return m_samples;
 }
 
 RenderBuffer::RenderBuffer(int a_width, int a_height, RenderBufferType a_type) :m_type{ a_type } {
@@ -668,37 +743,39 @@ AttachmentBuffer::AttachmentBuffer(int a_width, int a_height, AttachmentType a_a
 {
 	if (a_buf_type == AttachmentBufferType::TEXTURE) {
 		switch (a_attach_type) {
-		case AttachmentType::COLOR_2D:      m_attachment = Texture(a_width, a_height, TextureType::COLOR_2D); break;
-		case AttachmentType::COLOR_3D:      m_attachment = Texture(a_width, a_height, TextureType::COLOR_3D); break;
-		case AttachmentType::DEPTH:         m_attachment = Texture(a_width, a_height, TextureType::DEPTH); break;
-		case AttachmentType::DEPTH_STENCIL: m_attachment = Texture(a_width, a_height, TextureType::DEPTH_STENCIL); break;
+		case AttachmentType::COLOR_2D:      m_attachment = std::make_unique<Texture2D>(TextureType::GENERIC, a_width, a_height); break;
+		case AttachmentType::COLOR_3D:      m_attachment = std::make_unique<TextureCubemap>(TextureType::GENERIC, a_width, a_height); break;
+		case AttachmentType::DEPTH:         m_attachment = std::make_unique<Texture2D>(TextureType::DEPTH, a_width, a_height); break;
+		case AttachmentType::DEPTH_STENCIL: m_attachment = std::make_unique<Texture2D>(TextureType::DEPTH_STENCIL, a_width, a_height); break;
 		}
 	}
 	else if (a_buf_type == AttachmentBufferType::MSAA_TEXTURE) {
 		switch (a_attach_type) {
-		case AttachmentType::COLOR_2D:      m_attachment = Texture(a_width, a_height, a_samples, TextureType::COLOR_2D); break;
-		case AttachmentType::COLOR_3D:      m_attachment = Texture(a_width, a_height, a_samples, TextureType::COLOR_3D); break;
-		case AttachmentType::DEPTH:         m_attachment = Texture(a_width, a_height, a_samples, TextureType::DEPTH); break;
-		case AttachmentType::DEPTH_STENCIL: m_attachment = Texture(a_width, a_height, a_samples, TextureType::DEPTH_STENCIL); break;
+		case AttachmentType::COLOR_2D:      m_attachment = std::make_unique<TextureMSAA>(TextureType::GENERIC, a_width, a_height, a_samples); break;
+		case AttachmentType::DEPTH:         m_attachment = std::make_unique<TextureMSAA>(TextureType::DEPTH, a_width, a_height, a_samples); break;
+		case AttachmentType::DEPTH_STENCIL: m_attachment = std::make_unique<TextureMSAA>(TextureType::DEPTH_STENCIL, a_width, a_height, a_samples); break;
+		case AttachmentType::COLOR_3D:
+			ERROR("[ATTACHMENTBUFFER::ATTACHMENTBUFFER] Please use 2D attachment types for MSAA buffers.", Error_action::throwing);
+			break;
 		}
 	}
 	else if (a_buf_type == AttachmentBufferType::MSAA_RENDER_BUFFER) {
 		switch (a_attach_type) {
-		case AttachmentType::COLOR_2D:      m_attachment = RenderBuffer(a_width, a_height, a_samples, RenderBufferType::COLOR); break;
-		case AttachmentType::DEPTH:         m_attachment = RenderBuffer(a_width, a_height, a_samples, RenderBufferType::DEPTH); break;
-		case AttachmentType::DEPTH_STENCIL: m_attachment = RenderBuffer(a_width, a_height, a_samples, RenderBufferType::DEPTH_STENCIL); break;
+		case AttachmentType::COLOR_2D:      m_attachment = std::make_unique<RenderBuffer>(a_width, a_height, a_samples, RenderBufferType::COLOR); break;
+		case AttachmentType::DEPTH:         m_attachment = std::make_unique<RenderBuffer>(a_width, a_height, a_samples, RenderBufferType::DEPTH); break;
+		case AttachmentType::DEPTH_STENCIL: m_attachment = std::make_unique<RenderBuffer>(a_width, a_height, a_samples, RenderBufferType::DEPTH_STENCIL); break;
 		case AttachmentType::COLOR_3D:
-			ERROR("[ATTACHMENTBUFFER::ATTACHMENTBUFFER] Please use attachment type COLOR_2D for render buffers.", Error_action::throwing);
+			ERROR("[ATTACHMENTBUFFER::ATTACHMENTBUFFER] Please use 2D attachment types for render buffers.", Error_action::throwing);
 			break;
 		}
 	}
 	else if (a_buf_type == AttachmentBufferType::RENDER_BUFFER) {
 		switch (a_attach_type) {
-		case AttachmentType::COLOR_2D:      m_attachment = RenderBuffer(a_width, a_height, RenderBufferType::COLOR); break;
-		case AttachmentType::DEPTH:         m_attachment = RenderBuffer(a_width, a_height, RenderBufferType::DEPTH); break;
-		case AttachmentType::DEPTH_STENCIL: m_attachment = RenderBuffer(a_width, a_height, RenderBufferType::DEPTH_STENCIL); break;
+		case AttachmentType::COLOR_2D:      m_attachment = std::make_unique<RenderBuffer>(a_width, a_height, RenderBufferType::COLOR); break;
+		case AttachmentType::DEPTH:         m_attachment = std::make_unique<RenderBuffer>(a_width, a_height, RenderBufferType::DEPTH); break;
+		case AttachmentType::DEPTH_STENCIL: m_attachment = std::make_unique<RenderBuffer>(a_width, a_height, RenderBufferType::DEPTH_STENCIL); break;
 		case AttachmentType::COLOR_3D:
-			ERROR("[ATTACHMENTBUFFER::ATTACHMENTBUFFER] Please use attachment type COLOR_2D for render buffers.", Error_action::throwing);
+			ERROR("[ATTACHMENTBUFFER::ATTACHMENTBUFFER] Please use 2D attachment types for render buffers.", Error_action::throwing);
 			break;
 		}
 	}
@@ -711,12 +788,11 @@ AttachmentBuffer::AttachmentBuffer(int a_width, int a_height, AttachmentType a_a
 }
 
 void AttachmentBuffer::activate() const noexcept {
-	if (std::holds_alternative<Texture>(m_attachment)) {
-		std::get<Texture>(m_attachment).activate();
+	if (std::holds_alternative<uPtrTex>(m_attachment)) {
+		std::get<uPtrTex>(m_attachment)->activate();
 	}
-	else if (std::holds_alternative<RenderBuffer>(m_attachment)) {
-		// WARNING: Having color renderbuffer is plain weird but possible. Not sure how 
-		// to handle it.
+	else if (std::holds_alternative<uPtrRen>(m_attachment)) {
+		// WARNING: Having color renderbuffer is plain weird but possible. Not sure how to handle it.
 	}
 }
 
@@ -728,7 +804,7 @@ AttachmentBufferType AttachmentBuffer::get_buf_type() const noexcept {
 	return m_buf_type;
 }
 
-std::variant<Texture, RenderBuffer>& AttachmentBuffer::get_attachment() noexcept {
+std::variant<uPtrTex, uPtrRen>& AttachmentBuffer::get_attachment() noexcept {
 	return m_attachment;
 }
 
@@ -785,65 +861,63 @@ void FrameBuffer::attach(AttachmentType a_attach_type, AttachmentBufferType a_bu
 		return; 
 	} 
 
+	m_samples = a_samples; 
 	if (m_fbo == EMPTY_VBO) {
 		glGenFramebuffers(1, &m_fbo);
 		Application::get_instance().get_rmanager().inc_ref_count(ResourceType::FRAME_BUFFERS, m_fbo);
 	}
 
-	m_samples = a_samples; 
 	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo); 
 	AttachmentBuffer new_attachment(m_width, m_height, a_attach_type, a_buf_type, m_samples); 
-	if (a_attach_type == AttachmentType::COLOR_2D || a_attach_type == AttachmentType::COLOR_3D) {
-		m_color_attachment = new_attachment;
-	}
-	else if (a_attach_type == AttachmentType::DEPTH_STENCIL) {
-		m_depth_stencil_attachment = new_attachment;
-	}
-	else if (a_attach_type == AttachmentType::DEPTH) {
-		m_depth_attachment = new_attachment;
-	}
-
 	if (a_buf_type == AttachmentBufferType::TEXTURE) {
-		Texture& tex = std::get<Texture>(new_attachment.get_attachment());
+		const auto& tex = std::get<uPtrTex>(new_attachment.get_attachment());
 		switch (a_attach_type) {
-		case AttachmentType::COLOR_2D:      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex.get_id(), 0); break;
-		case AttachmentType::COLOR_3D:      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X, tex.get_id(), 0); break;
-		case AttachmentType::DEPTH:         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, tex.get_id(), 0); break;
-		case AttachmentType::DEPTH_STENCIL: glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, tex.get_id(), 0); break;
+		case AttachmentType::COLOR_2D:      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex->get_id(), 0); break;
+		case AttachmentType::COLOR_3D:      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X, tex->get_id(), 0); break;
+		case AttachmentType::DEPTH:         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, tex->get_id(), 0); break;
+		case AttachmentType::DEPTH_STENCIL: glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, tex->get_id(), 0); break;
 		default:
 			ERROR("[FRAMEBUFFER::ATTACH] Wrong attachment type.", Error_action::throwing);
 		}
 	}
 	else if (a_buf_type == AttachmentBufferType::MSAA_TEXTURE) {
-		Texture& tex = std::get<Texture>(new_attachment.get_attachment());
+		const auto& tex = std::get<uPtrTex>(new_attachment.get_attachment());
 		switch (a_attach_type) {
-		case AttachmentType::COLOR_2D:      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, tex.get_id(), 0); break;
-		case AttachmentType::DEPTH:         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D_MULTISAMPLE, tex.get_id(), 0); break;
-		case AttachmentType::DEPTH_STENCIL: glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D_MULTISAMPLE, tex.get_id(), 0); break;
+		case AttachmentType::COLOR_2D:      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, tex->get_id(), 0); break;
+		case AttachmentType::DEPTH:         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D_MULTISAMPLE, tex->get_id(), 0); break;
+		case AttachmentType::DEPTH_STENCIL: glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D_MULTISAMPLE, tex->get_id(), 0); break;
 		default:
 			ERROR("[FRAMEBUFFER::ATTACH] Wrong attachment type.", Error_action::throwing);
 		} 
 	}
 	else if (a_buf_type == AttachmentBufferType::RENDER_BUFFER || a_buf_type == AttachmentBufferType::MSAA_RENDER_BUFFER) {
-		RenderBuffer& ren_buf = std::get<RenderBuffer>(new_attachment.get_attachment());
+		const auto& ren = std::get<uPtrRen>(new_attachment.get_attachment());
 		switch (a_attach_type) {
-		case AttachmentType::COLOR_2D:      glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, ren_buf.get_id()); break;
-		case AttachmentType::DEPTH:         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, ren_buf.get_id()); break;
-		case AttachmentType::DEPTH_STENCIL: glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, ren_buf.get_id()); break;
+		case AttachmentType::COLOR_2D:      glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, ren->get_id()); break;
+		case AttachmentType::DEPTH:         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, ren->get_id()); break;
+		case AttachmentType::DEPTH_STENCIL: glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, ren->get_id()); break;
 		default:
 			ERROR("[FRAMEBUFFER::ATTACH] Wrong attachment type.", Error_action::throwing);
 		}
 	}
 	else if (a_buf_type == AttachmentBufferType::NONE) {
-		switch (a_attach_type) {
-		case AttachmentType::COLOR_2D:
-		case AttachmentType::COLOR_3D:
+		if (a_attach_type == AttachmentType::COLOR_2D || a_attach_type == AttachmentType::COLOR_3D) {
 			glDrawBuffer(GL_NONE);
 			glReadBuffer(GL_NONE);
-			break;
-		default:
+		}
+		else {
 			ERROR("[FRAMEBUFFER::ATTACH] None depth/stencil buffers not handled.", Error_action::throwing);
 		}
+	}
+
+	if (a_attach_type == AttachmentType::COLOR_2D || a_attach_type == AttachmentType::COLOR_3D) {
+		m_color_attachment = std::move(new_attachment);
+	}
+	else if (a_attach_type == AttachmentType::DEPTH_STENCIL) {
+		m_depth_stencil_attachment = std::move(new_attachment);
+	}
+	else if (a_attach_type == AttachmentType::DEPTH) {
+		m_depth_attachment = std::move(new_attachment);
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -858,13 +932,13 @@ void FrameBuffer::attach_cubemap_face(GLenum a_cubemap_face) {
 	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 
 	// Ensure that attached color buffer is a cubemap
-	if (!std::holds_alternative<Texture>(m_color_attachment.get_attachment()) || m_color_attachment.get_type() != AttachmentType::COLOR_3D) {
+	if (!std::holds_alternative<uPtrTex>(m_color_attachment.get_attachment()) || m_color_attachment.get_type() != AttachmentType::COLOR_3D) {
 		attach(AttachmentType::COLOR_3D, AttachmentBufferType::TEXTURE); 
 	}
 
-	Texture& attached_color_cubemap = std::get<Texture>(m_color_attachment.get_attachment());
+	const auto& attached_color_cubemap = std::get<uPtrTex>(m_color_attachment.get_attachment());
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, a_cubemap_face, attached_color_cubemap.get_id(), 0); 
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, a_cubemap_face, attached_color_cubemap->get_id(), 0); 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); 
 }
 
@@ -938,7 +1012,7 @@ bool FrameBuffer::set_samples(int a_samples) {
 		return false;
 	}
 
-	auto convert_buffer_type = [](const AttachmentBufferType& buf_type) {
+	auto change_buffer_type = [](const AttachmentBufferType& buf_type) {
 		switch (buf_type) {
 		case AttachmentBufferType::MSAA_TEXTURE:       return AttachmentBufferType::TEXTURE;
 		case AttachmentBufferType::MSAA_RENDER_BUFFER: return AttachmentBufferType::RENDER_BUFFER;
@@ -950,9 +1024,9 @@ bool FrameBuffer::set_samples(int a_samples) {
 
 	if (a_samples == 1 && m_samples > 1 || a_samples > 1 && m_samples == 1) { 
 		m_samples = a_samples;
-		attach(m_color_attachment.get_type(), convert_buffer_type(m_color_attachment.get_buf_type()), a_samples);
-		attach(m_depth_attachment.get_type(), convert_buffer_type(m_depth_attachment.get_buf_type()), a_samples);
-		attach(m_depth_stencil_attachment.get_type(), convert_buffer_type(m_depth_stencil_attachment.get_buf_type()), a_samples);
+		attach(m_color_attachment.get_type(), change_buffer_type(m_color_attachment.get_buf_type()), a_samples);
+		attach(m_depth_attachment.get_type(), change_buffer_type(m_depth_attachment.get_buf_type()), a_samples);
+		attach(m_depth_stencil_attachment.get_type(), change_buffer_type(m_depth_stencil_attachment.get_buf_type()), a_samples);
 	}
 	else {
 		m_samples = a_samples;

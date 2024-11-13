@@ -86,7 +86,7 @@ void Model::process_node(aiNode* a_node, const aiScene* a_scene) {
 Mesh Model::process_mesh(aiMesh* a_mesh, const aiScene* a_scene) {
 	BufferData data;
 	MaterialMap mat;
-	std::vector<Texture> textures;
+	std::vector<Texture2D> textures;
 	auto texture_siz = a_scene->mMaterials[a_mesh->mMaterialIndex]->GetTextureCount(aiTextureType::aiTextureType_DIFFUSE);
 	texture_siz += a_scene->mMaterials[a_mesh->mMaterialIndex]->GetTextureCount(aiTextureType::aiTextureType_SPECULAR);
 	texture_siz += a_scene->mMaterials[a_mesh->mMaterialIndex]->GetTextureCount(aiTextureType::aiTextureType_EMISSIVE);
@@ -145,7 +145,7 @@ Mesh Model::process_mesh(aiMesh* a_mesh, const aiScene* a_scene) {
 	return Mesh(data, mat);
 }
 
-void Model::process_texture(std::vector<Texture>& a_textures, aiMaterial* a_mat, aiTextureType a_ai_texture_type) {
+void Model::process_texture(std::vector<Texture2D>& a_textures, aiMaterial* a_mat, aiTextureType a_ai_texture_type) {
 	aiString texture_name;
 	TextureType texture_type{ TextureType::NONE };
 	int unit_id{ 0 };
@@ -172,8 +172,9 @@ void Model::process_texture(std::vector<Texture>& a_textures, aiMaterial* a_mat,
 		// Use rmanager to load texture (see Application class).
 		ResourceManager& rman = Application::get_instance().get_rmanager();
 		std::wstring texture_path = (fs::path(m_dir) / fs::path(texture_name.C_Str())).wstring();
-		Texture texture_ptr = rman.load_texture(texture_path, texture_type, unit_id + i, false, m_gamma_corr);
-		a_textures.push_back(texture_ptr);
+		Texture2D tex_obj = rman.load_texture(texture_type, texture_path, false, m_gamma_corr);
+		tex_obj.set_unit_id(unit_id + i);
+		a_textures.push_back(tex_obj);
 	}
 }
 

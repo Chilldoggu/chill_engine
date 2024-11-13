@@ -4,7 +4,7 @@
 #include "chill_renderer/meshes.hpp"
 
 namespace chill_renderer {
-auto ShadowMap::set_resolution(int a_width, int a_height) -> void {
+void ShadowMap::set_resolution(int a_width, int a_height) {
 	m_resolution.width = a_width;
 	m_resolution.height = a_height;
 
@@ -13,12 +13,12 @@ auto ShadowMap::set_resolution(int a_width, int a_height) -> void {
 		m_fb.attach(AttachmentType::COLOR_2D, AttachmentBufferType::NONE);
 		m_fb.attach(AttachmentType::DEPTH, AttachmentBufferType::TEXTURE);
 
-		auto& tex_depth_map = std::get<Texture>(m_fb.get_depth_attachment_buffer().get_attachment());
+		auto& tex_depth_map = std::get<uPtrTex>(m_fb.get_depth_attachment_buffer().get_attachment());
 		// Make sure that areas outside shadow map are lit by default.
-		tex_depth_map.set_wrap(TextureWrap::CLAMP_BORDER);
-		tex_depth_map.set_border_color(glm::vec3(1.f, 1.f, 1.f));
+		tex_depth_map->set_wrap(TextureWrap::CLAMP_BORDER);
+		tex_depth_map->set_border_color(glm::vec3(1.f, 1.f, 1.f));
 		// Needed for use with sampler2DShadow type in frag shader.
-		tex_depth_map.set_comp_func(TextureCompFunc::LEQUAL);
+		tex_depth_map->set_cmp_func(TextureCmpFunc::LEQUAL);
 
 		if (!m_fb.check_status()) {
 			ERROR("[SHADOWMAP::SET_RESOLUTION] Framebuffer is not complete!", Error_action::throwing);
@@ -29,11 +29,11 @@ auto ShadowMap::set_resolution(int a_width, int a_height) -> void {
 	}
 }
 
-auto ShadowMap::set_view(glm::vec3 a_pos, glm::vec3 a_target) -> void {
+void ShadowMap::set_view(glm::vec3 a_pos, glm::vec3 a_target) {
 	m_frustum.light_view = glm::lookAt(a_pos, a_target, glm::vec3(0.f, 1.f, 0.f));
 }
 
-auto ShadowMap::set_proj(ProjectionType a_proj_type, float a_near_plane, float a_far_plane) -> void {
+void ShadowMap::set_proj(ProjectionType a_proj_type, float a_near_plane, float a_far_plane) {
 	if (a_proj_type == ProjectionType::NONE) {
 		m_frustum.proj_type = a_proj_type;
 		m_frustum.near = 0;
@@ -54,64 +54,64 @@ auto ShadowMap::set_proj(ProjectionType a_proj_type, float a_near_plane, float a
 	}
 }
 
-auto ShadowMap::set_unit_id(int a_unit_id) -> void {
+void ShadowMap::set_unit_id(int a_unit_id) {
 	if (a_unit_id < g_shadow_sampler_id || a_unit_id >= g_shadow_sampler_id + g_shadow_sampler_siz)
 		return;
 
 	// Set texture unit in order not to replace any used material maps in frag shader.
-	auto& tex_depth_map = std::get<Texture>(m_fb.get_depth_attachment_buffer().get_attachment());
-	tex_depth_map.set_unit_id(a_unit_id);
+	auto& tex_depth_map = std::get<uPtrTex>(m_fb.get_depth_attachment_buffer().get_attachment());
+	tex_depth_map->set_unit_id(a_unit_id);
 }
 
-auto ShadowMap::bind() -> void {
+void ShadowMap::bind() {
 	m_fb.bind();
 }
 
-auto ShadowMap::unbind() -> void {
+void ShadowMap::unbind() {
 	m_fb.unbind();
 }
 
-auto ShadowMap::activate() -> void {
+void ShadowMap::activate() {
 	m_fb.get_depth_attachment_buffer().activate();
 }
 
-auto ShadowMap::check_status() -> bool {
+bool ShadowMap::check_status() {
 	if (m_fb.get_id() == EMPTY_VBO) return false;
 	else if (!m_fb.check_status())  return false;
 
 	return true;
 }
 
-auto ShadowMap::get_unit_id() noexcept -> int { 
-	auto& tex = std::get<Texture>(m_fb.get_depth_attachment_buffer().get_attachment());
-	return tex.get_unit_id();
+int ShadowMap::get_unit_id() noexcept {
+	auto& tex = std::get<uPtrTex>(m_fb.get_depth_attachment_buffer().get_attachment());
+	return tex->get_unit_id();
 }
 
-auto ShadowMap::get_near() const noexcept -> float {
+float ShadowMap::get_near() const noexcept {
 	return m_frustum.near;
 }
 
-auto ShadowMap::get_far() const noexcept -> float {
+float ShadowMap::get_far() const noexcept {
 	return m_frustum.far;
 }
 
-auto ShadowMap::get_proj_type() const noexcept -> ProjectionType {
+ProjectionType ShadowMap::get_proj_type() const noexcept {
 	return m_frustum.proj_type;
 }
 
-auto ShadowMap::get_view_mat() const noexcept -> glm::mat4 {
+glm::mat4 ShadowMap::get_view_mat() const noexcept {
 	return m_frustum.light_view;
 }
 
-auto ShadowMap::get_proj_mat() const noexcept -> glm::mat4 {
+glm::mat4 ShadowMap::get_proj_mat() const noexcept {
 	return m_frustum.light_proj;
 }
 
-auto ShadowMap::get_width() const noexcept -> int {
+int ShadowMap::get_width() const noexcept {
 	return m_resolution.width;
 }
 
-auto ShadowMap::get_height() const noexcept -> int {
+int ShadowMap::get_height() const noexcept {
 	return m_resolution.height;
 }
 }

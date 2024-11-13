@@ -125,7 +125,7 @@ int main() {
 	main_scene.push_uniform_buffer(UBO);
 
 	// LIGHTS
-	Model light_obj = rmanager.load_model(gpath("resources/Public/MIT/basic-shapes/sphere/sphere.obj"));
+	Model light_obj = rmanager.load_model(gpath("resources/Public/MIT/basic-shapes/sphere/sphere.obj"), false, true);
 	light_obj.set_size(1.f / 3.f);
 	Model dirlight_model = light_obj;
 	dirlight_model.set_pos(glm::vec3(0.0f, 90.0f, 0.0f));
@@ -139,32 +139,34 @@ int main() {
 
 	// SKYBOX
 	Skybox skybox_river{
-		.cubemap = rmanager.load_cubemap({
+		.cubemap = TextureCubemap(TextureType::GENERIC,
+			{
 				gpath("resources/Public/skybox/RiverMountains/right.jpg"),
 				gpath("resources/Public/skybox/RiverMountains/left.jpg"),
 				gpath("resources/Public/skybox/RiverMountains/top.jpg"),
 				gpath("resources/Public/skybox/RiverMountains/bottom.jpg"),
 				gpath("resources/Public/skybox/RiverMountains/front.jpg"),
 				gpath("resources/Public/skybox/RiverMountains/back.jpg")
-			}, 0),
+			}, false, true),
 		.cube = rmanager.create_model({ Mesh(presets::g_skybox_data, MaterialMap()) })
 	};
 	Skybox skybox_starmap{
-		.cubemap = rmanager.load_cubemap({
+		.cubemap = TextureCubemap(TextureType::GENERIC,
+			{
 				gpath("resources/Public/skybox/Starmap/4k/right.jpg"),
 				gpath("resources/Public/skybox/Starmap/4k/left.jpg"),
 				gpath("resources/Public/skybox/Starmap/4k/top.jpg"),
 				gpath("resources/Public/skybox/Starmap/4k/bottom.jpg"),
 				gpath("resources/Public/skybox/Starmap/4k/front.jpg"),
 				gpath("resources/Public/skybox/Starmap/4k/back.jpg")
-			}, 0),
+			}, false, true),
 		.cube = rmanager.create_model({ Mesh(presets::g_skybox_data, MaterialMap()) })
 	};
 	main_scene.set_skybox(skybox_starmap);
 
 	// MODELS 
 	// === Spheres ===
-	Model sphere = rmanager.load_model(gpath("resources/Public/MIT/basic-shapes/sphere/sphere.obj")); 
+	Model sphere = rmanager.load_model(gpath("resources/Public/MIT/basic-shapes/sphere/sphere.obj"), false, true); 
 	Rand dice{};
 	for (int i = 0; i < 10; ++i) {
 		auto x = dice.roll_f(-30.f, 30.f);
@@ -177,7 +179,7 @@ int main() {
 	}
 	
 	// === Floor ===
-	Model container = rmanager.load_model(gpath("resources/Public/LearnOpenGL/container/container.obj"));
+	Model container = rmanager.load_model(gpath("resources/Public/LearnOpenGL/container/container.obj"), false, true);
 	container.set_size(glm::vec3(30.f, 1.f, 30.f));
 	container.set_pos(glm::vec3(0.f, -15.f, 0.f));
 	main_scene.push_generic_model(container);
