@@ -1,4 +1,7 @@
 #include <tuple>
+#include <random>
+#include <chrono>
+#include <iostream>
 
 #include "chill_renderer/shadows.hpp"
 #include "chill_renderer/meshes.hpp"
@@ -63,6 +66,53 @@ void ShadowMap::set_unit_id(int a_unit_id) {
 	tex_depth_map->set_unit_id(a_unit_id);
 }
 
+void ShadowMap::set_offset_window(int a_window_size, int a_filter_width, int a_filter_height) {
+	m_offwin_resolution.size = a_window_size;
+	m_offwin_resolution.filter_width = a_filter_width;
+	m_offwin_resolution.filter_height = a_filter_height;
+
+	// Create scramble function with range <-1, 1>
+	std::default_random_engine eng{};
+	eng.seed(std::chrono::system_clock::now().time_since_epoch().count());
+	std::uniform_real_distribution<float> dist(-0.5f, 0.5f);
+	auto scramble = [&eng, &dist, a_filter_width]() {
+		return dist(eng);
+		};
+
+	int index = 0;
+	std::vector<float> tex3D_data{};
+	tex3D_data.resize(a_window_size * a_window_size * a_filter_width * a_filter_height * 2);
+	for (int window_pos = 0, window_pos_y = 0; window_pos < a_window_size * a_window_size; ++window_pos) {
+		for (int filter_y = 0; filter_y < a_filter_height; ++filter_y) {
+			for (int filter_x = 0; filter_x < a_filter_width / 2; ++filter_x) {
+				constexpr float pi2 = 2.f * glm::pi<float>();
+				std::array<float, 4> rect_filter_sample{};
+
+				// Populate rectangular filter.
+				rect_filter_sample[0] = static_cast<float>(filter_x * 2.f + 0.5f + scramble()) / a_filter_width;
+				rect_filter_sample[1] = static_cast<float>(a_filter_height - filter_y - 1 + 0.5f + scramble()) / a_filter_height;
+				rect_filter_sample[2] = static_cast<float>(filter_x * 2.f + 1.5f + scramble()) / a_filter_width;
+				rect_filter_sample[3] = static_cast<float>(a_filter_height - filter_y - 1 + 0.5f + scramble()) / a_filter_height;
+				
+				// Circle warp.
+				float x1 = glm::sqrt(rect_filter_sample[1]) * glm::cos(pi2 * rect_filter_sample[0]);
+				float y1 = glm::sqrt(rect_filter_sample[1]) * glm::sin(pi2 * rect_filter_sample[0]);
+				float x2 = glm::sqrt(rect_filter_sample[3]) * glm::cos(pi2 * rect_filter_sample[2]);
+				float y2 = glm::sqrt(rect_filter_sample[3]) * glm::sin(pi2 * rect_filter_sample[2]);
+
+				tex3D_data[index++] = x1;
+				tex3D_data[index++] = y1;
+				tex3D_data[index++] = x2;
+				tex3D_data[index++] = y2;
+			}
+		}
+	}
+	
+	m_offset_window = std::make_unique<Texture3D>(TextureType::GENERIC, a_filter_width * a_filter_height / 2, a_window_size, a_window_size, GL_FLOAT, (float*)tex3D_data.data());
+	m_offset_window->set_filter(TextureFilter::NEAREST);
+	m_offset_window->set_wrap(TextureWrap::REPEAT);
+}
+
 void ShadowMap::bind() {
 	m_fb.bind();
 }
@@ -113,6 +163,14 @@ int ShadowMap::get_width() const noexcept {
 
 int ShadowMap::get_height() const noexcept {
 	return m_resolution.height;
+}
+
+Texture3D& ShadowMap::get_offset_window() noexcept {
+	return *m_offset_window;
+}
+
+int ShadowMap::get_offset_window_size() noexcept {
+	return m_offwin_resolution.size;
 }
 }
 

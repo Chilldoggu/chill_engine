@@ -112,6 +112,7 @@ private:
 	auto refcnt_dec() -> void;
 };
 
+// Abstract base
 class Texture {
 public:
 	Texture() = default;
@@ -121,12 +122,14 @@ public:
 
 	auto operator=(const Texture& a_texture) -> Texture&;
 	auto operator=(Texture&& a_texture) noexcept -> Texture&;
+	
+	virtual auto abstract_construct() -> void = 0;
 
-	virtual auto activate() const noexcept -> void = 0;
-	virtual auto set_border_color(const glm::vec3& a_border_color) -> void = 0;
-	virtual auto set_wrap(TextureWrap a_wrap) -> void = 0;
-	virtual auto set_filter(TextureFilter a_filter) -> void = 0;
-	virtual auto set_cmp_func(TextureCmpFunc a_cmp_func) -> void = 0;
+	auto activate() const noexcept -> void;
+	auto set_border_color(const glm::vec3& a_border_color) -> void;
+	auto set_wrap(TextureWrap a_wrap) -> void;
+	auto set_filter(TextureFilter a_filter) -> void;
+	auto set_cmp_func(TextureCmpFunc a_cmp_func) -> void;
 
 	auto set_unit_id(int a_unit_id) noexcept -> void;
 	auto set_type(TextureType a_type) noexcept -> void;
@@ -143,12 +146,13 @@ protected:
 	auto refcnt_inc() -> void;
 
 	GLuint m_id = EMPTY_VBO;
-	TextureWrap m_wrap = TextureWrap::NONE;
-	TextureFilter m_filter = TextureFilter::NONE;
-	TextureCmpFunc m_cmp = TextureCmpFunc::NONE;
+	GLenum m_gltype = GL_NONE;
 
 private:
 	TextureType m_type = TextureType::NONE;
+	TextureWrap m_wrap = TextureWrap::NONE;
+	TextureFilter m_filter = TextureFilter::NONE;
+	TextureCmpFunc m_cmp = TextureCmpFunc::NONE;
 	int m_unit_id = 0;
 };
 
@@ -157,13 +161,9 @@ public:
 	Texture2D() = default;
 	Texture2D(TextureType a_type, std::wstring a_path, bool a_flip_image, bool a_gamma_correction, GLenum a_data_type = GL_NONE);
 	template<typename T = nulldata_t>
-	Texture2D(TextureType a_type, int width, int height, GLenum a_data_type = DEFAULT_TYPE, T* a_data = nullptr);
+	Texture2D(TextureType a_type, int a_width, int a_height, GLenum a_data_type = DEFAULT_TYPE, const T* a_data = nullptr);
 
-	auto activate() const noexcept -> void;
-	auto set_border_color(const glm::vec3& a_border_color) -> void;
-	auto set_wrap(TextureWrap a_wrap) -> void;
-	auto set_filter(TextureFilter a_filter) -> void;
-	auto set_cmp_func(TextureCmpFunc a_cmp_func) -> void;
+	auto abstract_construct() -> void;
 
 	auto get_filename() const noexcept -> std::wstring;
 	auto get_path() const noexcept -> std::wstring;
@@ -181,12 +181,10 @@ private:
 class Texture3D : public Texture {
 public:
 	Texture3D() = default;
+	template<typename T = nulldata_t>
+	Texture3D(TextureType a_type, int a_width, int a_height, int a_depth, GLenum a_data_type = DEFAULT_TYPE, const T* a_data = nullptr);
 
-	auto activate() const noexcept -> void;
-	auto set_border_color(const glm::vec3& a_border_color) -> void;
-	auto set_wrap(TextureWrap a_wrap) -> void;
-	auto set_filter(TextureFilter a_filter) -> void;
-	auto set_cmp_func(TextureCmpFunc a_cmp_func) -> void;
+	auto abstract_construct() -> void;
 
 private:
 };
@@ -199,11 +197,7 @@ public:
 	template<typename T = nulldata_t>
 	TextureCubemap(TextureType a_type, int a_width, int a_height, GLenum a_data_type = DEFAULT_TYPE, const std::array<T*, 6>& a_data = std::array<nulldata_t*, 6>{});
 
-	auto activate() const noexcept -> void;
-	auto set_border_color(const glm::vec3& a_border_color) -> void;
-	auto set_wrap(TextureWrap a_wrap) -> void;
-	auto set_filter(TextureFilter a_filter) -> void;
-	auto set_cmp_func(TextureCmpFunc a_cmp_func) -> void;
+	auto abstract_construct() -> void;
 
 	auto get_paths() const noexcept -> std::vector<std::wstring>;
 	auto get_filenames() const noexcept -> std::vector<std::wstring>;
@@ -219,11 +213,7 @@ public:
 	TextureMSAA() = default;
 	TextureMSAA(TextureType a_type, int a_width, int a_height, int a_samples);
 
-	auto activate() const noexcept -> void;
-	auto set_border_color(const glm::vec3& a_border_color) -> void;
-	auto set_wrap(TextureWrap a_wrap) -> void;
-	auto set_filter(TextureFilter a_filter) -> void;
-	auto set_cmp_func(TextureCmpFunc a_cmp_func) -> void;
+	auto abstract_construct() -> void;
 
 	auto get_samples() const noexcept -> int;
 

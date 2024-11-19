@@ -119,6 +119,9 @@ void Scene::set_uniforms() {
 	m_shaders["multi"]["light_projection"] = m_shadow_map.get_proj_mat();
 	m_shadow_map.activate();
 	m_shaders["multi"]["shadow_map"] = m_shadow_map.get_unit_id();
+	auto& off_win = m_shadow_map.get_offset_window();
+	off_win.activate();
+	m_shaders["multi"]["offset_window"] = off_win.get_unit_id();
 
 	m_shaders["multi"]["view_pos"] = m_camera->get_position();
 	m_shaders["multi"]["near_plane"] = m_camera->get_near_plane();
@@ -397,8 +400,12 @@ void Scene::draw_transparent_models() {
 }
 
 void Scene::draw_shadow_map() {
-	if (!m_shadow_map.check_status())
+	if (!m_shadow_map.check_status()) {
 		m_shadow_map.set_resolution(1024, 1024);
+		m_shadow_map.set_offset_window(32, 8, 6);
+		auto& tex_off_win = m_shadow_map.get_offset_window();
+		tex_off_win.set_unit_id(g_shadow_sampler_id + 1);
+	}
 
 	m_shadow_map.set_unit_id(g_shadow_sampler_id);
 	m_shadow_map.set_proj(ProjectionType::ORTOGHRAPHIC, 10.f, 200.f);

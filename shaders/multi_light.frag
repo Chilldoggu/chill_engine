@@ -74,6 +74,7 @@ uniform bool is_blinn_phong;
 uniform mat4 light_view;
 uniform mat4 light_projection;
 uniform sampler2DShadow shadow_map;
+uniform sampler3D offset_window;
 
 // Globals
 vec3 g_LightFragPos;
@@ -214,13 +215,6 @@ vec3 calc_fog(float a_density, float a_lindepth, vec3 a_frag_base_color, vec3 a_
 }
 
 float calc_shadow(vec3 a_light_frag_pos, vec3 a_normal, vec3 a_light_dir) {
-	vec2 poisson_disk[4] = vec2[](
-		vec2(-0.94201624,  -0.39906216),
-		vec2( 0.94558609,  -0.76890725),
-		vec2(-0.094184101, -0.92938870),
-		vec2( 0.34495938,   0.29387760)
-	);
-
 	// transform to range [0, 1]
 	a_light_frag_pos = a_light_frag_pos * 0.5 + 0.5;
 
@@ -232,12 +226,29 @@ float calc_shadow(vec3 a_light_frag_pos, vec3 a_normal, vec3 a_light_dir) {
 		return 1.0;
 	}
 
-	float shadow_val = 0.0;
-	int poisson_samples = 4;
-	float frac = 1.0 / poisson_samples;
-	for (int i = 0; i < poisson_samples; ++i) {
-		shadow_val += frac * texture(shadow_map, vec3(a_light_frag_pos.xy + poisson_disk[i]/700.0, current_depth)).r;
+	ivec3 tex3D_size = textureSize(offset_window, 0);
+	ivec2 sample_pos = ivec2(mod(gl_FragCoord.xy, tex3D_size.yz));
+	float radius = 1.f/700.f;
+	float shadow_val = 0;
+	float sum = 0;
+	// Test cheap samples.
+	for (int i = 0; i < 4; ++i) {
+		vec4 offsets = texelFetch(offset_window, ivec3(i, sample_pos.yx), 0) * radius;
+		sum += texture(shadow_map, vec3(a_light_frag_pos.xy + offsets.xy, current_depth));
+		sum += texture(shadow_map, vec3(a_light_frag_pos.xy + offsets.zw, current_depth));
 	}
-	
+	shadow_val = sum / 8.f;
+
+	// Bail out if not in penumbra.
+	if (shadow_val != 0.f && shadow_val != 1.f) {
+		// Do the rest of the samples.
+		for (int i = 4; i < tex3D_size.z; ++i) {
+			vec4 offsets = texelFetch(offset_window, ivec3(i, sample_pos.yx), 0) * radius;
+			sum += texture(shadow_map, vec3(a_light_frag_pos.xy + offsets.rg, current_depth));
+			sum += texture(shadow_map, vec3(a_light_frag_pos.xy + offsets.ba, current_depth));
+		}
+		shadow_val = sum / (tex3D_size.z * 2);
+	}
+
 	return shadow_val;
 }

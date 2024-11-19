@@ -152,14 +152,16 @@ void BufferObjects::refcnt_dec() {
 	}
 }
 
-Texture::~Texture() {
-	refcnt_dec();
-}
+void Texture2D::abstract_construct() { }
+void Texture3D::abstract_construct() { }
+void TextureCubemap::abstract_construct() { }
+void TextureMSAA::abstract_construct() { }
 
 Texture::Texture(const Texture& a_texture) {
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, a_texture.m_id);
 
 	m_id = a_texture.m_id;
+	m_gltype = a_texture.m_gltype;
 	m_type = a_texture.m_type;
 	m_wrap = a_texture.m_wrap;
 	m_filter = a_texture.m_filter;
@@ -170,6 +172,7 @@ Texture::Texture(const Texture& a_texture) {
 // When moving an object, reference count shouldn't increment.
 Texture::Texture(Texture&& a_texture) noexcept {
 	m_id = a_texture.m_id;
+	m_gltype = a_texture.m_gltype;
 	m_type = a_texture.m_type;
 	m_wrap = a_texture.m_wrap;
 	m_filter = a_texture.m_filter;
@@ -177,6 +180,7 @@ Texture::Texture(Texture&& a_texture) noexcept {
 	m_unit_id = a_texture.m_unit_id;
 
 	a_texture.m_id = EMPTY_VBO;
+	a_texture.m_gltype = GL_NONE;
 }
 
 Texture& Texture::operator=(const Texture& a_texture) {
@@ -186,6 +190,7 @@ Texture& Texture::operator=(const Texture& a_texture) {
 		refcnt_dec();
 	}
 	m_id = a_texture.m_id;
+	m_gltype = a_texture.m_gltype;
 	m_type = a_texture.m_type;
 	m_wrap = a_texture.m_wrap;
 	m_filter = a_texture.m_filter;
@@ -201,6 +206,7 @@ Texture& Texture::operator=(Texture&& a_texture) noexcept {
 		refcnt_dec();
 	}
 	m_id = a_texture.m_id;
+	m_gltype = a_texture.m_gltype;
 	m_type = a_texture.m_type;
 	m_wrap = a_texture.m_wrap;
 	m_filter = a_texture.m_filter;
@@ -208,8 +214,13 @@ Texture& Texture::operator=(Texture&& a_texture) noexcept {
 	m_unit_id = a_texture.m_unit_id;
 
 	a_texture.m_id = EMPTY_VBO;
+	a_texture.m_gltype = GL_NONE;
 
 	return *this;
+}
+
+Texture::~Texture() {
+	refcnt_dec();
 }
 
 void Texture::refcnt_inc() {
@@ -220,11 +231,88 @@ void Texture::refcnt_dec() {
 	if (m_id != EMPTY_VBO && m_type != TextureType::NONE) {
 		Application::get_instance().get_rmanager().dec_ref_count(ResourceType::TEXTURES, m_id);
 		if (!Application::get_instance().get_rmanager().chk_ref_count(ResourceType::TEXTURES, m_id)) {
-			std::cout << "DELETING: ID: " << m_id << std::endl;
+			std::cout << "DELETING TEXTURE OBJ: ID: " << m_id << std::endl;
 			glDeleteTextures(1, &m_id);
 		}
 	} 
 }
+
+void Texture::activate() const noexcept {
+	if (get_type() != TextureType::NONE) {
+		glActiveTexture(GL_TEXTURE0 + get_unit_id());
+		glBindTexture(m_gltype, m_id);
+	}
+}
+
+void Texture::set_border_color(const glm::vec3& a_border_color) {
+	float arr_border_color[] = { a_border_color.x, a_border_color.y, a_border_color.z, 1.f };
+	glBindTexture(m_gltype, m_id); 
+	glTexParameterfv(m_gltype, GL_TEXTURE_BORDER_COLOR, arr_border_color);
+}
+
+void Texture::set_wrap(TextureWrap a_wrap) {
+	// Error(1280): Multisample texture targets don't support sampler state.
+	if (m_gltype == GL_TEXTURE_2D_MULTISAMPLE) {
+		ERROR("[TEXTURE::SET_WRAP] Multisample texture doesn't support sampler state.", Error_action::logging);
+		return;
+	}
+
+	m_wrap = a_wrap;
+	GLuint tex_wrap = conv_wrap(a_wrap); 
+	if (tex_wrap == GL_NONE) {
+		ERROR("[TEXTURE::SET_WRAP] Wrong wrap type.", Error_action::throwing);
+	}
+
+	glBindTexture(m_gltype, m_id); 
+	glTexParameterf(m_gltype, GL_TEXTURE_WRAP_S, tex_wrap);
+	glTexParameterf(m_gltype, GL_TEXTURE_WRAP_T, tex_wrap);
+	if (m_gltype == GL_TEXTURE_CUBE_MAP || m_gltype == GL_TEXTURE_3D) {
+		glTexParameterf(m_gltype, GL_TEXTURE_WRAP_R, tex_wrap);
+	}
+}
+
+void Texture::set_filter(TextureFilter a_filter) {
+	// Error(1280): Multisample texture targets don't support sampler state.
+	if (m_gltype == GL_TEXTURE_2D_MULTISAMPLE) {
+		ERROR("[TEXTURE::SET_WRAP] Multisample texture doesn't support sampler state.", Error_action::logging);
+		return;
+	}
+
+	m_filter = a_filter;
+	GLuint tex_min, tex_mag;
+	conv_filter(a_filter, tex_min, tex_mag);
+	if (tex_min == GL_NONE && tex_mag == GL_NONE) {
+		ERROR("[TEXTURE::SET_FILTER] Wrong filter type.", Error_action::throwing);
+	}
+
+	glBindTexture(m_gltype, m_id); 
+	glTexParameteri(m_gltype, GL_TEXTURE_MIN_FILTER, tex_min);
+	glTexParameteri(m_gltype, GL_TEXTURE_MAG_FILTER, tex_mag);
+	if (a_filter == TextureFilter::MIPMAP_LINEAR || a_filter == TextureFilter::MIPMAP_NEAREST) {
+		glGenerateMipmap(m_gltype);
+	}
+}
+
+void Texture::set_cmp_func(TextureCmpFunc a_cmp_func) {
+	// Might be wrong. Error(1280): Multisample texture targets don't support sampler state.
+	if (m_gltype == GL_TEXTURE_2D_MULTISAMPLE) {
+		ERROR("[TEXTURE::SET_WRAP] Multisample texture doesn't support sampler state.", Error_action::logging);
+		return;
+	}
+
+	m_cmp = a_cmp_func;
+	GLuint tex_cmp = conv_cmp_func(a_cmp_func); 
+	if (tex_cmp == GL_NONE) { 
+		glBindTexture(m_gltype, m_id);
+		glTexParameteri(m_gltype, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+		return;
+	}
+
+	glBindTexture(m_gltype, m_id);
+	glTexParameteri(m_gltype, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	glTexParameteri(m_gltype, GL_TEXTURE_COMPARE_FUNC, tex_cmp);
+}
+
 
 void Texture::set_unit_id(int a_unit_id) noexcept {
 	m_unit_id = a_unit_id;
@@ -261,6 +349,7 @@ TextureFilter Texture::get_filter() const noexcept {
 Texture2D::Texture2D(TextureType a_type, std::wstring a_path, bool a_flip_image, bool a_gamma_corr, GLenum a_data_type)
 	:m_flipped{ a_flip_image }, m_gamma_corr{ a_gamma_corr }
 {
+	m_gltype = GL_TEXTURE_2D;
 	set_type(a_type);
 
 	fs::path p = guess_path(a_path);
@@ -272,7 +361,7 @@ Texture2D::Texture2D(TextureType a_type, std::wstring a_path, bool a_flip_image,
 
 	glGenTextures(1, &m_id);
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id);
-	glBindTexture(GL_TEXTURE_2D, m_id);
+	glBindTexture(m_gltype, m_id);
 
 	int nrChannels{};
 	int width{};
@@ -301,7 +390,7 @@ Texture2D::Texture2D(TextureType a_type, std::wstring a_path, bool a_flip_image,
 	}
 
 	if (data) {
-		glTexImage2D(GL_TEXTURE_2D, 0, in_format, width, height, 0, ex_format, (a_data_type == DEFAULT_TYPE) ? GL_UNSIGNED_BYTE : a_data_type, data);
+		glTexImage2D(m_gltype, 0, in_format, width, height, 0, ex_format, (a_data_type == DEFAULT_TYPE) ? GL_UNSIGNED_BYTE : a_data_type, data);
 		stbi_image_free(data);
 	}
 	else {
@@ -310,61 +399,6 @@ Texture2D::Texture2D(TextureType a_type, std::wstring a_path, bool a_flip_image,
 
 	set_wrap(TextureWrap::CLAMP_EDGE);
 	set_filter(TextureFilter::MIPMAP_LINEAR);
-}
-
-void Texture2D::activate() const noexcept {
-	if (get_type() != TextureType::NONE) {
-		glActiveTexture(GL_TEXTURE0 + get_unit_id());
-		glBindTexture(GL_TEXTURE_2D, m_id); 
-	}
-}
-
-void Texture2D::set_border_color(const glm::vec3& a_border_color) {
-	float arr_border_color[] = { a_border_color.x, a_border_color.y, a_border_color.z, 1.f };
-	glBindTexture(GL_TEXTURE_2D, m_id); 
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, arr_border_color);
-}
-
-void Texture2D::set_wrap(TextureWrap a_wrap) {
-	m_wrap = a_wrap;
-	GLuint tex_wrap = conv_wrap(a_wrap);
-	if (tex_wrap == GL_NONE) {
-		ERROR("[TEXTURE2D::SET_WRAP] Wrong wrap type.", Error_action::throwing);
-	}
-
-	glBindTexture(GL_TEXTURE_2D, m_id); 
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, tex_wrap);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tex_wrap);
-}
-
-void Texture2D::set_filter(TextureFilter a_filter) {
-	m_filter = a_filter;
-	GLuint tex_min, tex_mag;
-	conv_filter(a_filter, tex_min, tex_mag);
-	if (tex_min == GL_NONE && tex_mag == GL_NONE) {
-		ERROR("[TEXTURE2D::SET_FILTER] Wrong filter type.", Error_action::throwing);
-	}
-
-	glBindTexture(GL_TEXTURE_2D, m_id); 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, tex_min);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, tex_mag);
-	if (a_filter == TextureFilter::MIPMAP_LINEAR || a_filter == TextureFilter::MIPMAP_NEAREST) {
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-}
-
-void Texture2D::set_cmp_func(TextureCmpFunc a_cmp_func) { 
-	m_cmp = a_cmp_func;
-	GLuint tex_cmp = conv_cmp_func(a_cmp_func); 
-	if (tex_cmp == GL_NONE) { 
-		glBindTexture(GL_TEXTURE_2D, m_id);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-		return;
-	}
-
-	glBindTexture(GL_TEXTURE_2D, m_id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, tex_cmp);
 }
 
 std::wstring Texture2D::get_filename() const noexcept {
@@ -390,6 +424,7 @@ TextureCubemap::TextureCubemap(TextureType a_type, std::vector<std::wstring> a_p
 	if (a_paths.size() != 6)
 		ERROR("[TEXTURECUBEMAP::TEXTURECUBEMAP] Wrong amount of textures to create a cubemap.", Error_action::throwing); 
 
+	m_gltype = GL_TEXTURE_CUBE_MAP;
 	set_type(a_type);
 
 	fs::path parent_path{};
@@ -416,7 +451,7 @@ TextureCubemap::TextureCubemap(TextureType a_type, std::vector<std::wstring> a_p
 
 	glGenTextures(1, &m_id);
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id);
+	glBindTexture(m_gltype, m_id);
 
 	stbi_set_flip_vertically_on_load(a_flipped);
 	for (size_t i = 0; i < 6; ++i) {
@@ -455,63 +490,6 @@ TextureCubemap::TextureCubemap(TextureType a_type, std::vector<std::wstring> a_p
 	set_filter(TextureFilter::LINEAR);
 }
 
-void TextureCubemap::activate() const noexcept {
-	if (get_type() != TextureType::NONE) {
-		glActiveTexture(GL_TEXTURE0 + get_unit_id());
-		glBindTexture(GL_TEXTURE_CUBE_MAP, m_id); 
-	}
-}
-
-void TextureCubemap::set_border_color(const glm::vec3& a_border_color) {
-	float arr_border_color[] = { a_border_color.x, a_border_color.y, a_border_color.z, 1.f };
-	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id); 
-	glTexParameterfv(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BORDER_COLOR, arr_border_color);
-}
-
-void TextureCubemap::set_wrap(TextureWrap a_wrap) {
-	m_wrap = a_wrap;
-	GLuint tex_wrap = conv_wrap(a_wrap); 
-	if (tex_wrap == GL_NONE) {
-		ERROR("[TEXTURE::SET_WRAP] Wrong wrap type.", Error_action::throwing);
-	}
-
-	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id); 
-	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, tex_wrap);
-	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, tex_wrap);
-	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, tex_wrap); 
-}
-
-void TextureCubemap::set_filter(TextureFilter a_filter) {
-	m_filter = a_filter;
-	GLuint tex_min, tex_mag;
-	conv_filter(a_filter, tex_min, tex_mag);
-	if (tex_min == GL_NONE && tex_mag == GL_NONE) {
-		ERROR("[TEXTURE::SET_FILTER] Wrong filter type.", Error_action::throwing);
-	}
-
-	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id); 
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, tex_min);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, tex_mag);
-	if (a_filter == TextureFilter::MIPMAP_LINEAR || a_filter == TextureFilter::MIPMAP_NEAREST) {
-		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-	}
-}
-
-void TextureCubemap::set_cmp_func(TextureCmpFunc a_cmp_func) {
-	m_cmp = a_cmp_func;
-
-	GLuint tex_cmp = conv_cmp_func(a_cmp_func); 
-	if (tex_cmp == GL_NONE) { 
-		glBindTexture(GL_TEXTURE_2D, m_id);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-		return;
-	}
-
-	glBindTexture(GL_TEXTURE_CUBE_MAP, m_id);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, tex_cmp);
-}
-
 std::vector<std::wstring> TextureCubemap::get_paths() const noexcept {
 	return m_paths;
 }
@@ -528,55 +506,28 @@ std::vector<std::wstring> TextureCubemap::get_filenames() const noexcept {
 TextureMSAA::TextureMSAA(TextureType a_type, int a_width, int a_height, int a_samples)
 	:m_samples{ a_samples }
 {
+	m_gltype = GL_TEXTURE_2D_MULTISAMPLE;
 	set_type(a_type);
 
 	glGenTextures(1, &m_id);
 	Application::get_instance().get_rmanager().inc_ref_count(ResourceType::TEXTURES, m_id); 
-	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, m_id); 
+	glBindTexture(m_gltype, m_id); 
 
 	if (a_type == TextureType::GENERIC || a_type == TextureType::DIFFUSE || a_type == TextureType::SPECULAR || a_type == TextureType::EMISSION) {
-		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, a_samples, GL_RGB, a_width, a_height, GL_TRUE);
+		glTexImage2DMultisample(m_gltype, a_samples, GL_RGB, a_width, a_height, GL_TRUE);
 	}
 	else if (a_type == TextureType::DEPTH) {
-		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, a_samples, GL_DEPTH_COMPONENT, a_width, a_height, GL_TRUE);
+		glTexImage2DMultisample(m_gltype, a_samples, GL_DEPTH_COMPONENT, a_width, a_height, GL_TRUE);
 	}
 	else if (a_type == TextureType::DEPTH_STENCIL) {
-		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, a_samples, GL_DEPTH24_STENCIL8, a_width, a_height, GL_TRUE);
+		glTexImage2DMultisample(m_gltype, a_samples, GL_DEPTH24_STENCIL8, a_width, a_height, GL_TRUE);
 	} 
 	else {
 		ERROR("[TEXTUREMSAA::TEXTUREMSAA] Wrong TextureType.", Error_action::throwing);
 	}
 
-	set_wrap(TextureWrap::CLAMP_EDGE);
-	set_filter(TextureFilter::LINEAR);
-}
-
-void TextureMSAA::activate() const noexcept {
-	if (get_type() != TextureType::NONE) {
-		glActiveTexture(GL_TEXTURE0 + get_unit_id());
-		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, m_id); 
-	}
-}
-
-void TextureMSAA::set_border_color(const glm::vec3& a_border_color) {
-	float arr_border_color[] = { a_border_color.x, a_border_color.y, a_border_color.z, 1.f };
-	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, m_id); 
-	glTexParameterfv(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_BORDER_COLOR, arr_border_color);
-}
-
-void TextureMSAA::set_wrap(TextureWrap a_wrap) {
-	// Error(1280): Multisample texture targets don't support sampler state.
-	return;
-}
-
-void TextureMSAA::set_filter(TextureFilter a_filter) {
-	// Error(1280): Multisample texture targets don't support sampler state.
-	return;
-}
-
-void TextureMSAA::set_cmp_func(TextureCmpFunc a_cmp_func) { 
-	// TODO: Might be wrong. Check if Error(1280): Multisample texture targets don't support sampler state.
-	return;
+	//set_wrap(TextureWrap::CLAMP_EDGE);
+	//set_filter(TextureFilter::LINEAR);
 }
 
 int TextureMSAA::get_samples() const noexcept {
